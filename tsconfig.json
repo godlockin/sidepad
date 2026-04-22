@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "baseUrl": "./src",
+    "paths": {
+      "@main/*": ["main/*"],
+      "@renderer/*": ["renderer/*"],
+      "@preload/*": ["preload/*"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}
