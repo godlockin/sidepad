@@ -3,6 +3,7 @@ dist/
 out/
 release/
 .vite/
+.worktrees/
 *.log
 .DS_Store
 coverage/
