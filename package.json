@@ -11,7 +11,11 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pretest:e2e": "electron-rebuild -f -w better-sqlite3",
     "test:e2e": "playwright test",
+    "posttest:e2e": "npm rebuild better-sqlite3",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:node": "npm rebuild better-sqlite3",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
@@ -28,6 +32,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
     "@types/better-sqlite3": "^7.6.10",
