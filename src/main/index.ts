@@ -1,9 +1,11 @@
 import { app, BrowserWindow, safeStorage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createIPCHandler } from 'electron-trpc/main';
 import { sidepadPaths } from './paths.js';
 import { openSidepadDb } from './store/db.js';
 import { SecretStore } from './secret/secret-store.js';
+import { appRouter } from './ipc/trpc.js';
 import { log } from './logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -39,6 +41,8 @@ if (!gotLock) {
         sandbox: false,
       },
     });
+    createIPCHandler({ router: appRouter, windows: [win] });
+
     if (process.env.ELECTRON_RENDERER_URL) {
       win.loadURL(process.env.ELECTRON_RENDERER_URL);
     } else {
