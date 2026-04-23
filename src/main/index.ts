@@ -1,6 +1,10 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, safeStorage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { sidepadPaths } from './paths.js';
+import { openSidepadDb } from './store/db.js';
+import { SecretStore } from './secret/secret-store.js';
+import { log } from './logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -14,9 +18,21 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    const paths = sidepadPaths();
+    log.info({ dbPath: paths.dbPath }, 'opening sidepad db');
+    const db = openSidepadDb(paths.dbPath);
+    const secrets = new SecretStore(db);
+    log.info({ encryption: secrets.isEncryptionAvailable() }, 'secret store ready');
+
+    if (!safeStorage.isEncryptionAvailable()) {
+      log.warn('safeStorage encryption unavailable — secrets will be stored in plaintext on this OS');
+    }
+
+    // expose to global for IPC routers in Task 11
+    (globalThis as any).sidepad = { db, secrets, paths };
+
     const win = new BrowserWindow({
-      width: 1200,
-      height: 800,
+      width: 1200, height: 800,
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         contextIsolation: true,
@@ -28,9 +44,9 @@ if (!gotLock) {
     } else {
       win.loadFile(join(__dirname, '../renderer/index.html'));
     }
+
+    app.on('before-quit', () => { try { db.close(); log.info('db closed'); } catch (e) { log.error(e); } });
   });
 
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
-  });
+  app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 }
