@@ -1,12 +1,20 @@
 import { app, BrowserWindow, safeStorage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { createIPCHandler } from 'electron-trpc/main';
+import { createRequire } from 'node:module';
 import { sidepadPaths } from './paths.js';
 import { openSidepadDb } from './store/db.js';
 import { SecretStore } from './secret/secret-store.js';
 import { appRouter } from './ipc/trpc.js';
 import { log } from './logger.js';
+
+// electron-trpc 0.7.1 ships a single ESM bundle that statically imports
+// `ipcRenderer` from 'electron'. In Electron's main process those exports
+// don't exist, so a top-level ESM `import` crashes on load. Resolve via CJS
+// require — CJS named imports are lazy and the runtime usage path never
+// touches ipcRenderer in the main process.
+const require = createRequire(import.meta.url);
+const { createIPCHandler } = require('electron-trpc/main') as typeof import('electron-trpc/main');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -36,7 +44,7 @@ if (!gotLock) {
     const win = new BrowserWindow({
       width: 1200, height: 800,
       webPreferences: {
-        preload: join(__dirname, '../preload/index.js'),
+        preload: join(__dirname, '../preload/index.mjs'),
         contextIsolation: true,
         sandbox: false,
       },
