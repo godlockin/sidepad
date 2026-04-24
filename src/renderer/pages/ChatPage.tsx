@@ -1,22 +1,32 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useChatStore } from '../stores/chat-store';
 import { useSettingsStore } from '../stores/settings-store';
+import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 import { Sidebar } from '../components/Sidebar';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatInput } from '../components/ChatInput';
+import { PersonaPicker } from '../components/PersonaPicker';
 import { Eyebrow } from '../components/ui';
 import { trpc } from '../lib/trpc-client';
 
 export function ChatPage() {
-  const { sessions, activeSessionId, loadSessions } = useSessionStore();
+  const { sessions, activeSessionId, activeSession: storeActive, loadSessions } = useSessionStore();
   const { sendMessage, stopStreaming, streaming, messages } = useChatStore();
   const { providers } = useSettingsStore();
+  const personas = usePersonaStore((s) => s.personas);
+  const loadPersonas = usePersonaStore((s) => s.loadPersonas);
+  const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [headerPicker, setHeaderPicker] = useState<{
+    agentId: string;
+    anchor: { top: number; left: number };
+  } | null>(null);
 
   useEffect(() => {
     loadSessions();
-  }, [loadSessions]);
+    loadPersonas();
+  }, [loadSessions, loadPersonas]);
 
   // Auto-scroll to bottom on new messages / streaming tokens
   useEffect(() => {
@@ -28,7 +38,7 @@ export function ChatPage() {
     }
   }, [messages, streaming]);
 
-  const activeSession = sessions.find((s) => s.id === activeSessionId);
+  const activeSession = storeActive ?? sessions.find((s) => s.id === activeSessionId) ?? null;
 
   const handleSend = async (text: string, mentions: string[]) => {
     if (!activeSessionId) {
@@ -115,6 +125,57 @@ export function ChatPage() {
             </div>
           )}
         </header>
+
+        {activeSession && activeSession.participants && activeSession.participants.length > 0 && (
+          <div className="px-8 py-2 border-b border-rule flex flex-wrap items-baseline gap-x-3 gap-y-1 bg-paper">
+            <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint">
+              voices
+            </span>
+            {activeSession.participants.map((p) => {
+              const persona = personas.find((pp) => pp.id === p.personaId);
+              const personaLabel =
+                p.personaId !== DEFAULT_PERSONA_ID && persona ? ` · ${persona.name}` : '';
+              return (
+                <button
+                  key={p.agentId}
+                  type="button"
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    setHeaderPicker({
+                      agentId: p.agentId,
+                      anchor: { top: rect.bottom + 6, left: rect.left },
+                    });
+                  }}
+                  className="font-display italic text-[13px] text-ink hover:text-accent cursor-pointer"
+                  style={{ fontVariationSettings: "'opsz' 14, 'SOFT' 50, 'WONK' 0" }}
+                  title="Click to change persona"
+                >
+                  @{p.agentId}
+                  {personaLabel && (
+                    <span className="font-mono not-italic text-[10px] uppercase tracking-[0.14em] text-ink-faint ml-1">
+                      {personaLabel}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {headerPicker && (
+          <PersonaPicker
+            currentPersonaId={
+              activeSession?.participants?.find((p) => p.agentId === headerPicker.agentId)
+                ?.personaId ?? DEFAULT_PERSONA_ID
+            }
+            anchor={headerPicker.anchor}
+            onSelect={async (personaId) => {
+              await setParticipantPersona(headerPicker.agentId, personaId);
+              setHeaderPicker(null);
+            }}
+            onClose={() => setHeaderPicker(null)}
+          />
+        )}
 
         {/* Body — centered column like a periodical */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto">

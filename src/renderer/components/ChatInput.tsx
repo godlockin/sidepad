@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MentionPicker } from './MentionPicker';
+import { PersonaPicker } from './PersonaPicker';
+import { useSessionStore } from '../stores/session-store';
+import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 
 interface ChatInputProps {
   onSend: (text: string, mentions: string[]) => void;
@@ -26,7 +29,19 @@ export function ChatInput({
 }: ChatInputProps) {
   const [input, setInput] = useState('');
   const [showPicker, setShowPicker] = useState(false);
+  const [chipPicker, setChipPicker] = useState<{
+    agentId: string;
+    anchor: { top: number; left: number };
+  } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const activeSession = useSessionStore((s) => s.activeSession);
+  const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
+  const personas = usePersonaStore((s) => s.personas);
+  const loadPersonas = usePersonaStore((s) => s.loadPersonas);
+
+  useEffect(() => {
+    if (personas.length === 0) loadPersonas();
+  }, [personas.length, loadPersonas]);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -73,22 +88,59 @@ export function ChatInput({
 
   return (
     <div className="relative border-t border-rule bg-paper">
-      {/* Mention chips — italic inline tags, not pills */}
+      {/* Mention chips — italic inline tags, clickable to switch persona */}
       {mentions.length > 0 && (
-        <div className="px-6 pt-3 flex flex-wrap gap-x-3 gap-y-1">
+        <div className="px-6 pt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint">
             addressed to
           </span>
-          {mentions.map((m) => (
-            <span
-              key={m}
-              className="font-display italic text-[13px] text-accent"
-              style={{ fontVariationSettings: "'opsz' 14, 'SOFT' 50, 'WONK' 0" }}
-            >
-              @{m}
-            </span>
-          ))}
+          {mentions.map((m) => {
+            const personaId =
+              activeSession?.participants?.find((p) => p.agentId === m)?.personaId ??
+              DEFAULT_PERSONA_ID;
+            const persona = personas.find((p) => p.id === personaId);
+            const personaLabel =
+              personaId !== DEFAULT_PERSONA_ID && persona ? ` · ${persona.name}` : '';
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={(e) => {
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  setChipPicker({
+                    agentId: m,
+                    anchor: { top: rect.bottom + 6, left: rect.left },
+                  });
+                }}
+                className="font-display italic text-[13px] text-accent hover:underline decoration-accent/40 underline-offset-[3px] cursor-pointer"
+                style={{ fontVariationSettings: "'opsz' 14, 'SOFT' 50, 'WONK' 0" }}
+                title="Click to change persona"
+              >
+                @{m}
+                {personaLabel && (
+                  <span className="font-mono not-italic text-[10px] uppercase tracking-[0.14em] text-ink-faint ml-1">
+                    {personaLabel}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+      )}
+
+      {chipPicker && (
+        <PersonaPicker
+          currentPersonaId={
+            activeSession?.participants?.find((p) => p.agentId === chipPicker.agentId)
+              ?.personaId ?? DEFAULT_PERSONA_ID
+          }
+          anchor={chipPicker.anchor}
+          onSelect={async (personaId) => {
+            await setParticipantPersona(chipPicker.agentId, personaId);
+            setChipPicker(null);
+          }}
+          onClose={() => setChipPicker(null)}
+        />
       )}
 
       <div className="px-6 py-4 flex items-end gap-5 relative">

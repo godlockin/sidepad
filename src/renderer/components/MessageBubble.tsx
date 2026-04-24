@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import type { Message } from '../../main/store/types';
 import { EditForkModal } from './EditForkModal';
+import { PersonaPicker } from './PersonaPicker';
+import { useSessionStore } from '../stores/session-store';
+import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 
 interface MessageBubbleProps {
   message: Message;
@@ -121,9 +124,7 @@ function AgentEntry({
 
       {/* Byline */}
       <header className="flex items-baseline gap-3 mb-1.5">
-        <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink">
-          {meta.agentId || 'agent'}
-        </span>
+        <BylineAgent agentId={meta.agentId ?? null} />
         {isStreaming && (
           <span className="font-mono text-xxs tracking-wider text-accent">
             writing…
@@ -175,5 +176,58 @@ function AgentEntry({
         </footer>
       )}
     </div>
+  );
+}
+
+/* ─── Clickable byline showing agent + persona ─────────────────── */
+
+function BylineAgent({ agentId }: { agentId: string | null }) {
+  const [picker, setPicker] = useState<{ top: number; left: number } | null>(null);
+  const activeSession = useSessionStore((s) => s.activeSession);
+  const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
+  const personas = usePersonaStore((s) => s.personas);
+
+  if (!agentId) {
+    return (
+      <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink">agent</span>
+    );
+  }
+
+  const personaId =
+    activeSession?.participants?.find((p) => p.agentId === agentId)?.personaId ??
+    DEFAULT_PERSONA_ID;
+  const persona = personas.find((p) => p.id === personaId);
+  const showPersona = personaId !== DEFAULT_PERSONA_ID && persona;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          setPicker({ top: rect.bottom + 6, left: rect.left });
+        }}
+        className="font-mono text-xxs uppercase tracking-[0.16em] text-ink hover:text-accent cursor-pointer transition-colors"
+        title="Click to change persona"
+      >
+        {agentId}
+        {showPersona && (
+          <span className="normal-case tracking-[0.14em] text-ink-faint ml-1">
+            · {persona!.name}
+          </span>
+        )}
+      </button>
+      {picker && (
+        <PersonaPicker
+          currentPersonaId={personaId}
+          anchor={picker}
+          onSelect={async (id) => {
+            await setParticipantPersona(agentId, id);
+            setPicker(null);
+          }}
+          onClose={() => setPicker(null)}
+        />
+      )}
+    </>
   );
 }

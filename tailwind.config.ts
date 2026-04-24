@@ -6,14 +6,17 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
-        serif: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
-        sans: ['Instrument Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        serif: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'Menlo', 'monospace'],
       },
       colors: {
         paper: 'rgb(var(--paper) / <alpha-value>)',
-        surface: 'rgb(var(--surface) / <alpha-value>)',
+        surface: {
+          DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+          2: 'rgb(var(--surface-2) / <alpha-value>)',
+        },
         ink: {
           DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
           muted: 'rgb(var(--ink-muted) / <alpha-value>)',
@@ -30,13 +33,19 @@ export default {
         },
         danger: 'rgb(var(--danger) / <alpha-value>)',
         success: 'rgb(var(--success) / <alpha-value>)',
+        warn: 'rgb(var(--warn) / <alpha-value>)',
       },
       fontSize: {
-        'xxs': ['10px', { lineHeight: '14px', letterSpacing: '0.06em' }],
+        'xxs': ['10px', { lineHeight: '14px', letterSpacing: '0.04em' }],
       },
       letterSpacing: {
-        tightest: '-0.04em',
-        tighter: '-0.025em',
+        tightest: '-0.03em',
+        tighter: '-0.02em',
+      },
+      borderRadius: {
+        DEFAULT: 'var(--radius)',
+        sm: 'var(--radius-sm)',
+        lg: 'var(--radius-lg)',
       },
       transitionTimingFunction: {
         editorial: 'cubic-bezier(0.32, 0.72, 0, 1)',

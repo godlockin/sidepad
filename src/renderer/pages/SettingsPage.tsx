@@ -3,13 +3,15 @@ import { useSettingsStore } from '../stores/settings-store';
 import { applyTheme, type Theme } from '../lib/theme';
 import { ProviderForm } from '../components/ProviderForm';
 import { Eyebrow, Heading, Rule, Button } from '../components/ui';
+import { PersonasTab } from './settings/PersonasTab';
 
-type SettingsTab = 'providers' | 'appearance' | 'about';
+type SettingsTab = 'providers' | 'personas' | 'appearance' | 'about';
 
 const TABS: { key: SettingsTab; label: string; no: string }[] = [
   { key: 'providers', label: 'Voices', no: 'i' },
-  { key: 'appearance', label: 'Appearance', no: 'ii' },
-  { key: 'about', label: 'Colophon', no: 'iii' },
+  { key: 'personas', label: 'Personas', no: 'ii' },
+  { key: 'appearance', label: 'Appearance', no: 'iii' },
+  { key: 'about', label: 'Colophon', no: 'iv' },
 ];
 
 export function SettingsPage() {
@@ -153,9 +155,11 @@ export function SettingsPage() {
             </section>
           )}
 
+          {tab === 'personas' && <PersonasTab />}
+
           {tab === 'appearance' && (
             <section>
-              <Eyebrow>Chapter ii · appearance</Eyebrow>
+              <Eyebrow>Chapter iii · appearance</Eyebrow>
               <Heading level={1} className="mt-2 mb-3">
                 A room for the words.
               </Heading>
@@ -182,7 +186,7 @@ export function SettingsPage() {
 
           {tab === 'about' && (
             <section>
-              <Eyebrow>Chapter iii · colophon</Eyebrow>
+              <Eyebrow>Chapter iv · colophon</Eyebrow>
               <Heading level={1} className="mt-2 mb-6">
                 On this edition.
               </Heading>
