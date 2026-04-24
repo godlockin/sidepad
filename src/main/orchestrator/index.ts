@@ -21,7 +21,18 @@ export class ChatOrchestrator {
     private classifier: ClassifierAgent | null,
     private getProviderForAgent: (agentId: string) => LLMProvider | null = () => null,
     private getModelForAgent: (agentId: string) => string = () => 'gpt-4o-mini',
+    private getPersonaPromptForAgent: (sessionId: string, agentId: string) => string | null = () => null,
   ) {}
+
+  /**
+   * Combine persona prompt + session system prompt. Persona comes first so it
+   * acts as the agent's identity; session prompt is shared context.
+   */
+  private composedSystemPrompt(sessionId: string, agentId: string, sessionPrompt: string | null): string | null {
+    const persona = this.getPersonaPromptForAgent(sessionId, agentId);
+    if (persona && sessionPrompt) return `${persona}\n\n${sessionPrompt}`;
+    return persona ?? sessionPrompt ?? null;
+  }
 
   async *send(
     input: OrchestratorSendInput,
@@ -106,7 +117,7 @@ export class ChatOrchestrator {
           history: [],
           agentId,
           visibilityMode: session.visibilityMode,
-          systemPrompt: session.systemPrompt,
+          systemPrompt: this.composedSystemPrompt(session.id, agentId, session.systemPrompt),
           currentTurn: [{ role: 'user' as const, content: input.text }],
           modelContextWindow: 8000,
         });
@@ -147,7 +158,7 @@ export class ChatOrchestrator {
           history: [],
           agentId: leadId,
           visibilityMode: session.visibilityMode,
-          systemPrompt: session.systemPrompt,
+          systemPrompt: this.composedSystemPrompt(session.id, leadId, session.systemPrompt),
           currentTurn: [{ role: 'user' as const, content: input.text }],
           modelContextWindow: 8000,
         });
@@ -181,10 +192,11 @@ export class ChatOrchestrator {
         continue;
       }
 
-      const ctxMessages = [
-        { role: 'user' as const, content: input.text },
-        { role: 'assistant' as const, content: leadContent, name: leadId },
-      ];
+      const ctxMessages: any[] = [];
+      const commenterSysPrompt = this.composedSystemPrompt(session.id, commenterId, session.systemPrompt);
+      if (commenterSysPrompt) ctxMessages.push({ role: 'system', content: commenterSysPrompt });
+      ctxMessages.push({ role: 'user' as const, content: input.text });
+      ctxMessages.push({ role: 'assistant' as const, content: leadContent, name: leadId });
 
       try {
         for await (const ev of commenterProvider.chat(
@@ -229,7 +241,8 @@ export class ChatOrchestrator {
       const msg = this.store.startAssistantMessage(session.id, turnId, agentId, provider.id, model);
 
       const ctxMessages: any[] = [];
-      if (session.systemPrompt) ctxMessages.push({ role: 'system', content: session.systemPrompt });
+      const relaySysPrompt = this.composedSystemPrompt(session.id, agentId, session.systemPrompt);
+      if (relaySysPrompt) ctxMessages.push({ role: 'system', content: relaySysPrompt });
       for (const [prevAgent, output] of successfulOutputs) {
         ctxMessages.push({ role: 'assistant', content: output, name: prevAgent });
       }

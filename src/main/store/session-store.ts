@@ -1,6 +1,8 @@
 // src/main/store/session-store.ts
 import type Database from 'better-sqlite3';
-import type { Session, Message, MessageMeta, ChatRequest } from './types.js';
+import type { Session, Message, MessageMeta, ChatRequest, Participant } from './types.js';
+
+const DEFAULT_PERSONA_ID = '_default';
 
 function uuid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -8,6 +10,31 @@ function uuid(): string {
 
 function now(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+/** Parse participants JSON, accepting both legacy string[] and new Participant[]. */
+function parseParticipants(raw: string | null | undefined): Participant[] {
+  if (!raw) return [];
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { return []; }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map((p) => {
+    if (typeof p === 'string') return { agentId: p, personaId: DEFAULT_PERSONA_ID };
+    if (p && typeof p === 'object' && 'agentId' in p) {
+      const obj = p as { agentId: string; personaId?: string };
+      return { agentId: obj.agentId, personaId: obj.personaId ?? DEFAULT_PERSONA_ID };
+    }
+    return null;
+  }).filter((p): p is Participant => p !== null);
+}
+
+function normalizeParticipants(input: ReadonlyArray<string | Participant> | undefined): Participant[] {
+  if (!input) return [];
+  return input.map((p) =>
+    typeof p === 'string'
+      ? { agentId: p, personaId: DEFAULT_PERSONA_ID }
+      : { agentId: p.agentId, personaId: p.personaId ?? DEFAULT_PERSONA_ID },
+  );
 }
 
 function rowToSession(row: Record<string, unknown>): Session {
@@ -20,7 +47,7 @@ function rowToSession(row: Record<string, unknown>): Session {
     visibilityMode: (row.visibility_mode as 'independent' | 'full') ?? 'independent',
     groupMode: (row.group_mode as 'parallel' | 'relay') ?? 'parallel',
     defaultAgentId: (row.default_agent_id as string | null) ?? null,
-    participants: JSON.parse((row.participants as string) ?? '[]') as string[],
+    participants: parseParticipants(row.participants as string | null),
     folderId: (row.folder_id as string | null) ?? null,
     projectId: (row.project_id as string | null) ?? null,
     pinned: (row.pinned as number) === 1,
@@ -51,7 +78,7 @@ function rowToMessage(row: Record<string, unknown>): Message {
 export interface CreateSessionInput {
   title?: string;
   systemPrompt?: string;
-  participants?: string[];
+  participants?: ReadonlyArray<string | Participant>;
   folderId?: string;
   projectId?: string;
 }
@@ -64,7 +91,7 @@ export class SessionStore {
   createSession(input: CreateSessionInput = {}): Session {
     const id = uuid();
     const t = now();
-    const participants = JSON.stringify(input.participants ?? []);
+    const participants = JSON.stringify(normalizeParticipants(input.participants));
     this.db
       .prepare(
         `INSERT INTO sessions(id, title, created_at, updated_at, system_prompt, participants, folder_id, project_id)
@@ -90,6 +117,31 @@ export class SessionStore {
 
   setVisibilityMode(sessionId: string, mode: 'independent' | 'full'): void {
     this.db.prepare('UPDATE sessions SET visibility_mode = ?, updated_at = ? WHERE id = ?').run(mode, now(), sessionId);
+  }
+
+  /** Idempotently add an agent to the session's participant list with the default persona. */
+  ensureParticipant(sessionId: string, agentId: string): Participant[] {
+    const session = this.getSession(sessionId);
+    if (!session) return [];
+    if (session.participants.some((p) => p.agentId === agentId)) return session.participants;
+    const next = [...session.participants, { agentId, personaId: DEFAULT_PERSONA_ID }];
+    this.db
+      .prepare('UPDATE sessions SET participants = ?, updated_at = ? WHERE id = ?')
+      .run(JSON.stringify(next), now(), sessionId);
+    return next;
+  }
+
+  /** Update the persona for a single participant. No-op if agent isn't a participant. */
+  setParticipantPersona(sessionId: string, agentId: string, personaId: string): Participant[] {
+    const session = this.getSession(sessionId);
+    if (!session) return [];
+    const next = session.participants.map((p) =>
+      p.agentId === agentId ? { ...p, personaId } : p,
+    );
+    this.db
+      .prepare('UPDATE sessions SET participants = ?, updated_at = ? WHERE id = ?')
+      .run(JSON.stringify(next), now(), sessionId);
+    return next;
   }
 
   // ── Message operations ──────────────────────────────────

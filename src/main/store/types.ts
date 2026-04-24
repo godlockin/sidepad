@@ -1,5 +1,10 @@
 // src/main/store/types.ts
 
+export interface Participant {
+  agentId: string;
+  personaId: string;
+}
+
 export interface Session {
   id: string;
   title: string | null;
@@ -9,7 +14,7 @@ export interface Session {
   visibilityMode: 'independent' | 'full';
   groupMode: 'parallel' | 'relay';
   defaultAgentId: string | null;
-  participants: string[];
+  participants: Participant[];
   folderId: string | null;
   projectId: string | null;
   pinned: boolean;

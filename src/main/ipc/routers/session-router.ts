@@ -129,4 +129,16 @@ export const sessionRouter = t.router({
       if (!session) throw new Error(`Session "${input.sessionId}" not found`);
       return getStore().listMessages(input.sessionId);
     }),
+
+  setParticipantPersona: t.procedure
+    .input(z.object({ sessionId: z.string(), agentId: z.string(), personaId: z.string() }))
+    .mutation(({ input }) => {
+      const store = getStore();
+      const session = store.getSession(input.sessionId);
+      if (!session) throw new Error(`Session "${input.sessionId}" not found`);
+      // Make sure the agent is a participant first (idempotent)
+      store.ensureParticipant(input.sessionId, input.agentId);
+      const next = store.setParticipantPersona(input.sessionId, input.agentId, input.personaId);
+      return { participants: next };
+    }),
 });

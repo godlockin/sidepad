@@ -3,6 +3,7 @@ import { observable } from '@trpc/server/observable';
 import type { Observer, TeardownLogic } from '@trpc/server/observable';
 import { z } from 'zod';
 import { SessionStore } from '../../store/session-store.js';
+import { PersonaStore } from '../../store/persona-store.js';
 import { ChatOrchestrator } from '../../orchestrator/index.js';
 import type { OrchestratorEvent } from '../../orchestrator/types.js';
 import { registry } from '../../providers/index.js';
@@ -19,6 +20,7 @@ function getOrchestrator(): ChatOrchestrator {
   if (!db) throw new Error('Database not available');
 
   const store = new SessionStore(db);
+  const personaStore = new PersonaStore(db);
   const classifier = null;
 
   // Look up the configured model for an agent. Order of precedence:
@@ -65,9 +67,27 @@ function getOrchestrator(): ChatOrchestrator {
       return providers.length > 0 ? providers[0] : null;
     },
     resolveModel,
+    (sessionId: string, agentId: string) => {
+      const session = store.getSession(sessionId);
+      if (!session) return null;
+      const part = session.participants.find((p) => p.agentId === agentId);
+      if (!part) return null;
+      const persona = personaStore.get(part.personaId);
+      return persona?.prompt ?? null;
+    },
   );
 
   return orchestrator;
+}
+
+/** Auto-add @-mentioned agents as participants of the session before send. */
+function ensureMentionedParticipants(sessionId: string, mentions: string[]): void {
+  const db = (globalThis as any).sidepad?.db;
+  if (!db) return;
+  const store = new SessionStore(db);
+  for (const agentId of mentions) {
+    store.ensureParticipant(sessionId, agentId);
+  }
 }
 
 export const chatRouter = t.router({
@@ -84,6 +104,9 @@ export const chatRouter = t.router({
         (observer: Observer<OrchestratorEvent, Error>): TeardownLogic => {
           const ac = new AbortController();
           const orch = getOrchestrator();
+
+          // Auto-add @-mentioned agents to the session participants list with default persona
+          ensureMentionedParticipants(input.sessionId, input.mentions);
 
           async function run() {
             try {
