@@ -128,7 +128,15 @@ export class SessionStore {
 
   finalizeAssistant(msgId: string, meta: MessageMeta, finishReason: string, usage?: { promptTokens: number; completionTokens: number }): void {
     const t = now();
-    const metaJson = JSON.stringify(meta);
+    // Merge incoming meta with existing meta (preserve agentId/providerId/modelId set at start)
+    const existingRow = this.db
+      .prepare('SELECT meta_json FROM messages WHERE id = ?')
+      .get(msgId) as { meta_json: string | null } | undefined;
+    let existing: Record<string, unknown> = {};
+    if (existingRow?.meta_json) {
+      try { existing = JSON.parse(existingRow.meta_json); } catch { /* keep empty */ }
+    }
+    const metaJson = JSON.stringify({ ...existing, ...(meta as object) });
     if (usage) {
       this.db
         .prepare(

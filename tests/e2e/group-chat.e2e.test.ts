@@ -88,6 +88,20 @@ async function addAzureVoice(name: string, deployment: string) {
   );
 }
 
+async function ensureOllamaVoice(name: string, model: string) {
+  const existing = sql(`SELECT id FROM provider_configs WHERE id='${name}';`);
+  if (!existing.includes(name)) {
+    await addOllamaVoice(name, model);
+  }
+}
+
+async function ensureAzureVoice(name: string, deployment: string) {
+  const existing = sql(`SELECT id FROM provider_configs WHERE id='${name}';`);
+  if (!existing.includes(name)) {
+    await addAzureVoice(name, deployment);
+  }
+}
+
 async function newSession(): Promise<string> {
   await openChat();
   await win.locator('aside').locator('button', { hasText: '+ new' }).click();
@@ -167,6 +181,8 @@ test('G0 — configure @qwen and @llama Ollama voices', async () => {
 // ─────────────────────────────────────────────────────────────────────────
 test('G1 — parallel: @qwen + @llama both respond', async () => {
   test.setTimeout(180_000);
+  await ensureOllamaVoice('qwen', 'qwen2.5:1.5b');
+  await ensureOllamaVoice('llama', 'llama3.2:1b');
   const sessionId = await newSession();
   // Default groupMode is 'parallel' — leave as-is
 
@@ -192,6 +208,8 @@ test('G1 — parallel: @qwen + @llama both respond', async () => {
 // ─────────────────────────────────────────────────────────────────────────
 test('G2 — relay: @llama receives @qwen output in history', async () => {
   test.setTimeout(180_000);
+  await ensureOllamaVoice('qwen', 'qwen2.5:1.5b');
+  await ensureOllamaVoice('llama', 'llama3.2:1b');
   const sessionId = await newSession();
   // Switch session to relay mode via DB (no UI affordance yet)
   sql(`UPDATE sessions SET group_mode='relay' WHERE id='${sessionId}';`);
@@ -222,28 +240,41 @@ test('G2 — relay: @llama receives @qwen output in history', async () => {
 // G3 — LEAD-AND-COMMENT: @qwen leads, @llama comments (rule-based trigger)
 // ─────────────────────────────────────────────────────────────────────────
 test('G3 — lead-and-comment: @qwen leads, @llama comments', async () => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
+  await ensureOllamaVoice('qwen', 'qwen2.5:1.5b');
+  await ensureOllamaVoice('llama', 'llama3.2:1b');
   const sessionId = await newSession();
   // back to parallel default; the trigger word "你先" forces lead-and-comment
   sql(`UPDATE sessions SET group_mode='parallel' WHERE id='${sessionId}';`);
 
-  await sendAndWait('@qwen 你先回答：地球到月球大概多远？@llama 之后点评一下。', 150_000);
+  await sendAndWait('@qwen 你先回答：地球到月球大概多远？@llama 之后点评一下。', 270_000);
   await win.screenshot({ path: path.join(SHOTS, 'G3-lead-and-comment.png') });
 
+  // Pull full row: meta_json | status | content_length
   const rows = sql(
-    `SELECT meta_json FROM messages WHERE session_id='${sessionId}' AND role='assistant' ORDER BY created_at;`,
+    `SELECT meta_json || '||' || status || '||' || length(content) FROM messages WHERE session_id='${sessionId}' AND role='assistant' ORDER BY created_at;`,
   ).split('\n').filter(Boolean);
   console.log('G3 assistant rows:', rows.length, rows);
   expect(rows.length).toBeGreaterThanOrEqual(2);
 
-  // First assistant should be qwen (lead), second llama (commenter)
-  // Parse meta_json to confirm agent identity
-  const agentIds = rows.map((r) => {
-    try { return JSON.parse(r).agentId; } catch { return null; }
+  const parsed = rows.map((r) => {
+    const [metaStr, status, lenStr] = r.split('||');
+    let agentId: string | null = null;
+    try { agentId = JSON.parse(metaStr).agentId ?? null; } catch { /* ignore */ }
+    return { agentId, status, length: Number(lenStr) };
   });
-  console.log('G3 agent order:', agentIds);
-  expect(agentIds[0]).toBe('qwen');
-  expect(agentIds.slice(1)).toContain('llama');
+  console.log('G3 parsed:', parsed);
+
+  // Hard assertions: lead-and-comment requires
+  //   1. ordered: qwen leads, llama appears in commenters
+  //   2. no agent errored out
+  //   3. each produced non-empty content
+  expect(parsed[0].agentId).toBe('qwen');
+  expect(parsed.slice(1).map((p) => p.agentId)).toContain('llama');
+  for (const p of parsed) {
+    expect(p.status).not.toBe('error');
+    expect(p.length).toBeGreaterThan(0);
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -253,7 +284,8 @@ test('G4 — cross-provider parallel: @qwen + @azure', async () => {
   test.skip(!HAS_AZURE, 'no AZURE_OPENAI_* env');
   test.setTimeout(240_000);
 
-  await addAzureVoice('azure', process.env.AZURE_OPENAI_DEPLOYMENT!);
+  await ensureOllamaVoice('qwen', 'qwen2.5:1.5b');
+  await ensureAzureVoice('azure', process.env.AZURE_OPENAI_DEPLOYMENT!);
 
   const rows = sql(`SELECT id FROM provider_configs WHERE id='azure';`);
   expect(rows).toContain('azure');
