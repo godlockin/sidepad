@@ -1,30 +1,37 @@
 import React, { useState } from 'react';
-import { Heartbeat } from './components/Heartbeat';
+import { SettingsPage } from './pages/SettingsPage';
 import { SpikePage } from './pages/SpikePage';
 
+type Page = 'chat' | 'settings';
+
 export function App() {
-  const [page, setPage] = useState<'heartbeat' | 'spike'>('heartbeat');
+  const [page, setPage] = useState<Page>('chat');
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold mb-2">sidepad</h1>
-      <p className="mb-4">Phase 1 skeleton.</p>
-      <div className="flex gap-2 mb-4">
-        <button
-          className={`px-3 py-1 rounded text-sm ${page === 'heartbeat' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-          onClick={() => setPage('heartbeat')}
-        >
-          Heartbeat
-        </button>
-        <button
-          className={`px-3 py-1 rounded text-sm ${page === 'spike' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-          onClick={() => setPage('spike')}
-        >
-          Spike
-        </button>
+    <div className="h-screen flex flex-col">
+      {/* Top nav */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-700 bg-gray-900">
+        <span className="text-lg font-semibold text-white mr-4">sidepad</span>
+        {([['chat', 'Chat'], ['settings', 'Settings']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setPage(key)}
+            className={`px-3 py-1 rounded text-sm ${
+              page === key
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-      {page === 'heartbeat' && <Heartbeat />}
-      {page === 'spike' && <SpikePage />}
+
+      {/* Page content */}
+      <div className="flex-1 overflow-hidden">
+        {page === 'chat' && <SpikePage />}
+        {page === 'settings' && <SettingsPage />}
+      </div>
     </div>
   );
 }
