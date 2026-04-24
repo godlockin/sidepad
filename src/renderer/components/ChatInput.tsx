@@ -1,14 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { MentionPicker } from './MentionPicker';
 
 interface ChatInputProps {
   onSend: (text: string, mentions: string[]) => void;
   onStop: () => void;
   streaming: boolean;
   disabled?: boolean;
+  providers?: Array<{ id: string; configId: string }>;
+  onMentionSelect?: (providerId: string) => void;
 }
 
-export function ChatInput({ onSend, onStop, streaming, disabled = false }: ChatInputProps) {
+export function ChatInput({ onSend, onStop, streaming, disabled = false, providers = [], onMentionSelect }: ChatInputProps) {
   const [input, setInput] = useState('');
+  const [showPicker, setShowPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -16,7 +20,26 @@ export function ChatInput({ onSend, onStop, streaming, disabled = false }: ChatI
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 150) + 'px';
     }
-  }, [input]);
+    // Show picker when typing @
+    const lastAt = input.lastIndexOf('@');
+    if (lastAt >= 0 && providers.length > 0) {
+      const afterAt = input.slice(lastAt + 1);
+      if (afterAt === '' || /^[a-zA-Z0-9_-]+$/.test(afterAt)) {
+        setShowPicker(true);
+        return;
+      }
+    }
+    setShowPicker(false);
+  }, [input, providers.length]);
+
+  const handlePickerSelect = (providerId: string) => {
+    // Replace the last @mention with the selected provider id
+    const lastAt = input.lastIndexOf('@');
+    const before = input.slice(0, lastAt);
+    setInput(before + '@' + providerId + ' ');
+    setShowPicker(false);
+    onMentionSelect?.(providerId);
+  };
 
   const handleSend = () => {
     if (!input.trim() || streaming) return;
@@ -46,17 +69,26 @@ export function ChatInput({ onSend, onStop, streaming, disabled = false }: ChatI
           </div>
         ) : null;
       })()}
-      <div className="flex gap-2">
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Message... (Cmd+Enter to send)"
-          rows={1}
-          disabled={disabled || streaming}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 resize-none focus:outline-none focus:border-blue-500 text-sm"
-        />
+      <div className="flex gap-2 relative">
+        <div className="flex-1 relative">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Message... (Cmd+Enter to send)"
+            rows={1}
+            disabled={disabled || streaming}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 resize-none focus:outline-none focus:border-blue-500 text-sm"
+          />
+          {showPicker && (
+            <MentionPicker
+              providers={providers}
+              onSelect={handlePickerSelect}
+              onClose={() => setShowPicker(false)}
+            />
+          )}
+        </div>
         {streaming ? (
           <button
             onClick={onStop}
