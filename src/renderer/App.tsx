@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SettingsPage } from './pages/SettingsPage';
-import { SpikePage } from './pages/SpikePage';
+import { ChatPage } from './pages/ChatPage';
 
 type Page = 'chat' | 'settings';
 
@@ -29,7 +29,7 @@ export function App() {
 
       {/* Page content */}
       <div className="flex-1 overflow-hidden">
-        {page === 'chat' && <SpikePage />}
+        {page === 'chat' && <ChatPage />}
         {page === 'settings' && <SettingsPage />}
       </div>
     </div>
