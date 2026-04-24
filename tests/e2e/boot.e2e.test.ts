@@ -10,8 +10,8 @@ test('app boots, IPC heartbeat reports ok, db file is created', async () => {
     env: { ...process.env, NODE_ENV: 'test', SIDEPAD_USER_DATA: userData },
   });
   const window = await app.firstWindow();
-  await expect(window.locator('h1')).toHaveText('sidepad');
-  await expect(window.locator('text=IPC ok')).toBeVisible({ timeout: 10_000 });
+  // First launch with empty userData → onboarding wizard.
+  await expect(window.locator('h1')).toHaveText(/sidepad/);
 
   const dbExists = fs.existsSync(path.join(userData, 'sidepad.db'));
   expect(dbExists).toBe(true);

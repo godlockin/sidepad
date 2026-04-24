@@ -44,29 +44,8 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: Pro
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="relative pl-6 py-2 mt-4 anim-fade-up"
-    >
-      {/* Left hairline — the "draft" rule */}
-      <span
-        aria-hidden
-        className="absolute left-0 top-2 bottom-2 w-px bg-accent"
-      />
-
-      <header className="mb-5">
-        <span className="font-mono text-xxs uppercase tracking-[0.18em] text-ink-faint">
-          new entry
-        </span>
-        <h4
-          className="font-display text-[22px] leading-[1.15] text-ink mt-1"
-          style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 50, 'WONK' 1", fontStyle: 'italic' }}
-        >
-          Introduce a voice.
-        </h4>
-      </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4 anim-fade-up">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Kind">
           <Select value={type} onChange={(e) => setType(e.target.value as ProviderType)}>
             {PROVIDER_TYPES.map((pt) => (
@@ -114,14 +93,14 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: Pro
         )}
       </div>
 
-      <footer className="mt-6 flex items-center gap-5">
+      <div className="flex items-center gap-2 pt-2">
         <Button type="submit" variant="primary" size="sm">
           save voice
         </Button>
-        <Button type="button" variant="link" size="sm" onClick={onCancel}>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           cancel
         </Button>
-      </footer>
+      </div>
     </form>
   );
 }

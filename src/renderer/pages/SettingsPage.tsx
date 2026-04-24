@@ -2,16 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
 import { applyTheme, type Theme } from '../lib/theme';
 import { ProviderForm } from '../components/ProviderForm';
-import { Eyebrow, Heading, Rule, Button } from '../components/ui';
+import { Heading, Button } from '../components/ui';
 import { PersonasTab } from './settings/PersonasTab';
 
 type SettingsTab = 'providers' | 'personas' | 'appearance' | 'about';
 
-const TABS: { key: SettingsTab; label: string; no: string }[] = [
-  { key: 'providers', label: 'Voices', no: 'i' },
-  { key: 'personas', label: 'Personas', no: 'ii' },
-  { key: 'appearance', label: 'Appearance', no: 'iii' },
-  { key: 'about', label: 'Colophon', no: 'iv' },
+const TABS: { key: SettingsTab; label: string }[] = [
+  { key: 'providers', label: 'Voices' },
+  { key: 'personas', label: 'Personas' },
+  { key: 'appearance', label: 'Appearance' },
+  { key: 'about', label: 'About' },
 ];
 
 export function SettingsPage() {
@@ -39,37 +39,23 @@ export function SettingsPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* Table of Contents */}
-      <aside className="w-[220px] shrink-0 border-r border-rule bg-paper py-8 px-6">
-        <Eyebrow className="!tracking-[0.22em]">Contents</Eyebrow>
-        <nav className="mt-5">
-          <ol className="space-y-3">
+      {/* Sidebar */}
+      <aside className="w-[200px] shrink-0 border-r border-rule bg-surface-2 py-4 px-2">
+        <nav>
+          <ol className="space-y-0.5">
             {TABS.map((t) => {
               const active = tab === t.key;
               return (
                 <li key={t.key}>
                   <button
                     onClick={() => setTab(t.key)}
-                    className={`group flex items-baseline gap-3 text-left cursor-pointer transition-colors duration-[var(--dur-fast)] ${
-                      active ? 'text-ink' : 'text-ink-muted hover:text-ink'
+                    className={`w-full text-left px-3 py-1.5 rounded-[6px] text-[13px] font-medium cursor-pointer transition-colors duration-[var(--dur-fast)] ${
+                      active
+                        ? 'bg-accent-muted text-accent'
+                        : 'text-ink-muted hover:text-ink hover:bg-surface'
                     }`}
                   >
-                    <span
-                      className={`font-mono text-xxs tabular-nums lowercase ${
-                        active ? 'text-accent' : 'text-ink-faint'
-                      }`}
-                    >
-                      {t.no}.
-                    </span>
-                    <span
-                      className="font-display text-[17px] leading-[1.2]"
-                      style={{
-                        fontVariationSettings: "'opsz' 40, 'SOFT' 50, 'WONK' 0",
-                        fontStyle: active ? 'italic' : 'normal',
-                      }}
-                    >
-                      {t.label}
-                    </span>
+                    {t.label}
                   </button>
                 </li>
               );
@@ -78,80 +64,67 @@ export function SettingsPage() {
         </nav>
       </aside>
 
-      {/* Article */}
-      <article className="flex-1 overflow-y-auto">
-        <div className="max-w-[720px] mx-auto px-10 py-10">
+      {/* Main */}
+      <article className="flex-1 overflow-y-auto bg-paper">
+        <div className="max-w-[680px] mx-auto px-8 py-8">
           {tab === 'providers' && (
             <section>
-              <Eyebrow>Chapter i · voices</Eyebrow>
-              <Heading level={1} className="mt-2 mb-3">
-                The voices at the table.
+              <Heading level={1} className="mb-2">
+                Voices
               </Heading>
-              <p className="font-serif-body text-[15px] leading-[1.7] text-ink-muted max-w-[56ch]">
+              <p className="text-[14px] leading-[1.6] text-ink-muted">
                 Each voice is an LLM endpoint you address with{' '}
-                <span
-                  className="font-display italic text-accent"
-                  style={{ fontVariationSettings: "'opsz' 18, 'SOFT' 50, 'WONK' 0" }}
-                >
-                  @name
-                </span>
-                . Keys stay encrypted on this machine. There is no sync, no
-                telemetry — these words leave only when you send them.
+                <span className="font-mono text-accent text-[13px]">@name</span>.
+                Keys stay encrypted on this machine.
               </p>
 
-              <div className="mt-8 mb-4 flex items-baseline justify-between">
-                <Eyebrow>Configured · {providers.length.toString().padStart(2, '0')}</Eyebrow>
+              <div className="mt-6 mb-3 flex items-center justify-between">
+                <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
+                  Configured · {providers.length.toString().padStart(2, '0')}
+                </span>
                 {!showForm && (
-                  <button
-                    onClick={() => setShowForm(true)}
-                    className="font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint hover:text-accent cursor-pointer transition-colors"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setShowForm(true)}>
                     + introduce a voice
-                  </button>
+                  </Button>
                 )}
               </div>
-              <Rule />
 
-              {!showForm && providers.length === 0 && (
-                <p className="font-serif-body italic text-[14px] text-ink-faint py-10 text-center">
-                  No voices yet. Introduce one to begin.
-                </p>
-              )}
+              <div className="border border-rule rounded-[10px] bg-surface overflow-hidden">
+                {!showForm && providers.length === 0 && (
+                  <p className="text-[13px] text-ink-faint py-10 text-center">
+                    No voices yet. Introduce one to begin.
+                  </p>
+                )}
 
-              {providers.length > 0 && (
-                <ol className="divide-y divide-rule">
-                  {providers.map((p, i) => (
-                    <li key={p.id} className="py-4 flex items-baseline gap-4">
-                      <span className="font-mono text-xxs tabular-nums text-ink-faint pt-[3px]">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-3">
-                          <span
-                            className="font-display italic text-[18px] text-ink"
-                            style={{ fontVariationSettings: "'opsz' 36, 'SOFT' 50, 'WONK' 0" }}
-                          >
-                            @{p.id}
-                          </span>
-                          <span className="font-mono text-xxs uppercase tracking-[0.14em] text-ink-faint">
-                            {p.configId}
-                          </span>
+                {providers.length > 0 && (
+                  <ol className="divide-y divide-rule">
+                    {providers.map((p) => (
+                      <li key={p.id} className="px-4 py-3 flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[13px] text-ink bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px]">
+                              @{p.id}
+                            </span>
+                            <span className="text-[12px] text-ink-muted">{p.configId}</span>
+                          </div>
                         </div>
-                      </div>
-                      <span className="font-mono text-xxs uppercase tracking-[0.16em] text-success">
-                        · active
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
+                        <span className="text-[11px] uppercase tracking-[0.06em] text-success">
+                          ● active
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
 
-              {showForm && (
-                <ProviderForm
-                  onSubmit={handleAddProvider}
-                  onCancel={() => setShowForm(false)}
-                />
-              )}
+                {showForm && (
+                  <div className="p-5">
+                    <ProviderForm
+                      onSubmit={handleAddProvider}
+                      onCancel={() => setShowForm(false)}
+                    />
+                  </div>
+                )}
+              </div>
             </section>
           )}
 
@@ -159,18 +132,18 @@ export function SettingsPage() {
 
           {tab === 'appearance' && (
             <section>
-              <Eyebrow>Chapter iii · appearance</Eyebrow>
-              <Heading level={1} className="mt-2 mb-3">
-                A room for the words.
+              <Heading level={1} className="mb-2">
+                Appearance
               </Heading>
-              <p className="font-serif-body text-[15px] leading-[1.7] text-ink-muted max-w-[56ch]">
-                Paper or dusk. The interface follows your system by default.
+              <p className="text-[14px] leading-[1.6] text-ink-muted">
+                Light or dark. The interface follows your system by default.
               </p>
 
-              <div className="mt-10">
-                <Eyebrow>Theme</Eyebrow>
-                <Rule className="mt-2" />
-                <div className="mt-5 grid grid-cols-3 gap-4">
+              <div className="mt-6">
+                <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
+                  Theme
+                </span>
+                <div className="mt-3 grid grid-cols-3 gap-3">
                   {(['system', 'light', 'dark'] as const).map((t) => (
                     <ThemeSwatch
                       key={t}
@@ -186,38 +159,16 @@ export function SettingsPage() {
 
           {tab === 'about' && (
             <section>
-              <Eyebrow>Chapter iv · colophon</Eyebrow>
-              <Heading level={1} className="mt-2 mb-6">
-                On this edition.
+              <Heading level={1} className="mb-3">
+                About
               </Heading>
-
-              <div className="font-serif-body text-[15.5px] leading-[1.8] text-ink max-w-[56ch] space-y-4">
+              <div className="text-[14px] leading-[1.7] text-ink space-y-3 max-w-[60ch]">
                 <p>
-                  <span
-                    className="font-display italic"
-                    style={{ fontVariationSettings: "'opsz' 40, 'SOFT' 50, 'WONK' 1" }}
-                  >
-                    sidepad
-                  </span>{' '}
-                  — a small atelier for multi-voice conversation with large
-                  language models. Version{' '}
-                  <span className="font-mono text-[13px]">0.0.1</span>, printed
-                  locally.
+                  <span className="font-semibold">sidepad</span> — a desktop
+                  workspace for talking with multiple LLMs at once. Version{' '}
+                  <span className="font-mono text-[12px] text-ink-muted">0.0.1</span>.
                 </p>
-                <p>
-                  Set in{' '}
-                  <span
-                    className="font-display italic"
-                    style={{ fontVariationSettings: "'opsz' 40, 'SOFT' 50, 'WONK' 0" }}
-                  >
-                    Fraunces
-                  </span>{' '}
-                  for body,{' '}
-                  <span className="font-sans">Instrument Sans</span> for
-                  navigation, <span className="font-mono">JetBrains Mono</span>{' '}
-                  for marginalia.
-                </p>
-                <p className="text-ink-muted italic">
+                <p className="text-ink-muted">
                   Local storage · zero telemetry · open source.
                 </p>
               </div>
@@ -240,69 +191,54 @@ function ThemeSwatch({
 }) {
   const preview =
     value === 'light'
-      ? { bg: '#FAF8F3', ink: '#1B1915', accent: '#B2542A' }
+      ? { bg: '#FBFBFC', ink: '#0B0D12', accent: '#5B5BD6' }
       : value === 'dark'
-      ? { bg: '#151412', ink: '#ECE7DB', accent: '#D97B4E' }
+      ? { bg: '#0A0B0E', ink: '#ECEEF3', accent: '#7C7CFF' }
       : null;
 
   return (
     <button
       onClick={onSelect}
       aria-pressed={active}
-      className={`group relative text-left cursor-pointer transition-transform duration-[var(--dur)] ${
+      className={`group text-left cursor-pointer transition-transform duration-[var(--dur)] ${
         active ? '' : 'hover:-translate-y-[2px]'
       }`}
     >
       <div
-        className={`h-[96px] w-full border overflow-hidden relative ${
-          active ? 'border-accent' : 'border-rule group-hover:border-rule-strong'
+        className={`h-[80px] w-full border rounded-[8px] overflow-hidden relative ${
+          active ? 'border-accent ring-2 ring-accent-muted' : 'border-rule group-hover:border-rule-strong'
         }`}
         style={preview ? { background: preview.bg } : {}}
       >
         {preview ? (
           <>
-            {/* mini masthead */}
             <span
-              className="absolute top-3 left-3 text-[14px] italic"
-              style={{
-                color: preview.ink,
-                fontFamily: 'Fraunces, serif',
-                fontVariationSettings: "'opsz' 144, 'SOFT' 50, 'WONK' 1",
-              }}
+              className="absolute top-2 left-2 text-[12px] font-semibold"
+              style={{ color: preview.ink }}
             >
               sidepad
             </span>
             <span
-              className="absolute bottom-3 left-3 right-3 h-px"
-              style={{ background: preview.accent, opacity: 0.8 }}
-            />
-            <span
-              className="absolute bottom-6 left-3 h-[2px] w-8"
+              className="absolute bottom-2 left-2 h-1.5 w-10 rounded-full"
               style={{ background: preview.accent }}
             />
           </>
         ) : (
           <div className="absolute inset-0 flex">
-            <div className="flex-1" style={{ background: '#FAF8F3' }} />
-            <div className="flex-1" style={{ background: '#151412' }} />
-            <span
-              aria-hidden
-              className="absolute inset-y-0 left-1/2 w-px bg-rule-strong"
-            />
+            <div className="flex-1" style={{ background: '#FBFBFC' }} />
+            <div className="flex-1" style={{ background: '#0A0B0E' }} />
           </div>
         )}
       </div>
-      <div className="mt-2 flex items-baseline justify-between">
+      <div className="mt-1.5 flex items-center justify-between">
         <span
-          className={`font-mono text-xxs uppercase tracking-[0.16em] ${
+          className={`text-[12px] font-medium capitalize ${
             active ? 'text-accent' : 'text-ink-muted'
           }`}
         >
           {value}
         </span>
-        {active && (
-          <span className="font-mono text-xxs text-accent">· current</span>
-        )}
+        {active && <span className="text-[10px] text-accent">current</span>}
       </div>
     </button>
   );

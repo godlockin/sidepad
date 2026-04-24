@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Message } from '../../main/store/types';
-import { Eyebrow, Rule, Button, Input } from './ui';
+import { Button, Input } from './ui';
 
 interface EditForkModalProps {
   message: Message;
@@ -9,12 +9,6 @@ interface EditForkModalProps {
   onClose: () => void;
 }
 
-/**
- * Editorial overlay. No card chrome — a sheet of paper laid over the room.
- * Two intentions:
- *   · Revise here (mutate this entry, discard what followed)
- *   · Branch off (keep this page, start a new one from this point)
- */
 export function EditForkModal({
   message,
   onEditInPlace,
@@ -33,12 +27,12 @@ export function EditForkModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const title_ =
+  const heading =
     mode === 'edit'
-      ? 'Revise in place.'
+      ? 'Revise in place'
       : mode === 'fork'
-      ? 'Branch into a new page.'
-      : 'How shall we amend?';
+      ? 'Branch into a new conversation'
+      : 'How would you like to amend?';
 
   return (
     <div
@@ -48,95 +42,78 @@ export function EditForkModal({
       onClick={onClose}
     >
       <div
-        className="relative w-[620px] max-h-[82vh] flex flex-col bg-paper border border-rule-strong shadow-[0_24px_64px_-24px_rgba(0,0,0,0.35)]"
+        className="relative w-[600px] max-h-[82vh] flex flex-col bg-surface border border-rule rounded-[10px] shadow-[0_24px_64px_-24px_rgba(0,0,0,0.35)]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Corner folio */}
-        <span
-          aria-hidden
-          className="absolute top-3 left-4 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-faint"
-        >
-          — folio —
-        </span>
-
-        {/* Close, as typographic × in the corner */}
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-3 right-4 font-mono text-sm text-ink-faint hover:text-accent cursor-pointer transition-colors"
+          className="absolute top-3 right-3 w-7 h-7 rounded-[6px] flex items-center justify-center text-ink-faint hover:bg-ink/[0.06] hover:text-ink cursor-pointer transition-colors"
         >
           ×
         </button>
 
-        <header className="px-10 pt-10 pb-5">
-          <Eyebrow>
-            {mode === 'fork' ? 'branch' : mode === 'edit' ? 'revise' : 'amend'}
-          </Eyebrow>
-          <h3
-            className="mt-2 font-display text-[28px] leading-[1.1] tracking-tighter text-ink"
-            style={{
-              fontVariationSettings: "'opsz' 144, 'SOFT' 50, 'WONK' 1",
-              fontStyle: 'italic',
-            }}
-          >
-            {title_}
-          </h3>
+        <header className="px-6 pt-6 pb-4">
+          <h3 className="text-[18px] font-semibold text-ink">{heading}</h3>
           {!mode && (
-            <p className="mt-3 font-serif-body text-[14px] leading-[1.65] text-ink-muted max-w-[52ch]">
-              Revise replaces this entry and{' '}
-              <span className="italic">discards everything that followed</span>.
-              Branching keeps the page whole and opens a new one from this
-              point.
+            <p className="mt-2 text-[13px] leading-[1.55] text-ink-muted">
+              Revise replaces this entry and discards everything that followed.
+              Branching keeps the conversation whole and starts a new one from
+              this point.
             </p>
           )}
         </header>
 
-        <Rule />
+        <hr className="border-0 border-t border-rule" />
 
-        <div className="flex-1 overflow-y-auto px-10 py-6">
-          <Eyebrow>the text</Eyebrow>
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <label className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-muted">
+            Content
+          </label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={10}
             autoFocus
-            className="mt-3 w-full bg-transparent border-0 border-b border-rule p-0 py-2 resize-none font-serif-body text-[15.5px] leading-[1.65] text-ink placeholder:italic placeholder:text-ink-faint focus:outline-none focus:border-ink transition-colors duration-[var(--dur-fast)]"
+            className="mt-1.5 w-full bg-surface border border-rule rounded-[6px] px-3 py-2 resize-none text-[13px] leading-[1.55] text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
           />
 
           {mode === 'fork' && (
-            <div className="mt-6">
-              <Eyebrow>title for the new page</Eyebrow>
+            <div className="mt-4">
+              <label className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-muted">
+                Title for the new conversation
+              </label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="optional — untitled, if left blank"
-                className="mt-2"
+                placeholder="optional"
+                className="mt-1.5"
               />
             </div>
           )}
         </div>
 
-        <Rule />
+        <hr className="border-0 border-t border-rule" />
 
-        <footer className="px-10 py-5 flex items-center justify-between">
+        <footer className="px-6 py-3 flex items-center justify-between">
           {!mode ? (
             <>
               <Button variant="ghost" size="sm" onClick={onClose}>
-                never mind
+                Cancel
               </Button>
-              <div className="flex items-center gap-5">
-                <Button variant="link" size="sm" onClick={() => setMode('fork')}>
-                  branch off ↳
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setMode('fork')}>
+                  Branch off
                 </Button>
                 <Button variant="primary" size="sm" onClick={() => setMode('edit')}>
-                  revise here
+                  Revise here
                 </Button>
               </div>
             </>
           ) : (
             <>
               <Button variant="ghost" size="sm" onClick={() => setMode(null)}>
-                ← back
+                ← Back
               </Button>
               <Button
                 variant="primary"
@@ -146,7 +123,7 @@ export function EditForkModal({
                   else onFork(content, title || undefined);
                 }}
               >
-                {mode === 'edit' ? 'apply revision' : 'open new page ↳'}
+                {mode === 'edit' ? 'Apply revision' : 'Open new conversation'}
               </Button>
             </>
           )}

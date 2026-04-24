@@ -5,18 +5,10 @@ interface PersonaPickerProps {
   currentPersonaId: string | null;
   onSelect: (personaId: string) => void;
   onClose: () => void;
-  /**
-   * Optional: position via fixed coords (top, left) anchored to a chip.
-   * Defaults to absolute positioned above the trigger.
-   */
   anchor?: { top: number; left: number } | null;
   onEditLibrary?: () => void;
 }
 
-/**
- * Floating editorial list — paper, hairlines, italic display face.
- * Mirrors MentionPicker visually so the language stays consistent.
- */
 export function PersonaPicker({
   currentPersonaId,
   onSelect,
@@ -56,13 +48,11 @@ export function PersonaPicker({
     return () => document.removeEventListener('keydown', onKey);
   }, [personas, selectedIndex, onSelect, onClose]);
 
-  // Outside-click dismiss
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (!containerRef.current) return;
       if (!containerRef.current.contains(e.target as Node)) onClose();
     };
-    // defer to next tick so the opening click doesn't immediately close
     const t = setTimeout(() => document.addEventListener('mousedown', onClick), 0);
     return () => {
       clearTimeout(t);
@@ -75,8 +65,8 @@ export function PersonaPicker({
     : {};
 
   const className = anchor
-    ? 'min-w-[260px] bg-paper border border-rule-strong shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up'
-    : 'absolute bottom-full left-0 mb-3 min-w-[260px] bg-paper border border-rule-strong shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.12)] anim-fade-up z-40';
+    ? 'min-w-[240px] bg-surface border border-rule rounded-[8px] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up'
+    : 'absolute bottom-full left-0 mb-2 min-w-[240px] bg-surface border border-rule rounded-[8px] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up z-40';
 
   return (
     <div
@@ -86,21 +76,19 @@ export function PersonaPicker({
       style={positionStyle}
       className={className}
     >
-      <div className="px-4 pt-3 pb-2 flex items-baseline justify-between">
-        <span className="font-mono text-xxs uppercase tracking-[0.18em] text-ink-faint">
-          choose a persona
+      <div className="px-3 pt-2 pb-1.5 flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">
+          Choose a persona
         </span>
-        <span className="font-mono text-[10px] tracking-[0.12em] text-ink-faint/70 uppercase">
+        <span className="font-mono text-[10px] tracking-[0.04em] text-ink-faint uppercase">
           ↑↓ ↵
         </span>
       </div>
-      <hr className="border-0 border-t border-rule mx-4" />
+      <hr className="border-0 border-t border-rule" />
 
       <ol className="py-1 max-h-[280px] overflow-y-auto">
         {personas.length === 0 && (
-          <li className="px-4 py-3 font-serif-body italic text-[13px] text-ink-faint">
-            No personas yet.
-          </li>
+          <li className="px-3 py-2 text-[12px] text-ink-faint">No personas yet.</li>
         )}
         {personas.map((p, i) => {
           const active = i === selectedIndex;
@@ -112,37 +100,23 @@ export function PersonaPicker({
                 aria-selected={active}
                 onClick={() => onSelect(p.id)}
                 onMouseEnter={() => setSelectedIndex(i)}
-                className={`relative w-full text-left px-4 py-2 flex items-baseline gap-3 cursor-pointer transition-colors duration-[var(--dur-fast)] ${
-                  active ? 'bg-ink/[0.035]' : 'hover:bg-ink/[0.02]'
+                className={`w-full text-left px-3 py-1.5 flex items-center gap-2 cursor-pointer transition-colors duration-[var(--dur-fast)] ${
+                  active ? 'bg-accent-muted' : 'hover:bg-ink/[0.03]'
                 }`}
               >
                 <span
-                  className={`font-mono text-xxs tabular-nums ${
-                    active ? 'text-accent' : 'text-ink-faint'
+                  className={`flex-1 text-[13px] truncate ${
+                    active ? 'text-accent font-medium' : 'text-ink'
                   }`}
                 >
-                  {String(i + 1).padStart(2, '0')}
+                  {p.name}
                 </span>
-                <span className="flex-1 min-w-0 flex items-baseline gap-2">
-                  <span
-                    className={`font-display italic text-[15px] truncate ${
-                      active ? 'text-ink' : 'text-ink-muted'
-                    }`}
-                    style={{ fontVariationSettings: "'opsz' 24, 'SOFT' 50, 'WONK' 0" }}
-                  >
-                    {p.name}
-                  </span>
-                  {p.id === DEFAULT_PERSONA_ID && (
-                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">
-                      · default
-                    </span>
-                  )}
-                </span>
-                {current && (
-                  <span aria-hidden className="font-mono text-xxs text-accent">
-                    ·
+                {p.id === DEFAULT_PERSONA_ID && (
+                  <span className="text-[10px] uppercase tracking-[0.04em] text-ink-faint">
+                    default
                   </span>
                 )}
+                {current && <span className="text-accent text-[12px]">✓</span>}
               </button>
             </li>
           );
@@ -151,12 +125,12 @@ export function PersonaPicker({
 
       {onEditLibrary && (
         <>
-          <hr className="border-0 border-t border-rule mx-4" />
+          <hr className="border-0 border-t border-rule" />
           <button
             onClick={onEditLibrary}
-            className="w-full px-4 py-2 text-left font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint hover:text-accent cursor-pointer transition-colors"
+            className="w-full px-3 py-2 text-left text-[12px] font-medium text-ink-muted hover:text-accent cursor-pointer transition-colors"
           >
-            edit personas…
+            Edit personas…
           </button>
         </>
       )}

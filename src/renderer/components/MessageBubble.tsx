@@ -12,13 +12,6 @@ interface MessageBubbleProps {
   onFork?: (msgId: string, content: string, title?: string) => void;
 }
 
-/**
- * Editorial message entry.
- *
- * User messages: right-aligned, italic, em-dash prefixed — like a letter signoff.
- * AI messages: full-width typographic body with a monospace byline.
- * No bubbles. No cards. Just well-set type.
- */
 export function MessageBubble({ message, index = 0, onEditInPlace, onFork }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -34,14 +27,11 @@ export function MessageBubble({ message, index = 0, onEditInPlace, onFork }: Mes
     setTimeout(() => setCopied(false), 1400);
   };
 
-  const delay = Math.min(index * 40, 240);
+  const delay = Math.min(index * 30, 180);
 
   return (
     <>
-      <article
-        className="anim-fade-up py-5 first:pt-2"
-        style={{ animationDelay: `${delay}ms` }}
-      >
+      <article className="anim-fade-up py-3" style={{ animationDelay: `${delay}ms` }}>
         {isUser ? (
           <UserEntry message={message} />
         ) : (
@@ -75,25 +65,15 @@ export function MessageBubble({ message, index = 0, onEditInPlace, onFork }: Mes
   );
 }
 
-/* ─── User entry — the prompt, as a margin letter ─────────────── */
-
 function UserEntry({ message }: { message: Message }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[68%] text-right">
-        <p
-          className="font-display italic text-ink text-[17px] leading-[1.55] whitespace-pre-wrap"
-          style={{ fontVariationSettings: "'opsz' 40, 'SOFT' 50, 'WONK' 0" }}
-        >
-          <span className="text-ink-faint not-italic mr-1 select-none">—</span>
-          {message.content}
-        </p>
+      <div className="max-w-[68%] bg-accent text-white rounded-2xl px-3.5 py-2 text-[13px] leading-[1.55] whitespace-pre-wrap">
+        {message.content}
       </div>
     </div>
   );
 }
-
-/* ─── Agent entry — the response, as an editorial passage ─────── */
 
 function AgentEntry({
   message,
@@ -113,25 +93,15 @@ function AgentEntry({
   onEditFork: () => void;
 }) {
   return (
-    <div className="group relative pl-6 pr-2">
-      {/* Left rule — hairline decoration */}
-      <span
-        aria-hidden
-        className={`absolute left-0 top-[9px] bottom-1 w-px ${
-          isError ? 'bg-danger/40' : isStreaming ? 'bg-accent' : 'bg-rule-strong'
-        }`}
-      />
-
+    <div className="group relative">
       {/* Byline */}
-      <header className="flex items-baseline gap-3 mb-1.5">
+      <header className="flex items-center gap-2 mb-1.5">
         <BylineAgent agentId={meta.agentId ?? null} />
         {isStreaming && (
-          <span className="font-mono text-xxs tracking-wider text-accent">
-            writing…
-          </span>
+          <span className="text-[11px] font-medium text-accent">writing…</span>
         )}
         {isError && (
-          <span className="font-mono text-xxs uppercase tracking-wider text-danger">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-danger">
             error
           </span>
         )}
@@ -139,38 +109,40 @@ function AgentEntry({
 
       {/* Body */}
       <div
-        className={`font-serif-body text-[15.5px] leading-[1.65] whitespace-pre-wrap ${
+        className={`text-[14px] leading-[1.65] whitespace-pre-wrap ${
           isError ? 'text-ink-muted' : 'text-ink'
         }`}
       >
         {message.content}
-        {isStreaming && <span className="anim-caret bg-accent h-[1.05em] align-[-2px] translate-y-[2px]">▍</span>}
+        {isStreaming && (
+          <span className="anim-caret bg-accent h-[1.05em] align-[-2px] translate-y-[2px]">▍</span>
+        )}
       </div>
 
       {/* Error detail */}
       {isError && message.error && (
-        <p className="mt-2 font-mono text-[11px] text-danger/80 bg-danger/5 border-l-2 border-danger/40 pl-3 py-1">
+        <p className="mt-2 font-mono text-[11px] text-danger/80 bg-danger/5 border-l-2 border-danger/40 pl-3 py-1 rounded-r">
           {message.error}
         </p>
       )}
 
-      {/* Actions — hover-reveal micro-links */}
+      {/* Actions */}
       {!isStreaming && (
-        <footer className="mt-2 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--dur)]">
+        <footer className="mt-2 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--dur)]">
           {message.content && (
             <button
               onClick={onCopy}
-              className="font-mono text-xxs uppercase tracking-[0.14em] text-ink-faint hover:text-accent cursor-pointer transition-colors"
+              className="text-[11px] font-medium text-ink-faint hover:text-accent cursor-pointer transition-colors"
             >
-              {copied ? '✓ copied' : 'copy'}
+              {copied ? '✓ Copied' : 'Copy'}
             </button>
           )}
           {message.status === 'done' && (
             <button
               onClick={onEditFork}
-              className="font-mono text-xxs uppercase tracking-[0.14em] text-ink-faint hover:text-accent cursor-pointer transition-colors"
+              className="text-[11px] font-medium text-ink-faint hover:text-accent cursor-pointer transition-colors"
             >
-              edit / fork ↳
+              Edit / fork
             </button>
           )}
         </footer>
@@ -179,8 +151,6 @@ function AgentEntry({
   );
 }
 
-/* ─── Clickable byline showing agent + persona ─────────────────── */
-
 function BylineAgent({ agentId }: { agentId: string | null }) {
   const [picker, setPicker] = useState<{ top: number; left: number } | null>(null);
   const activeSession = useSessionStore((s) => s.activeSession);
@@ -188,9 +158,7 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
   const personas = usePersonaStore((s) => s.personas);
 
   if (!agentId) {
-    return (
-      <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink">agent</span>
-    );
+    return <span className="text-[12px] font-medium text-ink-muted">agent</span>;
   }
 
   const personaId =
@@ -207,14 +175,14 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           setPicker({ top: rect.bottom + 6, left: rect.left });
         }}
-        className="font-mono text-xxs uppercase tracking-[0.16em] text-ink hover:text-accent cursor-pointer transition-colors"
+        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-muted hover:text-accent cursor-pointer transition-colors"
         title="Click to change persona"
       >
-        {agentId}
+        <span className="font-mono text-[11px] bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px] text-ink">
+          {agentId}
+        </span>
         {showPersona && (
-          <span className="normal-case tracking-[0.14em] text-ink-faint ml-1">
-            · {persona!.name}
-          </span>
+          <span className="text-ink-muted">· {persona!.name}</span>
         )}
       </button>
       {picker && (

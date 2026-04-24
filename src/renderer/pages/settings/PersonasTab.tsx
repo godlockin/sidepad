@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Eyebrow, Heading, Rule, Button } from '../../components/ui';
+import { Heading, Button } from '../../components/ui';
 import { PersonaForm } from '../../components/PersonaForm';
 import {
   usePersonaStore,
@@ -19,83 +19,83 @@ export function PersonasTab() {
 
   return (
     <section>
-      <Eyebrow>Chapter ii · personas</Eyebrow>
-      <Heading level={1} className="mt-2 mb-3">
-        Voices behind the voice.
+      <Heading level={1} className="mb-2">
+        Personas
       </Heading>
-      <p className="font-serif-body text-[15px] leading-[1.7] text-ink-muted max-w-[56ch]">
-        A persona is a system prompt — a stance, a temperament. Attach one to
-        any voice in a chat to colour its replies. The same model can wear many
-        hats.
+      <p className="text-[14px] leading-[1.6] text-ink-muted">
+        A persona is a system prompt — a stance, a temperament. Attach one to any
+        voice in a chat to colour its replies. The same model can wear many hats.
       </p>
 
-      <div className="mt-8 mb-4 flex items-baseline justify-between">
-        <Eyebrow>
+      <div className="mt-6 mb-3 flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
           Library · {personas.length.toString().padStart(2, '0')}
-        </Eyebrow>
+        </span>
         {!showNew && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setShowNew(true);
               setEditingId(null);
             }}
-            className="font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint hover:text-accent cursor-pointer transition-colors"
           >
             + new persona
-          </button>
+          </Button>
         )}
       </div>
-      <Rule />
 
-      {showNew && (
-        <PersonaForm
-          onSubmit={async (input) => {
-            await createPersona({ name: input.name, prompt: input.prompt });
-            setShowNew(false);
-          }}
-          onCancel={() => setShowNew(false)}
-        />
-      )}
-
-      {personas.length === 0 && !showNew && (
-        <p className="font-serif-body italic text-[14px] text-ink-faint py-10 text-center">
-          No personas yet.
-        </p>
-      )}
-
-      {personas.length > 0 && (
-        <ol className="divide-y divide-rule">
-          {personas.map((p, i) => (
-            <PersonaRow
-              key={p.id}
-              persona={p}
-              index={i}
-              isEditing={editingId === p.id}
-              onEdit={() => {
-                setEditingId(p.id);
+      <div className="border border-rule rounded-[10px] bg-surface overflow-hidden">
+        {showNew && (
+          <div className="p-5 border-b border-rule">
+            <PersonaForm
+              onSubmit={async (input) => {
+                await createPersona({ name: input.name, prompt: input.prompt });
                 setShowNew(false);
               }}
-              onCancel={() => setEditingId(null)}
-              onSave={async (patch) => {
-                await updatePersona(p.id, patch);
-                setEditingId(null);
-              }}
-              onDelete={async () => {
-                if (p.id === DEFAULT_PERSONA_ID) return;
-                if (!confirm(`Delete persona "${p.name}"?`)) return;
-                await deletePersona(p.id);
-              }}
+              onCancel={() => setShowNew(false)}
             />
-          ))}
-        </ol>
-      )}
+          </div>
+        )}
+
+        {personas.length === 0 && !showNew && (
+          <p className="text-[13px] text-ink-faint py-10 text-center">
+            No personas yet.
+          </p>
+        )}
+
+        {personas.length > 0 && (
+          <ol className="divide-y divide-rule">
+            {personas.map((p) => (
+              <PersonaRow
+                key={p.id}
+                persona={p}
+                isEditing={editingId === p.id}
+                onEdit={() => {
+                  setEditingId(p.id);
+                  setShowNew(false);
+                }}
+                onCancel={() => setEditingId(null)}
+                onSave={async (patch) => {
+                  await updatePersona(p.id, patch);
+                  setEditingId(null);
+                }}
+                onDelete={async () => {
+                  if (p.id === DEFAULT_PERSONA_ID) return;
+                  if (!confirm(`Delete persona "${p.name}"?`)) return;
+                  await deletePersona(p.id);
+                }}
+              />
+            ))}
+          </ol>
+        )}
+      </div>
     </section>
   );
 }
 
 interface PersonaRowProps {
   persona: Persona;
-  index: number;
   isEditing: boolean;
   onEdit: () => void;
   onCancel: () => void;
@@ -105,7 +105,6 @@ interface PersonaRowProps {
 
 function PersonaRow({
   persona,
-  index,
   isEditing,
   onEdit,
   onCancel,
@@ -116,7 +115,7 @@ function PersonaRow({
 
   if (isEditing) {
     return (
-      <li className="py-2">
+      <li className="p-5">
         <PersonaForm
           initial={persona}
           onSubmit={async (input) => {
@@ -129,39 +128,26 @@ function PersonaRow({
   }
 
   return (
-    <li className="py-4 flex items-baseline gap-4">
-      <span className="font-mono text-xxs tabular-nums text-ink-faint pt-[3px]">
-        {String(index + 1).padStart(2, '0')}
-      </span>
+    <li className="px-4 py-3 flex items-start gap-3">
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-3">
-          <span
-            className="font-display italic text-[18px] text-ink"
-            style={{ fontVariationSettings: "'opsz' 36, 'SOFT' 50, 'WONK' 0" }}
-          >
-            {persona.name}
-          </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[14px] font-semibold text-ink">{persona.name}</span>
           {isDefault && (
-            <span className="font-mono text-xxs uppercase tracking-[0.14em] text-ink-faint">
-              · default
+            <span className="text-[10px] uppercase tracking-[0.06em] text-ink-faint">
+              default
             </span>
           )}
         </div>
-        <p className="mt-1 font-serif-body text-[13.5px] text-ink-muted leading-[1.6] line-clamp-2 max-w-[60ch]">
+        <p className="mt-1 text-[12.5px] text-ink-muted leading-[1.55] line-clamp-2">
           {persona.prompt}
         </p>
       </div>
-      <div className="flex items-baseline gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         <Button variant="ghost" size="sm" onClick={onEdit}>
-          edit
+          Edit
         </Button>
-        <Button
-          variant="danger"
-          size="sm"
-          disabled={isDefault}
-          onClick={onDelete}
-        >
-          delete
+        <Button variant="danger" size="sm" disabled={isDefault} onClick={onDelete}>
+          Delete
         </Button>
       </div>
     </li>

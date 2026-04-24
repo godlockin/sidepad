@@ -36,7 +36,7 @@ export function PersonaForm({ initial, onSubmit, onCancel }: PersonaFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="py-6 space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <Field label="Name">
         <Input
           autoFocus
@@ -53,8 +53,8 @@ export function PersonaForm({ initial, onSubmit, onCancel }: PersonaFormProps) {
           onChange={(e) => setPrompt(e.target.value)}
         />
       </Field>
-      {error && <p className="text-xs text-danger font-mono">{error}</p>}
-      <div className="flex items-center gap-3 pt-2">
+      {error && <p className="text-[12px] text-danger">{error}</p>}
+      <div className="flex items-center gap-2 pt-1">
         <Button type="submit" variant="primary" size="sm" disabled={!valid || submitting}>
           {submitting ? 'saving…' : isEdit ? 'save changes' : 'save persona'}
         </Button>

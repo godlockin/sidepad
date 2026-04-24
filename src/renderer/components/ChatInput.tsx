@@ -13,12 +13,6 @@ interface ChatInputProps {
   onMentionSelect?: (providerId: string) => void;
 }
 
-/**
- * Editorial composer.
- *
- * No card. No heavy border. Just a hairline above, a Fraunces-set textarea
- * that blends into the paper, and a monospace "send ↵" at the margin.
- */
 export function ChatInput({
   onSend,
   onStop,
@@ -87,122 +81,110 @@ export function ChatInput({
   const canSend = !disabled && !streaming && input.trim().length > 0;
 
   return (
-    <div className="relative border-t border-rule bg-paper">
-      {/* Mention chips — italic inline tags, clickable to switch persona */}
-      {mentions.length > 0 && (
-        <div className="px-6 pt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint">
-            addressed to
-          </span>
-          {mentions.map((m) => {
-            const personaId =
-              activeSession?.participants?.find((p) => p.agentId === m)?.personaId ??
-              DEFAULT_PERSONA_ID;
-            const persona = personas.find((p) => p.id === personaId);
-            const personaLabel =
-              personaId !== DEFAULT_PERSONA_ID && persona ? ` · ${persona.name}` : '';
-            return (
-              <button
-                key={m}
-                type="button"
-                onClick={(e) => {
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  setChipPicker({
-                    agentId: m,
-                    anchor: { top: rect.bottom + 6, left: rect.left },
-                  });
-                }}
-                className="font-display italic text-[13px] text-accent hover:underline decoration-accent/40 underline-offset-[3px] cursor-pointer"
-                style={{ fontVariationSettings: "'opsz' 14, 'SOFT' 50, 'WONK' 0" }}
-                title="Click to change persona"
-              >
-                @{m}
-                {personaLabel && (
-                  <span className="font-mono not-italic text-[10px] uppercase tracking-[0.14em] text-ink-faint ml-1">
-                    {personaLabel}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+    <div className="px-4 pb-4 pt-2 bg-paper">
+      <div className="relative border border-rule rounded-[10px] bg-surface focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-colors">
+        {/* Mention chips */}
+        {mentions.length > 0 && (
+          <div className="px-3 pt-2.5 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">
+              addressed to
+            </span>
+            {mentions.map((m) => {
+              const personaId =
+                activeSession?.participants?.find((p) => p.agentId === m)?.personaId ??
+                DEFAULT_PERSONA_ID;
+              const persona = personas.find((p) => p.id === personaId);
+              const personaLabel =
+                personaId !== DEFAULT_PERSONA_ID && persona ? ` · ${persona.name}` : '';
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    setChipPicker({
+                      agentId: m,
+                      anchor: { top: rect.bottom + 6, left: rect.left },
+                    });
+                  }}
+                  className="inline-flex items-center text-[12px] rounded-full bg-accent-muted text-accent px-2.5 py-0.5 hover:bg-accent hover:text-white cursor-pointer transition-colors"
+                  title="Click to change persona"
+                >
+                  <span className="font-medium">@{m}</span>
+                  {personaLabel && (
+                    <span className="opacity-80 ml-1">{personaLabel}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-      {chipPicker && (
-        <PersonaPicker
-          currentPersonaId={
-            activeSession?.participants?.find((p) => p.agentId === chipPicker.agentId)
-              ?.personaId ?? DEFAULT_PERSONA_ID
-          }
-          anchor={chipPicker.anchor}
-          onSelect={async (personaId) => {
-            await setParticipantPersona(chipPicker.agentId, personaId);
-            setChipPicker(null);
-          }}
-          onClose={() => setChipPicker(null)}
-        />
-      )}
-
-      <div className="px-6 py-4 flex items-end gap-5 relative">
-        {/* Left eyebrow marker */}
-        <span
-          aria-hidden
-          className="font-mono text-xxs uppercase tracking-[0.18em] text-ink-faint pb-[10px] select-none"
-        >
-          write
-        </span>
-
-        {/* Textarea — blends into paper */}
-        <div className="flex-1 relative">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="A message, a question, a thought…"
-            rows={1}
-            disabled={disabled || streaming}
-            className="w-full bg-transparent border-0 p-0 resize-none font-serif-body text-[15.5px] leading-[1.6] text-ink placeholder:text-ink-faint placeholder:italic focus:outline-none disabled:opacity-50"
-            style={{ minHeight: '1.6em' }}
+        {chipPicker && (
+          <PersonaPicker
+            currentPersonaId={
+              activeSession?.participants?.find((p) => p.agentId === chipPicker.agentId)
+                ?.personaId ?? DEFAULT_PERSONA_ID
+            }
+            anchor={chipPicker.anchor}
+            onSelect={async (personaId) => {
+              await setParticipantPersona(chipPicker.agentId, personaId);
+              setChipPicker(null);
+            }}
+            onClose={() => setChipPicker(null)}
           />
-          {showPicker && (
-            <MentionPicker
-              providers={providers}
-              onSelect={handlePickerSelect}
-              onClose={() => setShowPicker(false)}
+        )}
+
+        <div className="px-3 pt-2 pb-2 flex items-end gap-2 relative">
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Send a message… use @ to address a voice"
+              rows={1}
+              disabled={disabled || streaming}
+              className="w-full bg-transparent border-0 p-0 resize-none text-[14px] leading-[1.55] text-ink placeholder:text-ink-faint focus:outline-none disabled:opacity-50"
+              style={{ minHeight: '1.55em' }}
             />
+            {showPicker && (
+              <MentionPicker
+                providers={providers}
+                onSelect={handlePickerSelect}
+                onClose={() => setShowPicker(false)}
+              />
+            )}
+          </div>
+
+          {streaming ? (
+            <button
+              onClick={onStop}
+              className="self-end h-7 px-3 text-[12px] font-medium text-white bg-danger hover:bg-danger/90 rounded-[6px] cursor-pointer transition-colors"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!canSend}
+              className="self-end h-7 px-3 text-[12px] font-medium text-white bg-accent hover:bg-accent-hover rounded-[6px] cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-default"
+            >
+              Send
+            </button>
           )}
         </div>
 
-        {/* Action — monospace marginalia */}
-        {streaming ? (
-          <button
-            onClick={onStop}
-            className="self-end pb-[10px] font-mono text-xxs uppercase tracking-[0.16em] text-danger hover:text-danger cursor-pointer transition-colors"
-          >
-            stop ■
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={!canSend}
-            className="self-end pb-[10px] font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint hover:text-accent cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:text-ink-faint"
-          >
-            send ↵
-          </button>
-        )}
-      </div>
-
-      {/* Keyboard hint — barely there */}
-      <div className="px-6 pb-3 flex items-center justify-between">
-        <span className="font-mono text-[10px] tracking-[0.14em] text-ink-faint/70 uppercase">
-          {streaming ? 'composing reply…' : '⌘ + ↵ to send · @ to address'}
-        </span>
-        {input.length > 0 && (
-          <span className="font-mono text-[10px] tabular-nums text-ink-faint/70">
-            {input.length.toLocaleString()} ch
+        <div className="px-3 pb-2 flex items-center justify-between">
+          <span className="text-[10px] tracking-[0.04em] text-ink-faint uppercase">
+            {streaming ? 'composing reply…' : '⌘ + ↵ to send · @ to address'}
           </span>
-        )}
+          {input.length > 0 && (
+            <span className="font-mono text-[10px] tabular-nums text-ink-faint">
+              {input.length.toLocaleString()} ch
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

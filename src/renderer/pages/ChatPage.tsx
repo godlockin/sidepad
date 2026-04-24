@@ -7,7 +7,6 @@ import { Sidebar } from '../components/Sidebar';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatInput } from '../components/ChatInput';
 import { PersonaPicker } from '../components/PersonaPicker';
-import { Eyebrow } from '../components/ui';
 import { trpc } from '../lib/trpc-client';
 
 export function ChatPage() {
@@ -28,7 +27,6 @@ export function ChatPage() {
     loadPersonas();
   }, [loadSessions, loadPersonas]);
 
-  // Auto-scroll to bottom on new messages / streaming tokens
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -71,7 +69,6 @@ export function ChatPage() {
       parentMessageId: msgId,
       title,
     });
-    // Refresh sidebar so the new session shows up, then activate it.
     await useSessionStore.getState().loadSessions();
     await useSessionStore.getState().selectSession(forked.id);
   };
@@ -82,53 +79,35 @@ export function ChatPage() {
     <div className="flex h-full">
       <Sidebar />
       <section className="flex-1 flex flex-col bg-paper min-w-0">
-        {/* Per-session header — editorial dateline */}
-        <header className="px-8 pt-6 pb-4 border-b border-rule flex items-baseline justify-between gap-6">
-          <div className="min-w-0 flex-1">
-            <Eyebrow>
-              {activeSession
-                ? `session · ${new Date(activeSession.createdAt).toLocaleDateString(undefined, {
-                    month: 'long',
-                    day: 'numeric',
-                  })}`
-                : 'no session'}
-            </Eyebrow>
-            <h2
-              className="mt-1 font-display text-[26px] leading-[1.15] tracking-tighter text-ink truncate"
-              style={{
-                fontVariationSettings: "'opsz' 144, 'SOFT' 50, 'WONK' 1",
-                fontStyle: activeSession?.title ? 'italic' : 'normal',
-              }}
-            >
-              {activeSession?.title || (
-                <span className="text-ink-faint">An unwritten page.</span>
-              )}
-            </h2>
-          </div>
+        {/* Header */}
+        <header className="px-6 h-12 border-b border-rule flex items-center justify-between gap-4 bg-surface">
+          <h2 className="text-[14px] font-medium text-ink truncate">
+            {activeSession?.title || (
+              <span className="text-ink-faint font-normal">New conversation</span>
+            )}
+          </h2>
           {activeSession && (
-            <div className="flex items-baseline gap-3 shrink-0">
-              <Eyebrow>visibility</Eyebrow>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
+                visibility
+              </span>
               <select
                 value={activeSession.visibilityMode}
                 onChange={(e) =>
                   handleVisibilityChange(e.target.value as 'independent' | 'full')
                 }
-                className="bg-transparent border-0 border-b border-rule font-mono text-xxs uppercase tracking-[0.14em] text-ink px-0 py-1 pr-5 cursor-pointer focus:outline-none focus:border-ink appearance-none bg-no-repeat bg-[right_center] bg-[length:10px]"
-                style={{
-                  backgroundImage:
-                    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='currentColor' fill='none' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/></svg>\")",
-                }}
+                className="bg-surface border border-rule rounded-[6px] text-[12px] text-ink px-2 py-1 cursor-pointer focus:outline-none focus:border-accent"
               >
-                <option value="independent">independent</option>
-                <option value="full">full</option>
+                <option value="independent">Independent</option>
+                <option value="full">Full</option>
               </select>
             </div>
           )}
         </header>
 
         {activeSession && activeSession.participants && activeSession.participants.length > 0 && (
-          <div className="px-8 py-2 border-b border-rule flex flex-wrap items-baseline gap-x-3 gap-y-1 bg-paper">
-            <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint">
+          <div className="px-6 py-2 border-b border-rule flex flex-wrap items-center gap-2 bg-surface">
+            <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
               voices
             </span>
             {activeSession.participants.map((p) => {
@@ -146,15 +125,12 @@ export function ChatPage() {
                       anchor: { top: rect.bottom + 6, left: rect.left },
                     });
                   }}
-                  className="font-display italic text-[13px] text-ink hover:text-accent cursor-pointer"
-                  style={{ fontVariationSettings: "'opsz' 14, 'SOFT' 50, 'WONK' 0" }}
+                  className="inline-flex items-center text-[12px] rounded-full bg-surface-2 border border-rule px-2.5 py-0.5 text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors"
                   title="Click to change persona"
                 >
-                  @{p.agentId}
+                  <span className="font-medium">@{p.agentId}</span>
                   {personaLabel && (
-                    <span className="font-mono not-italic text-[10px] uppercase tracking-[0.14em] text-ink-faint ml-1">
-                      {personaLabel}
-                    </span>
+                    <span className="text-ink-muted ml-1">{personaLabel}</span>
                   )}
                 </button>
               );
@@ -177,24 +153,18 @@ export function ChatPage() {
           />
         )}
 
-        {/* Body — centered column like a periodical */}
+        {/* Body */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          <div className="max-w-[760px] mx-auto px-8 pt-6 pb-16">
+          <div className="max-w-[760px] mx-auto px-6 pt-6 pb-10">
             {messages.length === 0 && (
               <div className="h-[60vh] flex flex-col items-center justify-center text-center">
-                <span
-                  className="font-display text-[56px] leading-[1] tracking-tightest text-ink-faint select-none"
-                  style={{
-                    fontVariationSettings: "'opsz' 144, 'SOFT' 100, 'WONK' 1",
-                    fontStyle: 'italic',
-                  }}
-                >
-                  ¶
-                </span>
-                <p className="mt-6 font-serif-body italic text-[16px] text-ink-muted max-w-[32ch]">
-                  A blank page. Write a line, address a voice with{' '}
-                  <span className="text-accent not-italic font-mono text-[13px]">@</span>
-                  , or simply begin.
+                <div className="w-12 h-12 rounded-full bg-accent-muted flex items-center justify-center text-accent text-[20px] mb-4">
+                  ✦
+                </div>
+                <p className="text-[14px] text-ink-muted max-w-[42ch]">
+                  Start a conversation. Use{' '}
+                  <span className="font-mono text-accent text-[12px] bg-accent-muted px-1.5 py-[1px] rounded-[4px]">@</span>{' '}
+                  to address a voice.
                 </p>
               </div>
             )}

@@ -6,10 +6,6 @@ interface MentionPickerProps {
   onClose: () => void;
 }
 
-/**
- * Floating editorial list — no card, just paper + hairlines.
- * Appears above the composer when `@` is typed.
- */
 export function MentionPicker({ providers, onSelect, onClose }: MentionPickerProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,20 +38,18 @@ export function MentionPicker({ providers, onSelect, onClose }: MentionPickerPro
       ref={containerRef}
       role="listbox"
       aria-label="Address a voice"
-      className="absolute bottom-full left-0 mb-3 min-w-[260px] bg-paper border border-rule-strong shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.12)] anim-fade-up"
+      className="absolute bottom-full left-0 mb-2 min-w-[240px] bg-surface border border-rule rounded-[8px] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up z-40"
     >
-      {/* Eyebrow head */}
-      <div className="px-4 pt-3 pb-2 flex items-baseline justify-between">
-        <span className="font-mono text-xxs uppercase tracking-[0.18em] text-ink-faint">
-          address a voice
+      <div className="px-3 pt-2 pb-1.5 flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">
+          Address a voice
         </span>
-        <span className="font-mono text-[10px] tracking-[0.12em] text-ink-faint/70 uppercase">
+        <span className="font-mono text-[10px] tracking-[0.04em] text-ink-faint uppercase">
           ↑↓ ↵
         </span>
       </div>
-      <hr className="border-0 border-t border-rule mx-4" />
+      <hr className="border-0 border-t border-rule" />
 
-      {/* Options */}
       <ol className="py-1">
         {providers.map((p, i) => {
           const active = i === selectedIndex;
@@ -66,39 +60,16 @@ export function MentionPicker({ providers, onSelect, onClose }: MentionPickerPro
                 aria-selected={active}
                 onClick={() => onSelect(p.id)}
                 onMouseEnter={() => setSelectedIndex(i)}
-                className={`relative w-full text-left px-4 py-2 flex items-baseline gap-3 cursor-pointer transition-colors duration-[var(--dur-fast)] ${
-                  active ? 'bg-ink/[0.035]' : 'hover:bg-ink/[0.02]'
+                className={`w-full text-left px-3 py-1.5 flex items-center gap-2 cursor-pointer transition-colors duration-[var(--dur-fast)] ${
+                  active ? 'bg-accent-muted' : 'hover:bg-ink/[0.03]'
                 }`}
               >
-                {/* Gutter marker */}
-                <span
-                  className={`font-mono text-xxs tabular-nums ${
-                    active ? 'text-accent' : 'text-ink-faint'
-                  }`}
-                >
-                  {String(i + 1).padStart(2, '0')}
+                <span className={`text-[13px] font-medium ${active ? 'text-accent' : 'text-ink'}`}>
+                  @{p.id}
                 </span>
-                <span className="flex-1 min-w-0 flex items-baseline gap-2">
-                  <span
-                    className={`font-display italic text-[15px] truncate ${
-                      active ? 'text-ink' : 'text-ink-muted'
-                    }`}
-                    style={{ fontVariationSettings: "'opsz' 24, 'SOFT' 50, 'WONK' 0" }}
-                  >
-                    @{p.id}
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint truncate">
-                    {p.configId}
-                  </span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.04em] text-ink-faint truncate">
+                  {p.configId}
                 </span>
-                {active && (
-                  <span
-                    aria-hidden
-                    className="font-mono text-xxs text-accent"
-                  >
-                    ↵
-                  </span>
-                )}
               </button>
             </li>
           );
