@@ -33,6 +33,23 @@ export function ChatPage() {
     useSessionStore.getState().selectSession(activeSessionId);
   };
 
+  const handleEditInPlace = async (msgId: string, newContent: string) => {
+    // Find the message index, update content, remove all subsequent messages
+    const idx = messages.findIndex((m) => m.id === msgId);
+    if (idx < 0) return;
+    const updated = messages.map((m, i) =>
+      i === idx ? { ...m, content: newContent } : m,
+    ).slice(0, idx + 1);
+    useChatStore.getState().setMessages(updated);
+  };
+
+  const handleFork = async (msgId: string, _content: string, title?: string) => {
+    if (!activeSessionId) return;
+    const forked = await trpc.session.fork.mutate({ sessionId: activeSessionId, parentMessageId: msgId, title });
+    // Switch to the forked session
+    await useSessionStore.getState().selectSession(forked.id);
+  };
+
   return (
     <div className="flex h-full">
       <Sidebar />
@@ -67,7 +84,7 @@ export function ChatPage() {
             </div>
           )}
           {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
+            <MessageBubble key={msg.id} message={msg} onEditInPlace={handleEditInPlace} onFork={handleFork} />
           ))}
         </div>
 
