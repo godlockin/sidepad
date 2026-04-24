@@ -6,6 +6,8 @@ import { sidepadPaths } from './paths.js';
 import { openSidepadDb } from './store/db.js';
 import { SecretStore } from './secret/secret-store.js';
 import { appRouter } from './ipc/trpc.js';
+import { registry } from './providers/index.js';
+import { loadProviders } from './providers/factory.js';
 import { log } from './logger.js';
 
 // electron-trpc 0.7.1 ships a single ESM bundle that statically imports
@@ -40,6 +42,10 @@ if (!gotLock) {
 
     // expose to global for IPC routers in Task 11
     (globalThis as any).sidepad = { db, secrets, paths };
+
+    // load configured providers
+    loadProviders(db, secrets, registry);
+    log.info({ count: registry.list().length }, 'providers loaded');
 
     const win = new BrowserWindow({
       width: 1200, height: 800,
