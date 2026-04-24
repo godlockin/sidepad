@@ -19,7 +19,7 @@ export class AnthropicProvider implements LLMProvider {
       return res.data.map((m) => ({
         id: m.id,
         name: m.id,
-        contextWindow: (m.metadata as any)?.context_window_size ?? 200_000,
+        contextWindow: (m as any)?.metadata?.context_window_size ?? 200_000,
       }));
     } catch {
       return [
@@ -32,7 +32,7 @@ export class AnthropicProvider implements LLMProvider {
 
   async *chat(req: ChatRequest, signal: AbortSignal): AsyncIterable<ChatChunk> {
     const messages = req.messages.map((m) => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
+      role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
       content: m.content,
     }));
     try {

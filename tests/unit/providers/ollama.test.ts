@@ -13,6 +13,6 @@ describe('OllamaProvider', () => {
 
   it('configures baseURL', () => {
     new OllamaProvider('ollama', 'cfg-oll', 'http://localhost:11435');
-    expect(vi.mocked(ollama).configure).toHaveBeenCalledWith({ host: 'http://localhost:11435' });
+    expect((vi.mocked(ollama) as any).configure).toHaveBeenCalledWith({ host: 'http://localhost:11435' });
   });
 });

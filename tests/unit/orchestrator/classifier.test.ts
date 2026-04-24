@@ -3,7 +3,7 @@ import { ClassifierAgent } from '../../../src/main/orchestrator/classifier';
 
 describe('ClassifierAgent', () => {
   it('returns disabled when not configured', () => {
-    const agent = new ClassifierAgent({ enabled: false }, null as any);
+    const agent = new ClassifierAgent({ enabled: false, providerId: '', model: '', timeoutMs: 3000, threshold: 0.6 }, null as any);
     expect(agent.isEnabled()).toBe(false);
   });
 
@@ -25,7 +25,7 @@ describe('ClassifierAgent', () => {
   });
 
   it('throws when not enabled', async () => {
-    const agent = new ClassifierAgent({ enabled: false }, null as any);
+    const agent = new ClassifierAgent({ enabled: false, providerId: '', model: '', timeoutMs: 3000, threshold: 0.6 }, null as any);
     await expect(agent.classify({ text: 'hello', mentions: [], triggerHints: { leadMatched: false, commentMatched: false } })).rejects.toThrow();
   });
 });

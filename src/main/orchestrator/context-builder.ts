@@ -21,5 +21,6 @@ export function buildContext(input: {
   messages.push(...selected.map(m => ({ role: m.role, content: m.content })));
   messages.push(...currentTurn);
 
-  return truncateContext(messages, threshold, modelContextWindow);
+  const truncated = truncateContext(messages, threshold, modelContextWindow);
+  return { model: 'auto', messages: truncated.messages };
 }

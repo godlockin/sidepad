@@ -9,7 +9,7 @@ export class OllamaProvider implements LLMProvider {
   constructor(id: string, configId: string, baseURL?: string) {
     this.id = id;
     this.configId = configId;
-    if (baseURL) ollama.configure({ host: baseURL });
+    if (baseURL) (ollama as any).configure({ host: baseURL });
   }
 
   async listModels(): Promise<Model[]> {
