@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../stores/session-store';
 import { useChatStore } from '../stores/chat-store';
 import { useSettingsStore } from '../stores/settings-store';
@@ -10,6 +11,7 @@ import { PersonaPicker } from '../components/PersonaPicker';
 import { trpc } from '../lib/trpc-client';
 
 export function ChatPage() {
+  const { t } = useTranslation();
   const { sessions, activeSessionId, activeSession: storeActive, loadSessions } = useSessionStore();
   const { sendMessage, stopStreaming, streaming, messages } = useChatStore();
   const { providers } = useSettingsStore();
@@ -83,13 +85,13 @@ export function ChatPage() {
         <header className="px-6 h-12 border-b border-rule flex items-center justify-between gap-4 bg-surface">
           <h2 className="text-[14px] font-medium text-ink truncate">
             {activeSession?.title || (
-              <span className="text-ink-faint font-normal">New conversation</span>
+              <span className="text-ink-faint font-normal">{t('chat.newConversation')}</span>
             )}
           </h2>
           {activeSession && (
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
-                visibility
+                {t('chat.visibility')}
               </span>
               <select
                 value={activeSession.visibilityMode}
@@ -98,8 +100,8 @@ export function ChatPage() {
                 }
                 className="bg-surface border border-rule rounded-[6px] text-[12px] text-ink px-2 py-1 cursor-pointer focus:outline-none focus:border-accent"
               >
-                <option value="independent">Independent</option>
-                <option value="full">Full</option>
+                <option value="independent">{t('chat.visibilityIndependent')}</option>
+                <option value="full">{t('chat.visibilityFull')}</option>
               </select>
             </div>
           )}
@@ -108,7 +110,7 @@ export function ChatPage() {
         {activeSession && activeSession.participants && activeSession.participants.length > 0 && (
           <div className="px-6 py-2 border-b border-rule flex flex-wrap items-center gap-2 bg-surface">
             <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
-              voices
+              {t('chat.voices')}
             </span>
             {activeSession.participants.map((p) => {
               const persona = personas.find((pp) => pp.id === p.personaId);
@@ -126,7 +128,7 @@ export function ChatPage() {
                     });
                   }}
                   className="inline-flex items-center text-[12px] rounded-full bg-surface-2 border border-rule px-2.5 py-0.5 text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors"
-                  title="Click to change persona"
+                  title={t('chat.changePersona')}
                 >
                   <span className="font-medium">@{p.agentId}</span>
                   {personaLabel && (
@@ -162,9 +164,9 @@ export function ChatPage() {
                   ✦
                 </div>
                 <p className="text-[14px] text-ink-muted max-w-[42ch]">
-                  Start a conversation. Use{' '}
+                  {t('chat.emptyStart')}{' '}
                   <span className="font-mono text-accent text-[12px] bg-accent-muted px-1.5 py-[1px] rounded-[4px]">@</span>{' '}
-                  to address a voice.
+                  {t('chat.emptyEnd')}
                 </p>
               </div>
             )}

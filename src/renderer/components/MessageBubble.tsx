@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Message } from '../../main/store/types';
 import { EditForkModal } from './EditForkModal';
 import { PersonaPicker } from './PersonaPicker';
@@ -92,17 +93,18 @@ function AgentEntry({
   onCopy: () => void;
   onEditFork: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="group relative">
       {/* Byline */}
       <header className="flex items-center gap-2 mb-1.5">
         <BylineAgent agentId={meta.agentId ?? null} />
         {isStreaming && (
-          <span className="text-[11px] font-medium text-accent">writing…</span>
+          <span className="text-[11px] font-medium text-accent">{t('messageBubble.writing')}</span>
         )}
         {isError && (
           <span className="text-[11px] font-medium uppercase tracking-wider text-danger">
-            error
+            {t('messageBubble.error')}
           </span>
         )}
       </header>
@@ -134,7 +136,7 @@ function AgentEntry({
               onClick={onCopy}
               className="text-[11px] font-medium text-ink-faint hover:text-accent cursor-pointer transition-colors"
             >
-              {copied ? '✓ Copied' : 'Copy'}
+              {copied ? t('messageBubble.copied') : t('messageBubble.copy')}
             </button>
           )}
           {message.status === 'done' && (
@@ -142,7 +144,7 @@ function AgentEntry({
               onClick={onEditFork}
               className="text-[11px] font-medium text-ink-faint hover:text-accent cursor-pointer transition-colors"
             >
-              Edit / fork
+              {t('messageBubble.editFork')}
             </button>
           )}
         </footer>
@@ -152,13 +154,14 @@ function AgentEntry({
 }
 
 function BylineAgent({ agentId }: { agentId: string | null }) {
+  const { t } = useTranslation();
   const [picker, setPicker] = useState<{ top: number; left: number } | null>(null);
   const activeSession = useSessionStore((s) => s.activeSession);
   const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
   const personas = usePersonaStore((s) => s.personas);
 
   if (!agentId) {
-    return <span className="text-[12px] font-medium text-ink-muted">agent</span>;
+    return <span className="text-[12px] font-medium text-ink-muted">{t('messageBubble.agent')}</span>;
   }
 
   const personaId =
@@ -176,7 +179,7 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
           setPicker({ top: rect.bottom + 6, left: rect.left });
         }}
         className="inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-muted hover:text-accent cursor-pointer transition-colors"
-        title="Click to change persona"
+        title={t('chat.changePersona')}
       >
         <span className="font-mono text-[11px] bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px] text-ink">
           {agentId}

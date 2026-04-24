@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../stores/settings-store';
 import { applyTheme, type Theme } from '../lib/theme';
 import { ProviderForm } from '../components/ProviderForm';
@@ -7,14 +8,14 @@ import { PersonasTab } from './settings/PersonasTab';
 
 type SettingsTab = 'providers' | 'personas' | 'appearance' | 'about';
 
-const TABS: { key: SettingsTab; label: string }[] = [
-  { key: 'providers', label: 'Voices' },
-  { key: 'personas', label: 'Personas' },
-  { key: 'appearance', label: 'Appearance' },
-  { key: 'about', label: 'About' },
-];
-
 export function SettingsPage() {
+  const { t } = useTranslation();
+  const TABS: { key: SettingsTab; label: string }[] = [
+    { key: 'providers', label: t('settings.tabs.voices') },
+    { key: 'personas', label: t('settings.tabs.personas') },
+    { key: 'appearance', label: t('settings.tabs.appearance') },
+    { key: 'about', label: t('settings.tabs.about') },
+  ];
   const [tab, setTab] = useState<SettingsTab>('providers');
   const [showForm, setShowForm] = useState(false);
   const { providers, theme, init, setTheme, addProvider } = useSettingsStore();
@@ -70,21 +71,21 @@ export function SettingsPage() {
           {tab === 'providers' && (
             <section>
               <Heading level={1} className="mb-2">
-                Voices
+                {t('settings.voices.title')}
               </Heading>
               <p className="text-[14px] leading-[1.6] text-ink-muted">
-                Each voice is an LLM endpoint you address with{' '}
-                <span className="font-mono text-accent text-[13px]">@name</span>.
-                Keys stay encrypted on this machine.
+                {t('settings.voices.bodyStart')}{' '}
+                <span className="font-mono text-accent text-[13px]">@name</span>
+                {t('settings.voices.bodyEnd')}
               </p>
 
               <div className="mt-6 mb-3 flex items-center justify-between">
                 <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
-                  Configured · {providers.length.toString().padStart(2, '0')}
+                  {t('settings.voices.configured')} · {providers.length.toString().padStart(2, '0')}
                 </span>
                 {!showForm && (
                   <Button variant="ghost" size="sm" onClick={() => setShowForm(true)}>
-                    + introduce a voice
+                    {t('settings.voices.add')}
                   </Button>
                 )}
               </div>
@@ -92,7 +93,7 @@ export function SettingsPage() {
               <div className="border border-rule rounded-[10px] bg-surface overflow-hidden">
                 {!showForm && providers.length === 0 && (
                   <p className="text-[13px] text-ink-faint py-10 text-center">
-                    No voices yet. Introduce one to begin.
+                    {t('settings.voices.empty')}
                   </p>
                 )}
 
@@ -109,7 +110,7 @@ export function SettingsPage() {
                           </div>
                         </div>
                         <span className="text-[11px] uppercase tracking-[0.06em] text-success">
-                          ● active
+                          {t('settings.voices.active')}
                         </span>
                       </li>
                     ))}
@@ -133,15 +134,15 @@ export function SettingsPage() {
           {tab === 'appearance' && (
             <section>
               <Heading level={1} className="mb-2">
-                Appearance
+                {t('settings.appearance.title')}
               </Heading>
               <p className="text-[14px] leading-[1.6] text-ink-muted">
-                Light or dark. The interface follows your system by default.
+                {t('settings.appearance.body')}
               </p>
 
               <div className="mt-6">
                 <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
-                  Theme
+                  {t('settings.appearance.theme')}
                 </span>
                 <div className="mt-3 grid grid-cols-3 gap-3">
                   {(['system', 'light', 'dark'] as const).map((t) => (
@@ -160,16 +161,16 @@ export function SettingsPage() {
           {tab === 'about' && (
             <section>
               <Heading level={1} className="mb-3">
-                About
+                {t('settings.about.title')}
               </Heading>
               <div className="text-[14px] leading-[1.7] text-ink space-y-3 max-w-[60ch]">
                 <p>
-                  <span className="font-semibold">sidepad</span> — a desktop
-                  workspace for talking with multiple LLMs at once. Version{' '}
+                  <span className="font-semibold">{t('settings.about.name')}</span>{' '}
+                  {t('settings.about.tagline')}{' '}
                   <span className="font-mono text-[12px] text-ink-muted">0.0.1</span>.
                 </p>
                 <p className="text-ink-muted">
-                  Local storage · zero telemetry · open source.
+                  {t('settings.about.subtitle')}
                 </p>
               </div>
             </section>
@@ -189,6 +190,12 @@ function ThemeSwatch({
   active: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
+  const labelMap: Record<Theme, string> = {
+    system: t('settings.appearance.system'),
+    light: t('settings.appearance.light'),
+    dark: t('settings.appearance.dark'),
+  };
   const preview =
     value === 'light'
       ? { bg: '#FBFBFC', ink: '#0B0D12', accent: '#5B5BD6' }
@@ -236,9 +243,9 @@ function ThemeSwatch({
             active ? 'text-accent' : 'text-ink-muted'
           }`}
         >
-          {value}
+          {labelMap[value]}
         </span>
-        {active && <span className="text-[10px] text-accent">current</span>}
+        {active && <span className="text-[10px] text-accent">{t('settings.appearance.current')}</span>}
       </div>
     </button>
   );

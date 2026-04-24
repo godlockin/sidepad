@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Heading, Button } from '../../components/ui';
 import { PersonaForm } from '../../components/PersonaForm';
 import {
@@ -8,6 +9,7 @@ import {
 } from '../../stores/persona-store';
 
 export function PersonasTab() {
+  const { t } = useTranslation();
   const { personas, loadPersonas, createPersona, updatePersona, deletePersona } =
     usePersonaStore();
   const [showNew, setShowNew] = useState(false);
@@ -20,16 +22,15 @@ export function PersonasTab() {
   return (
     <section>
       <Heading level={1} className="mb-2">
-        Personas
+        {t('personasTab.title')}
       </Heading>
       <p className="text-[14px] leading-[1.6] text-ink-muted">
-        A persona is a system prompt — a stance, a temperament. Attach one to any
-        voice in a chat to colour its replies. The same model can wear many hats.
+        {t('personasTab.body')}
       </p>
 
       <div className="mt-6 mb-3 flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
-          Library · {personas.length.toString().padStart(2, '0')}
+          {t('personasTab.library')} · {personas.length.toString().padStart(2, '0')}
         </span>
         {!showNew && (
           <Button
@@ -40,7 +41,7 @@ export function PersonasTab() {
               setEditingId(null);
             }}
           >
-            + new persona
+            {t('personasTab.newPersona')}
           </Button>
         )}
       </div>
@@ -60,7 +61,7 @@ export function PersonasTab() {
 
         {personas.length === 0 && !showNew && (
           <p className="text-[13px] text-ink-faint py-10 text-center">
-            No personas yet.
+            {t('personasTab.empty')}
           </p>
         )}
 
@@ -82,7 +83,7 @@ export function PersonasTab() {
                 }}
                 onDelete={async () => {
                   if (p.id === DEFAULT_PERSONA_ID) return;
-                  if (!confirm(`Delete persona "${p.name}"?`)) return;
+                  if (!confirm(t('personasTab.confirmDelete', { name: p.name }))) return;
                   await deletePersona(p.id);
                 }}
               />
@@ -111,6 +112,7 @@ function PersonaRow({
   onSave,
   onDelete,
 }: PersonaRowProps) {
+  const { t } = useTranslation();
   const isDefault = persona.id === DEFAULT_PERSONA_ID;
 
   if (isEditing) {
@@ -134,7 +136,7 @@ function PersonaRow({
           <span className="text-[14px] font-semibold text-ink">{persona.name}</span>
           {isDefault && (
             <span className="text-[10px] uppercase tracking-[0.06em] text-ink-faint">
-              default
+              {t('personasTab.default')}
             </span>
           )}
         </div>
@@ -144,10 +146,10 @@ function PersonaRow({
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <Button variant="ghost" size="sm" onClick={onEdit}>
-          Edit
+          {t('personasTab.edit')}
         </Button>
         <Button variant="danger" size="sm" disabled={isDefault} onClick={onDelete}>
-          Delete
+          {t('personasTab.delete')}
         </Button>
       </div>
     </li>

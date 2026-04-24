@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Field, Input, TextArea, Button } from './ui';
 import type { Persona } from '../stores/persona-store';
 
@@ -9,6 +10,7 @@ interface PersonaFormProps {
 }
 
 export function PersonaForm({ initial, onSubmit, onCancel }: PersonaFormProps) {
+  const { t } = useTranslation();
   const isEdit = !!initial;
   const [name, setName] = useState(initial?.name ?? '');
   const [prompt, setPrompt] = useState(initial?.prompt ?? '');
@@ -37,18 +39,18 @@ export function PersonaForm({ initial, onSubmit, onCancel }: PersonaFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="Name">
+      <Field label={t('personaForm.nameLabel')}>
         <Input
           autoFocus
-          placeholder="e.g. Product Manager"
+          placeholder={t('personaForm.namePlaceholder')}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
       </Field>
-      <Field label="System prompt" hint="Sets voice, tone, and constraints for this persona.">
+      <Field label={t('personaForm.promptLabel')} hint={t('personaForm.promptHint')}>
         <TextArea
           rows={6}
-          placeholder="You are a senior product manager. Always answer…"
+          placeholder={t('personaForm.promptPlaceholder')}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
         />
@@ -56,10 +58,10 @@ export function PersonaForm({ initial, onSubmit, onCancel }: PersonaFormProps) {
       {error && <p className="text-[12px] text-danger">{error}</p>}
       <div className="flex items-center gap-2 pt-1">
         <Button type="submit" variant="primary" size="sm" disabled={!valid || submitting}>
-          {submitting ? 'saving…' : isEdit ? 'save changes' : 'save persona'}
+          {submitting ? t('personaForm.saving') : isEdit ? t('personaForm.saveChanges') : t('personaForm.savePersona')}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          cancel
+          {t('personaForm.cancel')}
         </Button>
       </div>
     </form>

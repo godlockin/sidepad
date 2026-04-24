@@ -1,0 +1,153 @@
+{
+  "nav": {
+    "chat": "Chat",
+    "settings": "Settings",
+    "toggleTheme": "Toggle theme",
+    "language": "Language"
+  },
+  "onboarding": {
+    "welcomeTitle": "Welcome to sidepad",
+    "welcomeBody": "A side-by-side workspace for talking with multiple LLMs at once. Group chats, personas, and a sharp keyboard-first surface.",
+    "getStarted": "Get started →",
+    "skip": "Skip for now",
+    "addFirstVoiceTitle": "Add your first voice",
+    "addFirstVoiceBody": "Connect a provider so sidepad has someone to talk to. You can add more later in Settings."
+  },
+  "chat": {
+    "newConversation": "New conversation",
+    "visibility": "visibility",
+    "visibilityIndependent": "Independent",
+    "visibilityFull": "Full",
+    "voices": "voices",
+    "changePersona": "Click to change persona",
+    "emptyStart": "Start a conversation. Use",
+    "emptyEnd": "to address a voice."
+  },
+  "sidebar": {
+    "sessions": "Sessions",
+    "newShort": "+ new",
+    "newAria": "New session",
+    "deleteAria": "Delete session",
+    "confirmDelete": "Delete this session?",
+    "untitled": "Untitled",
+    "emptyLine1": "No conversations yet.",
+    "emptyLine2": "Press",
+    "emptyLine3": "to begin.",
+    "footer": "local · zero telemetry"
+  },
+  "chatInput": {
+    "addressedTo": "addressed to",
+    "placeholder": "Send a message… use @ to address a voice",
+    "send": "Send",
+    "stop": "Stop",
+    "composing": "composing reply…",
+    "shortcut": "⌘ + ↵ to send · @ to address",
+    "charSuffix": "ch"
+  },
+  "mentionPicker": {
+    "title": "Address a voice"
+  },
+  "personaPicker": {
+    "title": "Choose a persona",
+    "empty": "No personas yet.",
+    "default": "default",
+    "editLibrary": "Edit personas…"
+  },
+  "messageBubble": {
+    "writing": "writing…",
+    "error": "error",
+    "copied": "✓ Copied",
+    "copy": "Copy",
+    "editFork": "Edit / fork",
+    "agent": "agent"
+  },
+  "editFork": {
+    "headingEdit": "Revise in place",
+    "headingFork": "Branch into a new conversation",
+    "headingChoose": "How would you like to amend?",
+    "explainer": "Revise replaces this entry and discards everything that followed. Branching keeps the conversation whole and starts a new one from this point.",
+    "contentLabel": "Content",
+    "titleLabel": "Title for the new conversation",
+    "titlePlaceholder": "optional",
+    "close": "Close",
+    "cancel": "Cancel",
+    "branch": "Branch off",
+    "revise": "Revise here",
+    "back": "← Back",
+    "applyRevision": "Apply revision",
+    "openNew": "Open new conversation"
+  },
+  "providerForm": {
+    "kindLabel": "Kind",
+    "nameLabel": "Name",
+    "nameHint": "Shown in @ mentions and sidebar",
+    "namePlaceholder": "my-openai",
+    "apiKey": "API key",
+    "apiKeyPlaceholder": "sk-…",
+    "baseURL": "Base URL",
+    "baseURLPlaceholderOllama": "http://localhost:11434",
+    "baseURLPlaceholder": "https://api.example.com/v1",
+    "save": "save voice",
+    "cancel": "cancel",
+    "types": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "ollama": "Ollama (local)",
+      "openaiCompat": "OpenAI-compatible"
+    }
+  },
+  "personaForm": {
+    "namePlaceholder": "e.g. Product Manager",
+    "nameLabel": "Name",
+    "promptLabel": "System prompt",
+    "promptHint": "Sets voice, tone, and constraints for this persona.",
+    "promptPlaceholder": "You are a senior product manager. Always answer…",
+    "saving": "saving…",
+    "saveChanges": "save changes",
+    "savePersona": "save persona",
+    "cancel": "cancel"
+  },
+  "personasTab": {
+    "title": "Personas",
+    "body": "A persona is a system prompt — a stance, a temperament. Attach one to any voice in a chat to colour its replies. The same model can wear many hats.",
+    "library": "Library",
+    "newPersona": "+ new persona",
+    "empty": "No personas yet.",
+    "confirmDelete": "Delete persona \"{{name}}\"?",
+    "default": "default",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "settings": {
+    "tabs": {
+      "voices": "Voices",
+      "personas": "Personas",
+      "appearance": "Appearance",
+      "about": "About"
+    },
+    "voices": {
+      "title": "Voices",
+      "bodyStart": "Each voice is an LLM endpoint you address with",
+      "bodyEnd": ". Keys stay encrypted on this machine.",
+      "configured": "Configured",
+      "add": "+ introduce a voice",
+      "empty": "No voices yet. Introduce one to begin.",
+      "active": "● active"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "body": "Light or dark. The interface follows your system by default.",
+      "theme": "Theme",
+      "system": "system",
+      "light": "light",
+      "dark": "dark",
+      "current": "current"
+    },
+    "about": {
+      "title": "About",
+      "name": "sidepad",
+      "tagline": "— a desktop workspace for talking with multiple LLMs at once. Version",
+      "subtitle": "Local storage · zero telemetry · open source."
+    }
+  }
+}

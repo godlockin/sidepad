@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MentionPicker } from './MentionPicker';
 import { PersonaPicker } from './PersonaPicker';
 import { useSessionStore } from '../stores/session-store';
@@ -21,6 +22,7 @@ export function ChatInput({
   providers = [],
   onMentionSelect,
 }: ChatInputProps) {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const [chipPicker, setChipPicker] = useState<{
@@ -87,7 +89,7 @@ export function ChatInput({
         {mentions.length > 0 && (
           <div className="px-3 pt-2.5 flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">
-              addressed to
+              {t('chatInput.addressedTo')}
             </span>
             {mentions.map((m) => {
               const personaId =
@@ -108,7 +110,7 @@ export function ChatInput({
                     });
                   }}
                   className="inline-flex items-center text-[12px] rounded-full bg-accent-muted text-accent px-2.5 py-0.5 hover:bg-accent hover:text-white cursor-pointer transition-colors"
-                  title="Click to change persona"
+                  title={t('chat.changePersona')}
                 >
                   <span className="font-medium">@{m}</span>
                   {personaLabel && (
@@ -142,7 +144,7 @@ export function ChatInput({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Send a message… use @ to address a voice"
+              placeholder={t('chatInput.placeholder')}
               rows={1}
               disabled={disabled || streaming}
               className="w-full bg-transparent border-0 p-0 resize-none text-[14px] leading-[1.55] text-ink placeholder:text-ink-faint focus:outline-none disabled:opacity-50"
@@ -162,7 +164,7 @@ export function ChatInput({
               onClick={onStop}
               className="self-end h-7 px-3 text-[12px] font-medium text-white bg-danger hover:bg-danger/90 rounded-[6px] cursor-pointer transition-colors"
             >
-              Stop
+              {t('chatInput.stop')}
             </button>
           ) : (
             <button
@@ -170,18 +172,18 @@ export function ChatInput({
               disabled={!canSend}
               className="self-end h-7 px-3 text-[12px] font-medium text-white bg-accent hover:bg-accent-hover rounded-[6px] cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-default"
             >
-              Send
+              {t('chatInput.send')}
             </button>
           )}
         </div>
 
         <div className="px-3 pb-2 flex items-center justify-between">
           <span className="text-[10px] tracking-[0.04em] text-ink-faint uppercase">
-            {streaming ? 'composing reply…' : '⌘ + ↵ to send · @ to address'}
+            {streaming ? t('chatInput.composing') : t('chatInput.shortcut')}
           </span>
           {input.length > 0 && (
             <span className="font-mono text-[10px] tabular-nums text-ink-faint">
-              {input.length.toLocaleString()} ch
+              {input.length.toLocaleString()} {t('chatInput.charSuffix')}
             </span>
           )}
         </div>

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../stores/session-store';
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const { sessions, activeSessionId, createSession, deleteSession, selectSession, renameSession } =
     useSessionStore();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -9,7 +11,7 @@ export function Sidebar() {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Delete this session?')) await deleteSession(id);
+    if (confirm(t('sidebar.confirmDelete'))) await deleteSession(id);
   };
 
   const commitRename = async () => {
@@ -24,14 +26,14 @@ export function Sidebar() {
       {/* Head */}
       <div className="px-3 pt-3 pb-2 flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
-          Sessions
+          {t('sidebar.sessions')}
         </span>
         <button
           onClick={() => createSession()}
-          aria-label="New session"
+          aria-label={t('sidebar.newAria')}
           className="text-[12px] font-medium text-ink-muted hover:text-accent cursor-pointer transition-colors"
         >
-          + new
+          {t('sidebar.newShort')}
         </button>
       </div>
 
@@ -45,7 +47,7 @@ export function Sidebar() {
                 onClick={() => selectSession(s.id)}
                 onDoubleClick={() => {
                   setEditingId(s.id);
-                  setEditTitle(s.title || 'Untitled');
+                  setEditTitle(s.title || t('sidebar.untitled'));
                 }}
                 className={`relative w-full text-left px-3 py-1.5 rounded-[6px] flex items-center gap-2 cursor-pointer transition-colors duration-[var(--dur-fast)] ${
                   active
@@ -72,7 +74,7 @@ export function Sidebar() {
                       {s.parentMessageId && (
                         <span className="text-ink-faint mr-1" title="forked">↳ </span>
                       )}
-                      {s.title || <span className="text-ink-faint">Untitled</span>}
+                      {s.title || <span className="text-ink-faint">{t('sidebar.untitled')}</span>}
                     </span>
                   )}
                 </span>
@@ -81,7 +83,7 @@ export function Sidebar() {
                   onClick={(e) => handleDelete(s.id, e)}
                   role="button"
                   tabIndex={-1}
-                  aria-label="Delete session"
+                  aria-label={t('sidebar.deleteAria')}
                   className={`text-[14px] leading-none text-ink-faint hover:text-danger cursor-pointer transition-opacity ${
                     active ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'
                   }`}
@@ -96,13 +98,13 @@ export function Sidebar() {
         {sessions.length === 0 && (
           <li className="px-3 py-8 text-center">
             <p className="text-[12px] text-ink-faint leading-relaxed">
-              No conversations yet.
+              {t('sidebar.emptyLine1')}
               <br />
-              Press{' '}
+              {t('sidebar.emptyLine2')}{' '}
               <span className="font-mono text-ink-muted bg-surface border border-rule px-1.5 py-[1px] rounded-[4px]">
-                + new
+                {t('sidebar.newShort')}
               </span>{' '}
-              to begin.
+              {t('sidebar.emptyLine3')}
             </p>
           </li>
         )}
@@ -111,7 +113,7 @@ export function Sidebar() {
       {/* Footer */}
       <div className="px-3 py-2 border-t border-rule">
         <span className="text-[10px] uppercase tracking-[0.1em] text-ink-faint">
-          local · zero telemetry
+          {t('sidebar.footer')}
         </span>
       </div>
     </aside>

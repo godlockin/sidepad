@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 
 interface PersonaPickerProps {
@@ -16,6 +17,7 @@ export function PersonaPicker({
   anchor,
   onEditLibrary,
 }: PersonaPickerProps) {
+  const { t } = useTranslation();
   const personas = usePersonaStore((s) => s.personas);
   const loadPersonas = usePersonaStore((s) => s.loadPersonas);
   const [selectedIndex, setSelectedIndex] = useState(() => {
@@ -72,13 +74,13 @@ export function PersonaPicker({
     <div
       ref={containerRef}
       role="listbox"
-      aria-label="Choose a persona"
+      aria-label={t('personaPicker.title')}
       style={positionStyle}
       className={className}
     >
       <div className="px-3 pt-2 pb-1.5 flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">
-          Choose a persona
+          {t('personaPicker.title')}
         </span>
         <span className="font-mono text-[10px] tracking-[0.04em] text-ink-faint uppercase">
           ↑↓ ↵
@@ -88,7 +90,7 @@ export function PersonaPicker({
 
       <ol className="py-1 max-h-[280px] overflow-y-auto">
         {personas.length === 0 && (
-          <li className="px-3 py-2 text-[12px] text-ink-faint">No personas yet.</li>
+          <li className="px-3 py-2 text-[12px] text-ink-faint">{t('personaPicker.empty')}</li>
         )}
         {personas.map((p, i) => {
           const active = i === selectedIndex;
@@ -113,7 +115,7 @@ export function PersonaPicker({
                 </span>
                 {p.id === DEFAULT_PERSONA_ID && (
                   <span className="text-[10px] uppercase tracking-[0.04em] text-ink-faint">
-                    default
+                    {t('personaPicker.default')}
                   </span>
                 )}
                 {current && <span className="text-accent text-[12px]">✓</span>}
@@ -130,7 +132,7 @@ export function PersonaPicker({
             onClick={onEditLibrary}
             className="w-full px-3 py-2 text-left text-[12px] font-medium text-ink-muted hover:text-accent cursor-pointer transition-colors"
           >
-            Edit personas…
+            {t('personaPicker.editLibrary')}
           </button>
         </>
       )}

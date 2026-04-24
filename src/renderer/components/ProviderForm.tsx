@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Field, Input, Select, Button } from './ui';
 
 type ProviderType = 'openai' | 'anthropic' | 'ollama' | 'openai-compat';
@@ -24,6 +25,13 @@ function needsAPIKey(type: ProviderType): boolean {
 }
 
 export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: ProviderFormProps) {
+  const { t } = useTranslation();
+  const PROVIDER_TYPES: { value: ProviderType; label: string }[] = [
+    { value: 'openai', label: t('providerForm.types.openai') },
+    { value: 'anthropic', label: t('providerForm.types.anthropic') },
+    { value: 'ollama', label: t('providerForm.types.ollama') },
+    { value: 'openai-compat', label: t('providerForm.types.openaiCompat') },
+  ];
   const [type, setType] = useState<ProviderType>(initialType);
   const [name, setName] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -46,7 +54,7 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: Pro
   return (
     <form onSubmit={handleSubmit} className="space-y-4 anim-fade-up">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Kind">
+        <Field label={t('providerForm.kindLabel')}>
           <Select value={type} onChange={(e) => setType(e.target.value as ProviderType)}>
             {PROVIDER_TYPES.map((pt) => (
               <option key={pt.value} value={pt.value}>
@@ -56,23 +64,23 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: Pro
           </Select>
         </Field>
 
-        <Field label="Name" hint="Shown in @ mentions and sidebar">
+        <Field label={t('providerForm.nameLabel')} hint={t('providerForm.nameHint')}>
           <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="my-openai"
+            placeholder={t('providerForm.namePlaceholder')}
             required
           />
         </Field>
 
         {showAPIKey && (
-          <Field label="API key" className="md:col-span-2">
+          <Field label={t('providerForm.apiKey')} className="md:col-span-2">
             <Input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-…"
+              placeholder={t('providerForm.apiKeyPlaceholder')}
               required={showAPIKey}
               autoComplete="off"
               spellCheck={false}
@@ -81,12 +89,12 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: Pro
         )}
 
         {showBaseURL && (
-          <Field label="Base URL" className="md:col-span-2">
+          <Field label={t('providerForm.baseURL')} className="md:col-span-2">
             <Input
               type="text"
               value={baseURL}
               onChange={(e) => setBaseURL(e.target.value)}
-              placeholder={type === 'ollama' ? 'http://localhost:11434' : 'https://api.example.com/v1'}
+              placeholder={type === 'ollama' ? t('providerForm.baseURLPlaceholderOllama') : t('providerForm.baseURLPlaceholder')}
               spellCheck={false}
             />
           </Field>
@@ -95,10 +103,10 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: Pro
 
       <div className="flex items-center gap-2 pt-2">
         <Button type="submit" variant="primary" size="sm">
-          save voice
+          {t('providerForm.save')}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          cancel
+          {t('providerForm.cancel')}
         </Button>
       </div>
     </form>

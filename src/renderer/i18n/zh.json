@@ -1,0 +1,153 @@
+{
+  "nav": {
+    "chat": "对话",
+    "settings": "设置",
+    "toggleTheme": "切换主题",
+    "language": "语言"
+  },
+  "onboarding": {
+    "welcomeTitle": "欢迎使用 sidepad",
+    "welcomeBody": "并排与多个 LLM 同时对话的工作台。群聊、人格设定、键盘优先的简洁界面。",
+    "getStarted": "开始使用 →",
+    "skip": "暂时跳过",
+    "addFirstVoiceTitle": "添加第一个声音",
+    "addFirstVoiceBody": "连接一个 Provider，让 sidepad 有可以对话的对象。之后还可以在「设置」中继续添加。"
+  },
+  "chat": {
+    "newConversation": "新对话",
+    "visibility": "可见性",
+    "visibilityIndependent": "独立模式",
+    "visibilityFull": "全员可见",
+    "voices": "声音",
+    "changePersona": "点击切换人格",
+    "emptyStart": "开始对话。输入",
+    "emptyEnd": "来指定一个声音回复。"
+  },
+  "sidebar": {
+    "sessions": "会话列表",
+    "newShort": "+ 新建",
+    "newAria": "新建会话",
+    "deleteAria": "删除会话",
+    "confirmDelete": "确认删除该会话？",
+    "untitled": "未命名",
+    "emptyLine1": "还没有任何对话。",
+    "emptyLine2": "点击",
+    "emptyLine3": "开始。",
+    "footer": "本地存储 · 零遥测"
+  },
+  "chatInput": {
+    "addressedTo": "发送给",
+    "placeholder": "发送消息…  用 @ 指定声音",
+    "send": "发送",
+    "stop": "停止",
+    "composing": "正在生成回复…",
+    "shortcut": "⌘ + ↵ 发送 · @ 指定",
+    "charSuffix": "字符"
+  },
+  "mentionPicker": {
+    "title": "指定一个声音"
+  },
+  "personaPicker": {
+    "title": "选择一个人格",
+    "empty": "暂无人格。",
+    "default": "默认",
+    "editLibrary": "管理人格库…"
+  },
+  "messageBubble": {
+    "writing": "写作中…",
+    "error": "错误",
+    "copied": "✓ 已复制",
+    "copy": "复制",
+    "editFork": "编辑 / 分支",
+    "agent": "智能体"
+  },
+  "editFork": {
+    "headingEdit": "原地修改",
+    "headingFork": "分支到新对话",
+    "headingChoose": "你希望如何修改？",
+    "explainer": "原地修改会替换该条消息并丢弃之后的内容；分支会保留原对话，从此处派生新对话。",
+    "contentLabel": "内容",
+    "titleLabel": "新对话的标题",
+    "titlePlaceholder": "可选",
+    "close": "关闭",
+    "cancel": "取消",
+    "branch": "分支",
+    "revise": "在此修改",
+    "back": "← 返回",
+    "applyRevision": "应用修改",
+    "openNew": "打开新对话"
+  },
+  "providerForm": {
+    "kindLabel": "类型",
+    "nameLabel": "名称",
+    "nameHint": "用于 @ 提及和侧边栏显示",
+    "namePlaceholder": "my-openai",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "sk-…",
+    "baseURL": "Base URL",
+    "baseURLPlaceholderOllama": "http://localhost:11434",
+    "baseURLPlaceholder": "https://api.example.com/v1",
+    "save": "save voice",
+    "cancel": "取消",
+    "types": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "ollama": "Ollama (本地)",
+      "openaiCompat": "OpenAI 兼容"
+    }
+  },
+  "personaForm": {
+    "namePlaceholder": "例如：产品经理",
+    "nameLabel": "名称",
+    "promptLabel": "系统 Prompt",
+    "promptHint": "决定该人格的语气、风格与约束。",
+    "promptPlaceholder": "你是一名资深产品经理。请始终回答…",
+    "saving": "保存中…",
+    "saveChanges": "save persona",
+    "savePersona": "save persona",
+    "cancel": "取消"
+  },
+  "personasTab": {
+    "title": "人格",
+    "body": "人格即一段系统 Prompt——一种立场、一种性格。为对话中的某个声音附加人格，可以改变它的回复风格；同一个模型可以扮演多种角色。",
+    "library": "人格库",
+    "newPersona": "+ new persona",
+    "empty": "暂无人格。",
+    "confirmDelete": "确认删除人格 \"{{name}}\"？",
+    "default": "默认",
+    "edit": "编辑",
+    "delete": "删除"
+  },
+  "settings": {
+    "tabs": {
+      "voices": "Voices",
+      "personas": "人格",
+      "appearance": "外观",
+      "about": "关于"
+    },
+    "voices": {
+      "title": "声音",
+      "bodyStart": "每个声音都是一个用",
+      "bodyEnd": "调用的 LLM 端点。密钥仅加密保存在本机。",
+      "configured": "已配置",
+      "add": "+ introduce a voice",
+      "empty": "尚未配置任何声音，先添加一个吧。",
+      "active": "● 已启用"
+    },
+    "appearance": {
+      "title": "外观",
+      "body": "浅色或深色。默认跟随系统。",
+      "theme": "主题",
+      "system": "系统",
+      "light": "浅色",
+      "dark": "深色",
+      "current": "当前"
+    },
+    "about": {
+      "title": "关于",
+      "name": "sidepad",
+      "tagline": "—— 一个并排与多个 LLM 对话的桌面工作台。版本",
+      "subtitle": "本地存储 · 零遥测 · 开源。"
+    }
+  }
+}

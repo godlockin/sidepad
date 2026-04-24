@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SettingsPage } from './pages/SettingsPage';
 import { ChatPage } from './pages/ChatPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { useSettingsStore } from './stores/settings-store';
 import { applyTheme } from './lib/theme';
+import { SUPPORTED_LANGS, type Lang } from './i18n/config';
 
 type Page = 'chat' | 'settings' | 'onboarding';
 
 export function App() {
+  const { t, i18n } = useTranslation();
   const { theme, setTheme, providers, loaded, init } = useSettingsStore();
   const [page, setPage] = useState<Page>('chat');
   const [transitioned, setTransitioned] = useState(false);
@@ -49,7 +52,7 @@ export function App() {
 
         {page !== 'onboarding' && (
           <nav className="flex items-center gap-1">
-            {([['chat', 'Chat'], ['settings', 'Settings']] as const).map(([key, label]) => {
+            {([['chat', t('nav.chat')], ['settings', t('nav.settings')]] as const).map(([key, label]) => {
               const active = page === key;
               return (
                 <button
@@ -69,10 +72,14 @@ export function App() {
         )}
 
         <div className="flex items-center gap-1">
+          <LangSwitcher
+            current={(i18n.resolvedLanguage as Lang) || 'en'}
+            onChange={(l) => i18n.changeLanguage(l)}
+          />
           <button
             onClick={toggleTheme}
-            aria-label="Toggle theme"
-            title="Toggle theme"
+            aria-label={t('nav.toggleTheme')}
+            title={t('nav.toggleTheme')}
             className="w-8 h-8 rounded-[6px] flex items-center justify-center text-ink-muted hover:text-ink hover:bg-ink/[0.04] cursor-pointer transition-colors"
           >
             {isDark ? (
@@ -98,5 +105,25 @@ export function App() {
         {page === 'settings' && <SettingsPage />}
       </main>
     </div>
+  );
+}
+
+function LangSwitcher({ current, onChange }: { current: Lang; onChange: (l: Lang) => void }) {
+  const { t } = useTranslation();
+  const labels: Record<Lang, string> = { en: 'EN', zh: '中' };
+  return (
+    <select
+      aria-label={t('nav.language')}
+      title={t('nav.language')}
+      value={current}
+      onChange={(e) => onChange(e.target.value as Lang)}
+      className="h-8 px-2 rounded-[6px] bg-transparent text-[12px] font-medium text-ink-muted hover:text-ink hover:bg-ink/[0.04] cursor-pointer focus:outline-none border-0"
+    >
+      {SUPPORTED_LANGS.map((l) => (
+        <option key={l} value={l}>
+          {labels[l]}
+        </option>
+      ))}
+    </select>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Message } from '../../main/store/types';
 import { Button, Input } from './ui';
 
@@ -15,6 +16,7 @@ export function EditForkModal({
   onFork,
   onClose,
 }: EditForkModalProps) {
+  const { t } = useTranslation();
   const [content, setContent] = useState(message.content);
   const [title, setTitle] = useState('');
   const [mode, setMode] = useState<'edit' | 'fork' | null>(null);
@@ -29,10 +31,10 @@ export function EditForkModal({
 
   const heading =
     mode === 'edit'
-      ? 'Revise in place'
+      ? t('editFork.headingEdit')
       : mode === 'fork'
-      ? 'Branch into a new conversation'
-      : 'How would you like to amend?';
+      ? t('editFork.headingFork')
+      : t('editFork.headingChoose');
 
   return (
     <div
@@ -47,7 +49,7 @@ export function EditForkModal({
       >
         <button
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t('editFork.close')}
           className="absolute top-3 right-3 w-7 h-7 rounded-[6px] flex items-center justify-center text-ink-faint hover:bg-ink/[0.06] hover:text-ink cursor-pointer transition-colors"
         >
           ×
@@ -57,9 +59,7 @@ export function EditForkModal({
           <h3 className="text-[18px] font-semibold text-ink">{heading}</h3>
           {!mode && (
             <p className="mt-2 text-[13px] leading-[1.55] text-ink-muted">
-              Revise replaces this entry and discards everything that followed.
-              Branching keeps the conversation whole and starts a new one from
-              this point.
+              {t('editFork.explainer')}
             </p>
           )}
         </header>
@@ -68,7 +68,7 @@ export function EditForkModal({
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <label className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-muted">
-            Content
+            {t('editFork.contentLabel')}
           </label>
           <textarea
             value={content}
@@ -81,12 +81,12 @@ export function EditForkModal({
           {mode === 'fork' && (
             <div className="mt-4">
               <label className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-muted">
-                Title for the new conversation
+                {t('editFork.titleLabel')}
               </label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="optional"
+                placeholder={t('editFork.titlePlaceholder')}
                 className="mt-1.5"
               />
             </div>
@@ -99,21 +99,21 @@ export function EditForkModal({
           {!mode ? (
             <>
               <Button variant="ghost" size="sm" onClick={onClose}>
-                Cancel
+                {t('editFork.cancel')}
               </Button>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setMode('fork')}>
-                  Branch off
+                  {t('editFork.branch')}
                 </Button>
                 <Button variant="primary" size="sm" onClick={() => setMode('edit')}>
-                  Revise here
+                  {t('editFork.revise')}
                 </Button>
               </div>
             </>
           ) : (
             <>
               <Button variant="ghost" size="sm" onClick={() => setMode(null)}>
-                ← Back
+                {t('editFork.back')}
               </Button>
               <Button
                 variant="primary"
@@ -123,7 +123,7 @@ export function EditForkModal({
                   else onFork(content, title || undefined);
                 }}
               >
-                {mode === 'edit' ? 'Apply revision' : 'Open new conversation'}
+                {mode === 'edit' ? t('editFork.applyRevision') : t('editFork.openNew')}
               </Button>
             </>
           )}

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface MentionPickerProps {
   providers: Array<{ id: string; configId: string }>;
@@ -7,6 +8,7 @@ interface MentionPickerProps {
 }
 
 export function MentionPicker({ providers, onSelect, onClose }: MentionPickerProps) {
+  const { t } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -37,12 +39,12 @@ export function MentionPicker({ providers, onSelect, onClose }: MentionPickerPro
     <div
       ref={containerRef}
       role="listbox"
-      aria-label="Address a voice"
+      aria-label={t('mentionPicker.title')}
       className="absolute bottom-full left-0 mb-2 min-w-[240px] bg-surface border border-rule rounded-[8px] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up z-40"
     >
       <div className="px-3 pt-2 pb-1.5 flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">
-          Address a voice
+          {t('mentionPicker.title')}
         </span>
         <span className="font-mono text-[10px] tracking-[0.04em] text-ink-faint uppercase">
           ↑↓ ↵

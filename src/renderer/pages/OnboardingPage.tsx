@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ProviderForm } from '../components/ProviderForm';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
@@ -15,6 +16,7 @@ interface OnboardingPageProps {
  * Step 2: Add first voice via ProviderForm → land in chat
  */
 export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
   const addProvider = useSettingsStore((s) => s.addProvider);
   const createSession = useSessionStore((s) => s.createSession);
@@ -39,18 +41,17 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
               s
             </div>
             <Heading level={1} className="mb-3">
-              Welcome to sidepad
+              {t('onboarding.welcomeTitle')}
             </Heading>
             <p className="text-[15px] text-ink-muted leading-[1.55] max-w-[420px] mx-auto mb-8">
-              A side-by-side workspace for talking with multiple LLMs at once.
-              Group chats, personas, and a sharp keyboard-first surface.
+              {t('onboarding.welcomeBody')}
             </p>
             <div className="flex items-center justify-center gap-3">
               <Button onClick={() => setStep(2)} variant="primary">
-                Get started →
+                {t('onboarding.getStarted')}
               </Button>
               <Button onClick={onSkip} variant="link">
-                Skip for now
+                {t('onboarding.skip')}
               </Button>
             </div>
           </div>
@@ -59,11 +60,10 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
         {step === 2 && (
           <div>
             <Heading level={2} className="mb-2">
-              Add your first voice
+              {t('onboarding.addFirstVoiceTitle')}
             </Heading>
             <p className="text-[13px] text-ink-muted mb-2">
-              Connect a provider so sidepad has someone to talk to. You can add
-              more later in Settings.
+              {t('onboarding.addFirstVoiceBody')}
             </p>
             <div className="border border-rule rounded-[10px] bg-surface p-5">
               <ProviderForm
@@ -73,7 +73,7 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
             </div>
             <div className="mt-3 text-center">
               <Button onClick={onSkip} variant="link">
-                Skip for now
+                {t('onboarding.skip')}
               </Button>
             </div>
           </div>
