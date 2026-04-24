@@ -1,6 +1,6 @@
 import React from 'react';
 
-/** Hairline horizontal rule — editorial divider. */
+/** Hairline horizontal rule. */
 export function Rule({ className = '' }: { className?: string }) {
   return <hr className={`border-0 border-t border-rule ${className}`} />;
 }
@@ -10,18 +10,18 @@ export function VRule({ className = '' }: { className?: string }) {
   return <div aria-hidden className={`w-px bg-rule ${className}`} />;
 }
 
-/** Running-head / section label in monospace small caps. */
+/** Section eyebrow label — small medium uppercase. */
 export function Eyebrow({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <span
-      className={`font-mono text-xxs uppercase tracking-[0.18em] text-ink-faint ${className}`}
+      className={`text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint ${className}`}
     >
       {children}
     </span>
   );
 }
 
-/** Display heading with Fraunces wonk. */
+/** Display heading — Inter, no decorative variation. */
 export function Heading({
   level = 2,
   children,
@@ -34,15 +34,12 @@ export function Heading({
   const Tag = (`h${level}` as unknown) as 'h1' | 'h2' | 'h3';
   const size =
     level === 1
-      ? 'text-[44px] leading-[1.05]'
+      ? 'text-[28px] leading-[1.15] font-semibold'
       : level === 2
-      ? 'text-[28px] leading-[1.1]'
-      : 'text-[20px] leading-[1.2]';
+      ? 'text-[20px] leading-[1.2] font-semibold'
+      : 'text-[16px] leading-[1.25] font-medium';
   return (
-    <Tag
-      className={`font-display font-normal tracking-tighter text-ink ${size} ${className}`}
-      style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 50, 'WONK' 1" }}
-    >
+    <Tag className={`font-sans tracking-tight text-ink ${size} ${className}`}>
       {children}
     </Tag>
   );

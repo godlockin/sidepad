@@ -12,26 +12,26 @@ const base =
   'inline-flex items-center justify-center gap-1.5 font-sans font-medium ' +
   'transition-colors duration-[var(--dur-fast)] ease-editorial ' +
   'disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ' +
-  'focus-visible:outline-none';
+  'focus-visible:outline-none rounded-[6px]';
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-ink text-paper hover:bg-ink/90 ' +
+    'bg-accent text-white hover:bg-accent-hover ' +
     'focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
   ghost:
-    'bg-transparent text-ink hover:bg-ink/5 ' +
+    'bg-transparent text-ink hover:bg-ink/[0.06] border border-rule ' +
     'focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
   link:
-    'bg-transparent text-ink-muted hover:text-accent underline-offset-[3px] decoration-rule-strong ' +
-    'hover:decoration-accent decoration-[0.5px] px-0 py-0',
+    'bg-transparent text-ink-muted hover:text-accent underline-offset-2 ' +
+    'hover:underline px-0 py-0',
   danger:
-    'bg-transparent text-danger hover:bg-danger/8 ' +
+    'bg-transparent text-danger hover:bg-danger/10 border border-rule ' +
     'focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'text-xxs uppercase tracking-[0.12em] px-2.5 py-1 rounded-[var(--radius-sm)]',
-  md: 'text-[13px] px-3.5 py-2 rounded-[var(--radius-sm)]',
+  sm: 'text-[12px] px-2.5 py-1',
+  md: 'text-[13px] px-3 py-1.5',
 };
 
 export function Button({
