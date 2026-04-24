@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registry } from '@main/providers';
 import type { LLMProvider, Model, ChatRequest, ChatChunk } from '@main/providers/types';
 import { ProviderError, normalizeError } from '@main/providers/errors';

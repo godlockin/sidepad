@@ -20,11 +20,13 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.0",
     "@trpc/client": "^10.45.2",
     "@trpc/server": "^10.45.2",
     "better-sqlite3": "^12.9.0",
     "electron": "^41.3.0",
     "electron-trpc": "^0.7.1",
+    "ollama": "^0.6.3",
     "openai": "^6.34.0",
     "pino": "^9.1.0",
     "react": "^18.3.1",

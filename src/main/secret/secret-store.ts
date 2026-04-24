@@ -35,4 +35,11 @@ export class SecretStore {
   delete(providerConfigId: string): void {
     this.db.prepare('DELETE FROM provider_secrets WHERE provider_config_id = ?').run(providerConfigId);
   }
+
+  has(providerConfigId: string): boolean {
+    const row = this.db
+      .prepare('SELECT 1 FROM provider_secrets WHERE provider_config_id = ? LIMIT 1')
+      .get(providerConfigId) as { 1: number } | undefined;
+    return !!row;
+  }
 }
