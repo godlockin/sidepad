@@ -1,20 +1,21 @@
-import ollama from 'ollama';
+import ollamaDefault, { Ollama } from 'ollama';
 import type { LLMProvider, ChatRequest, ChatChunk, Model } from './types';
 import { normalizeError } from './errors';
 
 export class OllamaProvider implements LLMProvider {
   public readonly id: string;
   public readonly configId: string;
+  private readonly client: Ollama;
 
   constructor(id: string, configId: string, baseURL?: string) {
     this.id = id;
     this.configId = configId;
-    if (baseURL) (ollama as any).configure({ host: baseURL });
+    this.client = baseURL ? new Ollama({ host: baseURL }) : (ollamaDefault as unknown as Ollama);
   }
 
   async listModels(): Promise<Model[]> {
     try {
-      const res = await ollama.list();
+      const res = await this.client.list();
       return res.models.map((m) => ({
         id: m.name,
         name: m.name,
@@ -27,7 +28,7 @@ export class OllamaProvider implements LLMProvider {
 
   async *chat(req: ChatRequest, signal: AbortSignal): AsyncIterable<ChatChunk> {
     try {
-      const response = await ollama.chat({
+      const response = await this.client.chat({
         model: req.model,
         messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
         stream: true,

@@ -6,6 +6,10 @@ interface MentionPickerProps {
   onClose: () => void;
 }
 
+/**
+ * Floating editorial list — no card, just paper + hairlines.
+ * Appears above the composer when `@` is typed.
+ */
 export function MentionPicker({ providers, onSelect, onClose }: MentionPickerProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,25 +40,70 @@ export function MentionPicker({ providers, onSelect, onClose }: MentionPickerPro
   return (
     <div
       ref={containerRef}
-      className="absolute bottom-full left-0 mb-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden z-50 min-w-[200px]"
+      role="listbox"
+      aria-label="Address a voice"
+      className="absolute bottom-full left-0 mb-3 min-w-[260px] bg-paper border border-rule-strong shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.12)] anim-fade-up"
     >
-      <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-700">
-        Select provider
+      {/* Eyebrow head */}
+      <div className="px-4 pt-3 pb-2 flex items-baseline justify-between">
+        <span className="font-mono text-xxs uppercase tracking-[0.18em] text-ink-faint">
+          address a voice
+        </span>
+        <span className="font-mono text-[10px] tracking-[0.12em] text-ink-faint/70 uppercase">
+          ↑↓ ↵
+        </span>
       </div>
-      {providers.map((p, i) => (
-        <button
-          key={p.id}
-          onClick={() => onSelect(p.id)}
-          className={`w-full text-left px-3 py-2 text-sm ${
-            i === selectedIndex
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-300 hover:bg-gray-700'
-          }`}
-        >
-          <span className="font-medium">{p.id}</span>
-          <span className="text-gray-500 ml-2 text-xs">({p.configId})</span>
-        </button>
-      ))}
+      <hr className="border-0 border-t border-rule mx-4" />
+
+      {/* Options */}
+      <ol className="py-1">
+        {providers.map((p, i) => {
+          const active = i === selectedIndex;
+          return (
+            <li key={p.id}>
+              <button
+                role="option"
+                aria-selected={active}
+                onClick={() => onSelect(p.id)}
+                onMouseEnter={() => setSelectedIndex(i)}
+                className={`relative w-full text-left px-4 py-2 flex items-baseline gap-3 cursor-pointer transition-colors duration-[var(--dur-fast)] ${
+                  active ? 'bg-ink/[0.035]' : 'hover:bg-ink/[0.02]'
+                }`}
+              >
+                {/* Gutter marker */}
+                <span
+                  className={`font-mono text-xxs tabular-nums ${
+                    active ? 'text-accent' : 'text-ink-faint'
+                  }`}
+                >
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span className="flex-1 min-w-0 flex items-baseline gap-2">
+                  <span
+                    className={`font-display italic text-[15px] truncate ${
+                      active ? 'text-ink' : 'text-ink-muted'
+                    }`}
+                    style={{ fontVariationSettings: "'opsz' 24, 'SOFT' 50, 'WONK' 0" }}
+                  >
+                    @{p.id}
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint truncate">
+                    {p.configId}
+                  </span>
+                </span>
+                {active && (
+                  <span
+                    aria-hidden
+                    className="font-mono text-xxs text-accent"
+                  >
+                    ↵
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }

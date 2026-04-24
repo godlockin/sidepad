@@ -4,87 +4,176 @@ import { EditForkModal } from './EditForkModal';
 
 interface MessageBubbleProps {
   message: Message;
+  index?: number;
   onEditInPlace?: (msgId: string, newContent: string) => void;
   onFork?: (msgId: string, content: string, title?: string) => void;
 }
 
-export function MessageBubble({ message, onEditInPlace, onFork }: MessageBubbleProps) {
+/**
+ * Editorial message entry.
+ *
+ * User messages: right-aligned, italic, em-dash prefixed — like a letter signoff.
+ * AI messages: full-width typographic body with a monospace byline.
+ * No bubbles. No cards. Just well-set type.
+ */
+export function MessageBubble({ message, index = 0, onEditInPlace, onFork }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   const isUser = message.role === 'user';
   const isError = message.status === 'error';
+  const isStreaming = message.status === 'streaming';
+  const meta: { agentId?: string } = message.metaJson ? JSON.parse(message.metaJson) : {};
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 1400);
   };
 
-  const meta: { agentId?: string } = message.metaJson ? JSON.parse(message.metaJson) : {};
+  const delay = Math.min(index * 40, 240);
 
   return (
     <>
-      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
-        <div
-          className={`max-w-[75%] rounded-lg px-4 py-3 relative group ${
-            isUser
-              ? 'bg-blue-600 text-white'
-              : isError
-              ? 'bg-red-900/40 border border-red-700 text-red-200'
-              : 'bg-gray-800 text-gray-100 border border-gray-700'
-          }`}
-        >
-          {!isUser && meta.agentId && (
-            <div className="text-xs text-gray-400 mb-1 font-mono">{meta.agentId}</div>
-          )}
-          <div className="whitespace-pre-wrap text-sm">{message.content || (message.status === 'streaming' ? '▊' : '')}</div>
-          {isError && message.error && (
-            <div className="text-xs text-red-300 mt-2">{message.error}</div>
-          )}
-          <div className="flex items-center justify-between mt-2">
-            <div className="text-xs text-gray-500">
-              {message.status === 'streaming' && <span className="text-blue-400">streaming...</span>}
-              {message.status === 'error' && <span className="text-red-400">error</span>}
-            </div>
-            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              {!isUser && message.content && (
-                <button
-                  onClick={handleCopy}
-                  className="text-xs text-gray-400 hover:text-white"
-                  title="Copy"
-                >
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              )}
-              {message.status === 'done' && (
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="text-xs text-gray-400 hover:text-white"
-                  title="Edit / Fork"
-                >
-                  Edit/Fork
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <article
+        className="anim-fade-up py-5 first:pt-2"
+        style={{ animationDelay: `${delay}ms` }}
+      >
+        {isUser ? (
+          <UserEntry message={message} />
+        ) : (
+          <AgentEntry
+            message={message}
+            meta={meta}
+            isError={isError}
+            isStreaming={isStreaming}
+            copied={copied}
+            onCopy={handleCopy}
+            onEditFork={() => setShowModal(true)}
+          />
+        )}
+      </article>
 
       {showModal && (
         <EditForkModal
           message={message}
-          onEditInPlace={(newContent) => {
-            onEditInPlace?.(message.id, newContent);
+          onEditInPlace={(c) => {
+            onEditInPlace?.(message.id, c);
             setShowModal(false);
           }}
-          onFork={(content, title) => {
-            onFork?.(message.id, content, title);
+          onFork={(c, t) => {
+            onFork?.(message.id, c, t);
             setShowModal(false);
           }}
           onClose={() => setShowModal(false)}
         />
       )}
     </>
+  );
+}
+
+/* ─── User entry — the prompt, as a margin letter ─────────────── */
+
+function UserEntry({ message }: { message: Message }) {
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[68%] text-right">
+        <p
+          className="font-display italic text-ink text-[17px] leading-[1.55] whitespace-pre-wrap"
+          style={{ fontVariationSettings: "'opsz' 40, 'SOFT' 50, 'WONK' 0" }}
+        >
+          <span className="text-ink-faint not-italic mr-1 select-none">—</span>
+          {message.content}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Agent entry — the response, as an editorial passage ─────── */
+
+function AgentEntry({
+  message,
+  meta,
+  isError,
+  isStreaming,
+  copied,
+  onCopy,
+  onEditFork,
+}: {
+  message: Message;
+  meta: { agentId?: string };
+  isError: boolean;
+  isStreaming: boolean;
+  copied: boolean;
+  onCopy: () => void;
+  onEditFork: () => void;
+}) {
+  return (
+    <div className="group relative pl-6 pr-2">
+      {/* Left rule — hairline decoration */}
+      <span
+        aria-hidden
+        className={`absolute left-0 top-[9px] bottom-1 w-px ${
+          isError ? 'bg-danger/40' : isStreaming ? 'bg-accent' : 'bg-rule-strong'
+        }`}
+      />
+
+      {/* Byline */}
+      <header className="flex items-baseline gap-3 mb-1.5">
+        <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink">
+          {meta.agentId || 'agent'}
+        </span>
+        {isStreaming && (
+          <span className="font-mono text-xxs tracking-wider text-accent">
+            writing…
+          </span>
+        )}
+        {isError && (
+          <span className="font-mono text-xxs uppercase tracking-wider text-danger">
+            error
+          </span>
+        )}
+      </header>
+
+      {/* Body */}
+      <div
+        className={`font-serif-body text-[15.5px] leading-[1.65] whitespace-pre-wrap ${
+          isError ? 'text-ink-muted' : 'text-ink'
+        }`}
+      >
+        {message.content}
+        {isStreaming && <span className="anim-caret bg-accent h-[1.05em] align-[-2px] translate-y-[2px]">▍</span>}
+      </div>
+
+      {/* Error detail */}
+      {isError && message.error && (
+        <p className="mt-2 font-mono text-[11px] text-danger/80 bg-danger/5 border-l-2 border-danger/40 pl-3 py-1">
+          {message.error}
+        </p>
+      )}
+
+      {/* Actions — hover-reveal micro-links */}
+      {!isStreaming && (
+        <footer className="mt-2 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--dur)]">
+          {message.content && (
+            <button
+              onClick={onCopy}
+              className="font-mono text-xxs uppercase tracking-[0.14em] text-ink-faint hover:text-accent cursor-pointer transition-colors"
+            >
+              {copied ? '✓ copied' : 'copy'}
+            </button>
+          )}
+          {message.status === 'done' && (
+            <button
+              onClick={onEditFork}
+              className="font-mono text-xxs uppercase tracking-[0.14em] text-ink-faint hover:text-accent cursor-pointer transition-colors"
+            >
+              edit / fork ↳
+            </button>
+          )}
+        </footer>
+      )}
+    </div>
   );
 }

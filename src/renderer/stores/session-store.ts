@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { trpc } from '../lib/trpc-client';
 import type { Session, Message } from '../../main/store/types';
+import { useChatStore } from './chat-store';
 
 interface SessionState {
   sessions: Session[];
@@ -37,12 +38,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   selectSession: async (id: string) => {
     const messages = await trpc.session.messages.query({ sessionId: id });
     set({ activeSessionId: id, messages });
+    useChatStore.getState().setMessages(messages);
   },
 
   createSession: async (title?: string) => {
     const session = await trpc.session.create.mutate({ title });
     const { sessions } = get();
     set({ sessions: [session, ...sessions], activeSessionId: session.id, messages: [] });
+    useChatStore.getState().setMessages([]);
     return session;
   },
 
@@ -69,6 +72,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const forked = await trpc.session.fork.mutate({ sessionId: activeSessionId, parentMessageId, title });
     const { sessions } = get();
     set({ sessions: [forked, ...sessions], activeSessionId: forked.id, messages: [] });
+    useChatStore.getState().setMessages([]);
     return forked;
   },
 

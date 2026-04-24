@@ -29,6 +29,7 @@ export const providerRouter = t.router({
         type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat']),
         apiKey: z.string().optional(),
         baseURL: z.string().optional(),
+        defaultModel: z.string().optional(),
       }),
     )
     .mutation(({ input }) => {
@@ -36,12 +37,16 @@ export const providerRouter = t.router({
       const secrets = (globalThis as any).sidepad?.secrets;
       if (!db) throw new Error('Database not available');
 
+      const paramsJson = input.defaultModel
+        ? JSON.stringify({ defaultModel: input.defaultModel })
+        : null;
+
       // Upsert into provider_configs
       db.prepare(
-        `INSERT INTO provider_configs(id, type, name, base_url)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET type = excluded.type, base_url = excluded.base_url`,
-      ).run(input.id, input.type, input.id, input.baseURL ?? null);
+        `INSERT INTO provider_configs(id, type, name, base_url, params_json)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET type = excluded.type, base_url = excluded.base_url, params_json = excluded.params_json`,
+      ).run(input.id, input.type, input.id, input.baseURL ?? null, paramsJson);
 
       // Store API key if provided
       if (input.apiKey && secrets) {

@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
-import { applyTheme } from '../lib/theme';
+import { applyTheme, type Theme } from '../lib/theme';
 import { ProviderForm } from '../components/ProviderForm';
+import { Eyebrow, Heading, Rule, Button } from '../components/ui';
 
 type SettingsTab = 'providers' | 'appearance' | 'about';
+
+const TABS: { key: SettingsTab; label: string; no: string }[] = [
+  { key: 'providers', label: 'Voices', no: 'i' },
+  { key: 'appearance', label: 'Appearance', no: 'ii' },
+  { key: 'about', label: 'Colophon', no: 'iii' },
+];
 
 export function SettingsPage() {
   const [tab, setTab] = useState<SettingsTab>('providers');
@@ -18,104 +25,281 @@ export function SettingsPage() {
     applyTheme(theme);
   }, [theme]);
 
-  const handleAddProvider = async (config: { id: string; type: string; apiKey: string; baseURL?: string }) => {
+  const handleAddProvider = async (config: {
+    id: string;
+    type: string;
+    apiKey: string;
+    baseURL?: string;
+  }) => {
     await addProvider(config as any);
     setShowForm(false);
   };
 
   return (
-    <div className="flex h-full">
-      {/* Tab sidebar */}
-      <div className="w-48 bg-gray-800 border-r border-gray-700 p-4">
-        <h2 className="text-lg font-semibold mb-4">Settings</h2>
-        <nav className="space-y-1">
-          {([['providers', 'Providers'], ['appearance', 'Appearance'], ['about', 'About']] as const).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`w-full text-left px-3 py-2 rounded text-sm ${
-                tab === key ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 p-6 overflow-auto">
-        {tab === 'providers' && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Provider Configuration</h3>
-              {!showForm && (
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-500"
-                >
-                  + Add Provider
-                </button>
-              )}
-            </div>
-
-            {showForm && <ProviderForm onSubmit={handleAddProvider} onCancel={() => setShowForm(false)} />}
-
-            {!showForm && providers.length === 0 && (
-              <p className="text-gray-400 mt-4">No providers configured. Add one to get started.</p>
-            )}
-
-            {providers.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {providers.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between bg-gray-800 rounded px-4 py-3 border border-gray-700">
-                    <div>
-                      <span className="font-medium">{p.id}</span>
-                      <span className="text-gray-400 text-sm ml-2">({p.configId})</span>
-                    </div>
-                    <span className="text-xs bg-green-900 text-green-300 px-2 py-1 rounded">active</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {tab === 'appearance' && (
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Appearance</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Theme</label>
-                <div className="flex gap-2">
-                  {(['system', 'light', 'dark'] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTheme(t)}
-                      className={`px-4 py-2 rounded text-sm capitalize ${
-                        theme === t ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+    <div className="flex h-full overflow-hidden">
+      {/* Table of Contents */}
+      <aside className="w-[220px] shrink-0 border-r border-rule bg-paper py-8 px-6">
+        <Eyebrow className="!tracking-[0.22em]">Contents</Eyebrow>
+        <nav className="mt-5">
+          <ol className="space-y-3">
+            {TABS.map((t) => {
+              const active = tab === t.key;
+              return (
+                <li key={t.key}>
+                  <button
+                    onClick={() => setTab(t.key)}
+                    className={`group flex items-baseline gap-3 text-left cursor-pointer transition-colors duration-[var(--dur-fast)] ${
+                      active ? 'text-ink' : 'text-ink-muted hover:text-ink'
+                    }`}
+                  >
+                    <span
+                      className={`font-mono text-xxs tabular-nums lowercase ${
+                        active ? 'text-accent' : 'text-ink-faint'
                       }`}
                     >
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
-                    </button>
+                      {t.no}.
+                    </span>
+                    <span
+                      className="font-display text-[17px] leading-[1.2]"
+                      style={{
+                        fontVariationSettings: "'opsz' 40, 'SOFT' 50, 'WONK' 0",
+                        fontStyle: active ? 'italic' : 'normal',
+                      }}
+                    >
+                      {t.label}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+      </aside>
+
+      {/* Article */}
+      <article className="flex-1 overflow-y-auto">
+        <div className="max-w-[720px] mx-auto px-10 py-10">
+          {tab === 'providers' && (
+            <section>
+              <Eyebrow>Chapter i · voices</Eyebrow>
+              <Heading level={1} className="mt-2 mb-3">
+                The voices at the table.
+              </Heading>
+              <p className="font-serif-body text-[15px] leading-[1.7] text-ink-muted max-w-[56ch]">
+                Each voice is an LLM endpoint you address with{' '}
+                <span
+                  className="font-display italic text-accent"
+                  style={{ fontVariationSettings: "'opsz' 18, 'SOFT' 50, 'WONK' 0" }}
+                >
+                  @name
+                </span>
+                . Keys stay encrypted on this machine. There is no sync, no
+                telemetry — these words leave only when you send them.
+              </p>
+
+              <div className="mt-8 mb-4 flex items-baseline justify-between">
+                <Eyebrow>Configured · {providers.length.toString().padStart(2, '0')}</Eyebrow>
+                {!showForm && (
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint hover:text-accent cursor-pointer transition-colors"
+                  >
+                    + introduce a voice
+                  </button>
+                )}
+              </div>
+              <Rule />
+
+              {!showForm && providers.length === 0 && (
+                <p className="font-serif-body italic text-[14px] text-ink-faint py-10 text-center">
+                  No voices yet. Introduce one to begin.
+                </p>
+              )}
+
+              {providers.length > 0 && (
+                <ol className="divide-y divide-rule">
+                  {providers.map((p, i) => (
+                    <li key={p.id} className="py-4 flex items-baseline gap-4">
+                      <span className="font-mono text-xxs tabular-nums text-ink-faint pt-[3px]">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-3">
+                          <span
+                            className="font-display italic text-[18px] text-ink"
+                            style={{ fontVariationSettings: "'opsz' 36, 'SOFT' 50, 'WONK' 0" }}
+                          >
+                            @{p.id}
+                          </span>
+                          <span className="font-mono text-xxs uppercase tracking-[0.14em] text-ink-faint">
+                            {p.configId}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="font-mono text-xxs uppercase tracking-[0.16em] text-success">
+                        · active
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+
+              {showForm && (
+                <ProviderForm
+                  onSubmit={handleAddProvider}
+                  onCancel={() => setShowForm(false)}
+                />
+              )}
+            </section>
+          )}
+
+          {tab === 'appearance' && (
+            <section>
+              <Eyebrow>Chapter ii · appearance</Eyebrow>
+              <Heading level={1} className="mt-2 mb-3">
+                A room for the words.
+              </Heading>
+              <p className="font-serif-body text-[15px] leading-[1.7] text-ink-muted max-w-[56ch]">
+                Paper or dusk. The interface follows your system by default.
+              </p>
+
+              <div className="mt-10">
+                <Eyebrow>Theme</Eyebrow>
+                <Rule className="mt-2" />
+                <div className="mt-5 grid grid-cols-3 gap-4">
+                  {(['system', 'light', 'dark'] as const).map((t) => (
+                    <ThemeSwatch
+                      key={t}
+                      value={t}
+                      active={theme === t}
+                      onSelect={() => setTheme(t)}
+                    />
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            </section>
+          )}
 
-        {tab === 'about' && (
-          <div>
-            <h3 className="text-xl font-semibold mb-4">About</h3>
-            <div className="space-y-2 text-gray-300">
-              <p><span className="font-medium">sidepad</span> v0.0.1</p>
-              <p>Multi-LLM group chat desktop app.</p>
-              <p>Local data. Zero telemetry.</p>
-            </div>
+          {tab === 'about' && (
+            <section>
+              <Eyebrow>Chapter iii · colophon</Eyebrow>
+              <Heading level={1} className="mt-2 mb-6">
+                On this edition.
+              </Heading>
+
+              <div className="font-serif-body text-[15.5px] leading-[1.8] text-ink max-w-[56ch] space-y-4">
+                <p>
+                  <span
+                    className="font-display italic"
+                    style={{ fontVariationSettings: "'opsz' 40, 'SOFT' 50, 'WONK' 1" }}
+                  >
+                    sidepad
+                  </span>{' '}
+                  — a small atelier for multi-voice conversation with large
+                  language models. Version{' '}
+                  <span className="font-mono text-[13px]">0.0.1</span>, printed
+                  locally.
+                </p>
+                <p>
+                  Set in{' '}
+                  <span
+                    className="font-display italic"
+                    style={{ fontVariationSettings: "'opsz' 40, 'SOFT' 50, 'WONK' 0" }}
+                  >
+                    Fraunces
+                  </span>{' '}
+                  for body,{' '}
+                  <span className="font-sans">Instrument Sans</span> for
+                  navigation, <span className="font-mono">JetBrains Mono</span>{' '}
+                  for marginalia.
+                </p>
+                <p className="text-ink-muted italic">
+                  Local storage · zero telemetry · open source.
+                </p>
+              </div>
+            </section>
+          )}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function ThemeSwatch({
+  value,
+  active,
+  onSelect,
+}: {
+  value: Theme;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  const preview =
+    value === 'light'
+      ? { bg: '#FAF8F3', ink: '#1B1915', accent: '#B2542A' }
+      : value === 'dark'
+      ? { bg: '#151412', ink: '#ECE7DB', accent: '#D97B4E' }
+      : null;
+
+  return (
+    <button
+      onClick={onSelect}
+      aria-pressed={active}
+      className={`group relative text-left cursor-pointer transition-transform duration-[var(--dur)] ${
+        active ? '' : 'hover:-translate-y-[2px]'
+      }`}
+    >
+      <div
+        className={`h-[96px] w-full border overflow-hidden relative ${
+          active ? 'border-accent' : 'border-rule group-hover:border-rule-strong'
+        }`}
+        style={preview ? { background: preview.bg } : {}}
+      >
+        {preview ? (
+          <>
+            {/* mini masthead */}
+            <span
+              className="absolute top-3 left-3 text-[14px] italic"
+              style={{
+                color: preview.ink,
+                fontFamily: 'Fraunces, serif',
+                fontVariationSettings: "'opsz' 144, 'SOFT' 50, 'WONK' 1",
+              }}
+            >
+              sidepad
+            </span>
+            <span
+              className="absolute bottom-3 left-3 right-3 h-px"
+              style={{ background: preview.accent, opacity: 0.8 }}
+            />
+            <span
+              className="absolute bottom-6 left-3 h-[2px] w-8"
+              style={{ background: preview.accent }}
+            />
+          </>
+        ) : (
+          <div className="absolute inset-0 flex">
+            <div className="flex-1" style={{ background: '#FAF8F3' }} />
+            <div className="flex-1" style={{ background: '#151412' }} />
+            <span
+              aria-hidden
+              className="absolute inset-y-0 left-1/2 w-px bg-rule-strong"
+            />
           </div>
         )}
       </div>
-    </div>
+      <div className="mt-2 flex items-baseline justify-between">
+        <span
+          className={`font-mono text-xxs uppercase tracking-[0.16em] ${
+            active ? 'text-accent' : 'text-ink-muted'
+          }`}
+        >
+          {value}
+        </span>
+        {active && (
+          <span className="font-mono text-xxs text-accent">· current</span>
+        )}
+      </div>
+    </button>
   );
 }

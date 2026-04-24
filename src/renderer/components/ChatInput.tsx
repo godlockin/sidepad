@@ -10,17 +10,30 @@ interface ChatInputProps {
   onMentionSelect?: (providerId: string) => void;
 }
 
-export function ChatInput({ onSend, onStop, streaming, disabled = false, providers = [], onMentionSelect }: ChatInputProps) {
+/**
+ * Editorial composer.
+ *
+ * No card. No heavy border. Just a hairline above, a Fraunces-set textarea
+ * that blends into the paper, and a monospace "send ↵" at the margin.
+ */
+export function ChatInput({
+  onSend,
+  onStop,
+  streaming,
+  disabled = false,
+  providers = [],
+  onMentionSelect,
+}: ChatInputProps) {
   const [input, setInput] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 150) + 'px';
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 168) + 'px';
     }
-    // Show picker when typing @
     const lastAt = input.lastIndexOf('@');
     if (lastAt >= 0 && providers.length > 0) {
       const afterAt = input.slice(lastAt + 1);
@@ -33,11 +46,11 @@ export function ChatInput({ onSend, onStop, streaming, disabled = false, provide
   }, [input, providers.length]);
 
   const handlePickerSelect = (providerId: string) => {
-    // Replace the last @mention with the selected provider id
     const lastAt = input.lastIndexOf('@');
     const before = input.slice(0, lastAt);
     setInput(before + '@' + providerId + ' ');
     setShowPicker(false);
+    textareaRef.current?.focus();
     onMentionSelect?.(providerId);
   };
 
@@ -55,31 +68,50 @@ export function ChatInput({ onSend, onStop, streaming, disabled = false, provide
     }
   };
 
+  const mentions = extractMentions(input);
+  const canSend = !disabled && !streaming && input.trim().length > 0;
+
   return (
-    <div className="border-t border-gray-700 p-3 bg-gray-900">
-      {(() => {
-        const mentions = extractMentions(input);
-        return mentions.length > 0 ? (
-          <div className="flex gap-1 mb-2">
-            {mentions.map((m) => (
-              <span key={m} className="text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded">
-                @{m}
-              </span>
-            ))}
-          </div>
-        ) : null;
-      })()}
-      <div className="flex gap-2 relative">
+    <div className="relative border-t border-rule bg-paper">
+      {/* Mention chips — italic inline tags, not pills */}
+      {mentions.length > 0 && (
+        <div className="px-6 pt-3 flex flex-wrap gap-x-3 gap-y-1">
+          <span className="font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint">
+            addressed to
+          </span>
+          {mentions.map((m) => (
+            <span
+              key={m}
+              className="font-display italic text-[13px] text-accent"
+              style={{ fontVariationSettings: "'opsz' 14, 'SOFT' 50, 'WONK' 0" }}
+            >
+              @{m}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="px-6 py-4 flex items-end gap-5 relative">
+        {/* Left eyebrow marker */}
+        <span
+          aria-hidden
+          className="font-mono text-xxs uppercase tracking-[0.18em] text-ink-faint pb-[10px] select-none"
+        >
+          write
+        </span>
+
+        {/* Textarea — blends into paper */}
         <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message... (Cmd+Enter to send)"
+            placeholder="A message, a question, a thought…"
             rows={1}
             disabled={disabled || streaming}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 resize-none focus:outline-none focus:border-blue-500 text-sm"
+            className="w-full bg-transparent border-0 p-0 resize-none font-serif-body text-[15.5px] leading-[1.6] text-ink placeholder:text-ink-faint placeholder:italic focus:outline-none disabled:opacity-50"
+            style={{ minHeight: '1.6em' }}
           />
           {showPicker && (
             <MentionPicker
@@ -89,21 +121,35 @@ export function ChatInput({ onSend, onStop, streaming, disabled = false, provide
             />
           )}
         </div>
+
+        {/* Action — monospace marginalia */}
         {streaming ? (
           <button
             onClick={onStop}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-500 self-end"
+            className="self-end pb-[10px] font-mono text-xxs uppercase tracking-[0.16em] text-danger hover:text-danger cursor-pointer transition-colors"
           >
-            Stop
+            stop ■
           </button>
         ) : (
           <button
             onClick={handleSend}
-            disabled={disabled || !input.trim()}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-500 disabled:opacity-40 self-end"
+            disabled={!canSend}
+            className="self-end pb-[10px] font-mono text-xxs uppercase tracking-[0.16em] text-ink-faint hover:text-accent cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:text-ink-faint"
           >
-            Send
+            send ↵
           </button>
+        )}
+      </div>
+
+      {/* Keyboard hint — barely there */}
+      <div className="px-6 pb-3 flex items-center justify-between">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-ink-faint/70 uppercase">
+          {streaming ? 'composing reply…' : '⌘ + ↵ to send · @ to address'}
+        </span>
+        {input.length > 0 && (
+          <span className="font-mono text-[10px] tabular-nums text-ink-faint/70">
+            {input.length.toLocaleString()} ch
+          </span>
         )}
       </div>
     </div>

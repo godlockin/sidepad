@@ -110,6 +110,7 @@ export class ChatOrchestrator {
           currentTurn: [{ role: 'user' as const, content: input.text }],
           modelContextWindow: 8000,
         });
+        ctx.model = model;
         for await (const ev of provider.chat(ctx, new AbortController().signal)) {
           if (ev.delta) {
             this.store.appendDelta(msg.id, ev.delta);
@@ -150,6 +151,7 @@ export class ChatOrchestrator {
           currentTurn: [{ role: 'user' as const, content: input.text }],
           modelContextWindow: 8000,
         });
+        ctx.model = leadModel;
         for await (const ev of leadProvider.chat(ctx, new AbortController().signal)) {
           if (ev.delta) {
             leadContent += ev.delta;

@@ -21,6 +21,38 @@ function getOrchestrator(): ChatOrchestrator {
   const store = new SessionStore(db);
   const classifier = null;
 
+  // Look up the configured model for an agent. Order of precedence:
+  //   1. provider_configs.params_json.defaultModel (explicit user override)
+  //   2. first entry in provider_configs.model_list_json
+  //   3. type-specific fallback
+  function resolveModel(agentId: string): string {
+    try {
+      const row = db
+        .prepare('SELECT type, params_json, model_list_json FROM provider_configs WHERE id = ?')
+        .get(agentId) as { type?: string; params_json?: string; model_list_json?: string } | undefined;
+      if (row) {
+        if (row.params_json) {
+          try {
+            const p = JSON.parse(row.params_json);
+            if (p?.defaultModel) return p.defaultModel as string;
+          } catch { /* ignore */ }
+        }
+        if (row.model_list_json) {
+          try {
+            const list = JSON.parse(row.model_list_json);
+            if (Array.isArray(list) && list.length > 0) {
+              return typeof list[0] === 'string' ? list[0] : (list[0]?.id ?? list[0]?.name);
+            }
+          } catch { /* ignore */ }
+        }
+        // type-specific fallback
+        if (row.type === 'anthropic') return 'claude-3-5-haiku-latest';
+        if (row.type === 'ollama') return 'qwen2.5:1.5b';
+      }
+    } catch { /* ignore */ }
+    return 'gpt-4o-mini';
+  }
+
   orchestrator = new ChatOrchestrator(
     store,
     registry,
@@ -32,7 +64,7 @@ function getOrchestrator(): ChatOrchestrator {
       const providers = registry.list();
       return providers.length > 0 ? providers[0] : null;
     },
-    () => 'gpt-4o-mini',
+    resolveModel,
   );
 
   return orchestrator;

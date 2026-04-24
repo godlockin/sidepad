@@ -18,6 +18,15 @@ import { log } from './logger.js';
 const require = createRequire(import.meta.url);
 const { createIPCHandler } = require('electron-trpc/main') as typeof import('electron-trpc/main');
 
+process.on('uncaughtException', (err) => {
+  console.error('[main:uncaughtException]', err);
+  log.error({ err: { message: err.message, stack: err.stack } }, 'uncaught exception');
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[main:unhandledRejection]', reason);
+  log.error({ reason: String(reason) }, 'unhandled rejection');
+});
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const gotLock = app.requestSingleInstanceLock();
