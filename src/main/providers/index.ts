@@ -47,3 +47,4 @@ export const registry = new ProviderRegistry();
 
 export type { LLMProvider, Model, ChatRequest, ChatChunk } from './types';
 export { ProviderError, normalizeError, type ErrorCode } from './errors';
+export { OpenAIProvider } from './openai';
