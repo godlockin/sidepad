@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { SessionStore } from '../../store/session-store.js';
 import { PersonaStore } from '../../store/persona-store.js';
 import { ChatOrchestrator } from '../../orchestrator/index.js';
+import { getSessionSkillAddenda } from '../../skills/composer.js';
 import type { OrchestratorEvent } from '../../orchestrator/types.js';
 import { registry } from '../../providers/index.js';
 
@@ -74,6 +75,13 @@ function getOrchestrator(): ChatOrchestrator {
       if (!part) return null;
       const persona = personaStore.get(part.personaId);
       return persona?.prompt ?? null;
+    },
+    (sessionId: string) => {
+      try {
+        return getSessionSkillAddenda(db, sessionId);
+      } catch {
+        return '';
+      }
     },
   );
 

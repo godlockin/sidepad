@@ -22,16 +22,23 @@ export class ChatOrchestrator {
     private getProviderForAgent: (agentId: string) => LLMProvider | null = () => null,
     private getModelForAgent: (agentId: string) => string = () => 'gpt-4o-mini',
     private getPersonaPromptForAgent: (sessionId: string, agentId: string) => string | null = () => null,
+    private getSessionSkillAddendum: (sessionId: string) => string = () => '',
   ) {}
 
   /**
-   * Combine persona prompt + session system prompt. Persona comes first so it
-   * acts as the agent's identity; session prompt is shared context.
+   * Combine persona prompt + session system prompt + attached skill addenda.
+   * Persona comes first (identity), then session prompt (shared context), then
+   * skill addenda (per-session attached behavior).
    */
   private composedSystemPrompt(sessionId: string, agentId: string, sessionPrompt: string | null): string | null {
     const persona = this.getPersonaPromptForAgent(sessionId, agentId);
-    if (persona && sessionPrompt) return `${persona}\n\n${sessionPrompt}`;
-    return persona ?? sessionPrompt ?? null;
+    const skill = this.getSessionSkillAddendum(sessionId) || '';
+    const parts: string[] = [];
+    if (persona) parts.push(persona);
+    if (sessionPrompt) parts.push(sessionPrompt);
+    if (skill.trim()) parts.push(skill);
+    if (parts.length === 0) return null;
+    return parts.join('\n\n');
   }
 
   async *send(

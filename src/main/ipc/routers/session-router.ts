@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import { SessionStore } from '../../store/session-store.js';
+import { createSessionToolsStore } from '../../store/session-tools-store.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -140,5 +141,30 @@ export const sessionRouter = t.router({
       store.ensureParticipant(input.sessionId, input.agentId);
       const next = store.setParticipantPersona(input.sessionId, input.agentId, input.personaId);
       return { participants: next };
+    }),
+
+  attachSkill: t.procedure
+    .input(z.object({ sessionId: z.string(), skillId: z.string() }))
+    .mutation(({ input }) => {
+      const store = getStore();
+      const session = store.getSession(input.sessionId);
+      if (!session) throw new Error(`Session "${input.sessionId}" not found`);
+      createSessionToolsStore(getDb()).attach(input.sessionId, 'skill', input.skillId);
+      return { ok: true };
+    }),
+
+  detachSkill: t.procedure
+    .input(z.object({ sessionId: z.string(), skillId: z.string() }))
+    .mutation(({ input }) => {
+      createSessionToolsStore(getDb()).detach(input.sessionId, 'skill', input.skillId);
+      return { ok: true };
+    }),
+
+  listAttachedSkills: t.procedure
+    .input(z.object({ sessionId: z.string() }))
+    .query(({ input }) => {
+      return createSessionToolsStore(getDb())
+        .list(input.sessionId, 'skill')
+        .map((r) => r.refId);
     }),
 });

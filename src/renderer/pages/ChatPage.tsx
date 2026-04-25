@@ -4,6 +4,8 @@ import { useSessionStore } from '../stores/session-store';
 import { useChatStore } from '../stores/chat-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
+import { useSkillStore } from '../stores/skill-store';
+import { useSessionSkillsStore } from '../stores/session-skills-store';
 import { Sidebar } from '../components/Sidebar';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatInput } from '../components/ChatInput';
@@ -17,17 +19,31 @@ export function ChatPage() {
   const { providers } = useSettingsStore();
   const personas = usePersonaStore((s) => s.personas);
   const loadPersonas = usePersonaStore((s) => s.loadPersonas);
+  const skills = useSkillStore((s) => s.skills);
+  const loadSkills = useSkillStore((s) => s.loadSkills);
+  const sessionSkillsByMap = useSessionSkillsStore((s) => s.attached);
+  const loadSessionSkills = useSessionSkillsStore((s) => s.load);
+  const attachSessionSkill = useSessionSkillsStore((s) => s.attach);
+  const detachSessionSkill = useSessionSkillsStore((s) => s.detach);
   const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [headerPicker, setHeaderPicker] = useState<{
     agentId: string;
     anchor: { top: number; left: number };
   } | null>(null);
+  const [skillsPopover, setSkillsPopover] = useState<{
+    anchor: { top: number; left: number };
+  } | null>(null);
 
   useEffect(() => {
     loadSessions();
     loadPersonas();
-  }, [loadSessions, loadPersonas]);
+    loadSkills();
+  }, [loadSessions, loadPersonas, loadSkills]);
+
+  useEffect(() => {
+    if (activeSessionId) loadSessionSkills(activeSessionId);
+  }, [activeSessionId, loadSessionSkills]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -153,6 +169,86 @@ export function ChatPage() {
             }}
             onClose={() => setHeaderPicker(null)}
           />
+        )}
+
+        {activeSession && (() => {
+          const enabledSkills = skills.filter((s) => s.enabled);
+          const attachedIds = new Set(sessionSkillsByMap[activeSession.id] ?? []);
+          const visible = enabledSkills.filter((s) => attachedIds.has(s.id));
+          return (
+            <div className="px-6 py-2 border-b border-rule flex flex-wrap items-center gap-2 bg-surface">
+              <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
+                {t('chat.skills.title')}
+              </span>
+              {visible.length === 0 && (
+                <span className="text-[12px] text-ink-faint">
+                  {t('chat.skills.none')}
+                </span>
+              )}
+              {visible.map((s) => (
+                <span
+                  key={s.id}
+                  className="inline-flex items-center text-[12px] rounded-full bg-accent-muted border border-rule px-2.5 py-0.5 text-accent"
+                  title={s.description ?? s.name}
+                >
+                  {s.name}
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={(e) => {
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  setSkillsPopover({ anchor: { top: rect.bottom + 6, left: rect.left } });
+                }}
+                className="inline-flex items-center text-[12px] rounded-full bg-surface-2 border border-rule px-2.5 py-0.5 text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors"
+              >
+                {t('chat.skills.manage')}
+              </button>
+            </div>
+          );
+        })()}
+
+        {skillsPopover && activeSession && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setSkillsPopover(null)}
+            />
+            <div
+              className="fixed z-50 bg-surface border border-rule rounded-[6px] shadow-lg p-2 min-w-[220px]"
+              style={{ top: skillsPopover.anchor.top, left: skillsPopover.anchor.left }}
+            >
+              {skills.filter((s) => s.enabled).length === 0 && (
+                <div className="text-[12px] text-ink-faint px-2 py-1">
+                  {t('chat.skills.none')}
+                </div>
+              )}
+              {skills
+                .filter((s) => s.enabled)
+                .map((s) => {
+                  const attached = (sessionSkillsByMap[activeSession.id] ?? []).includes(s.id);
+                  return (
+                    <label
+                      key={s.id}
+                      className="flex items-center gap-2 px-2 py-1 text-[12px] text-ink hover:bg-surface-2 cursor-pointer rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={attached}
+                        onChange={async (e) => {
+                          if (e.target.checked) {
+                            await attachSessionSkill(activeSession.id, s.id);
+                          } else {
+                            await detachSessionSkill(activeSession.id, s.id);
+                          }
+                        }}
+                      />
+                      <span>{s.name}</span>
+                    </label>
+                  );
+                })}
+            </div>
+          </>
         )}
 
         {/* Body */}
