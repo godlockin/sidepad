@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProviderForm } from '../components/ProviderForm';
 import { useSettingsStore } from '../stores/settings-store';
@@ -10,6 +10,11 @@ interface OnboardingPageProps {
   onSkip: () => void;
 }
 
+interface DetectedOllama {
+  baseURL: string;
+  model?: string;
+}
+
 /**
  * First-launch wizard. Shown when no providers are configured.
  * Step 1: Welcome → Get started
@@ -18,8 +23,32 @@ interface OnboardingPageProps {
 export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
+  const [detected, setDetected] = useState<DetectedOllama | null>(null);
   const addProvider = useSettingsStore((s) => s.addProvider);
   const createSession = useSessionStore((s) => s.createSession);
+
+  useEffect(() => {
+    if (step !== 2) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('http://localhost:11434/api/tags', {
+          signal: AbortSignal.timeout(1500),
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as { models?: Array<{ name?: string }> };
+        const firstModel = json?.models?.[0]?.name;
+        if (!cancelled) {
+          setDetected({ baseURL: 'http://localhost:11434', model: firstModel });
+        }
+      } catch {
+        /* silent: no Ollama running, leave the form empty */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step]);
 
   const handleProviderSubmit = async (config: {
     id: string;
@@ -66,9 +95,24 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
               {t('onboarding.addFirstVoiceBody')}
             </p>
             <div className="border border-rule rounded-[10px] bg-surface p-5">
+              {detected && (
+                <div className="mb-3 px-3 py-2 rounded-[6px] bg-accent-muted text-[12px] text-accent border border-rule">
+                  {t('onboarding.ollamaDetected')}
+                </div>
+              )}
               <ProviderForm
                 onSubmit={handleProviderSubmit}
                 onCancel={() => setStep(1)}
+                initial={
+                  detected
+                    ? {
+                        type: 'ollama',
+                        id: 'ollama',
+                        baseURL: detected.baseURL,
+                        defaultModel: detected.model,
+                      }
+                    : undefined
+                }
               />
             </div>
             <div className="mt-3 text-center">

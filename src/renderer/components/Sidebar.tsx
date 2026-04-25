@@ -101,6 +101,37 @@ export function Sidebar() {
                   )}
                 </span>
 
+                {editingId !== s.id && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingId(s.id);
+                      setEditTitle(s.title || t('sidebar.untitled'));
+                    }}
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={t('common.rename')}
+                    title={t('common.rename')}
+                    className={`text-ink-faint hover:text-accent cursor-pointer transition-colors ${
+                      active ? 'opacity-70 hover:opacity-100' : 'opacity-0 group-hover:opacity-70 hover:!opacity-100'
+                    }`}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M11.5 1.5l3 3-9 9H2.5v-3l9-9z" />
+                    </svg>
+                  </span>
+                )}
+
                 <span
                   onClick={(e) => handleDelete(s.id, e)}
                   role="button"

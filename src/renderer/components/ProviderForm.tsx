@@ -8,6 +8,12 @@ interface ProviderFormProps {
   onSubmit: (config: { id: string; type: ProviderType; apiKey: string; baseURL?: string }) => void;
   onCancel: () => void;
   initialType?: ProviderType;
+  initial?: {
+    type?: ProviderType;
+    id?: string;
+    baseURL?: string;
+    defaultModel?: string;
+  };
 }
 
 const PROVIDER_TYPES: { value: ProviderType; label: string }[] = [
@@ -24,7 +30,7 @@ function needsAPIKey(type: ProviderType): boolean {
   return type !== 'ollama';
 }
 
-export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: ProviderFormProps) {
+export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initial }: ProviderFormProps) {
   const { t } = useTranslation();
   const PROVIDER_TYPES: { value: ProviderType; label: string }[] = [
     { value: 'openai', label: t('providerForm.types.openai') },
@@ -32,10 +38,10 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai' }: Pro
     { value: 'ollama', label: t('providerForm.types.ollama') },
     { value: 'openai-compat', label: t('providerForm.types.openaiCompat') },
   ];
-  const [type, setType] = useState<ProviderType>(initialType);
-  const [name, setName] = useState('');
+  const [type, setType] = useState<ProviderType>(initial?.type ?? initialType);
+  const [name, setName] = useState(initial?.id ?? '');
   const [apiKey, setApiKey] = useState('');
-  const [baseURL, setBaseURL] = useState('');
+  const [baseURL, setBaseURL] = useState(initial?.baseURL ?? '');
 
   const showBaseURL = needsBaseURL(type);
   const showAPIKey = needsAPIKey(type);

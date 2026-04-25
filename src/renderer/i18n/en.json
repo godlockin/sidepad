@@ -1,4 +1,7 @@
 {
+  "common": {
+    "rename": "Rename"
+  },
   "nav": {
     "chat": "Chat",
     "settings": "Settings",
@@ -11,7 +14,8 @@
     "getStarted": "Get started →",
     "skip": "Skip for now",
     "addFirstVoiceTitle": "Add your first voice",
-    "addFirstVoiceBody": "Connect a provider so sidepad has someone to talk to. You can add more later in Settings."
+    "addFirstVoiceBody": "Connect a provider so sidepad has someone to talk to. You can add more later in Settings.",
+    "ollamaDetected": "Detected Ollama at localhost:11434 — prefilled."
   },
   "chat": {
     "newConversation": "New conversation",
@@ -214,8 +218,16 @@
       "personas": "Personas",
       "mcp": "MCP",
       "skills": "Skills",
+      "capabilities": "Capabilities",
       "appearance": "Appearance",
       "about": "About"
+    },
+    "capabilities": {
+      "title": "Capabilities",
+      "body": "Skills and tools your voices can use. Skills are reusable instruction packets; tools come from connected MCP servers.",
+      "filterAll": "All",
+      "filterSkills": "Skills",
+      "filterTools": "Tools"
     },
     "voices": {
       "title": "Voices",
