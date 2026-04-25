@@ -118,10 +118,44 @@
     "edit": "Edit",
     "delete": "Delete"
   },
+  "skillsTab": {
+    "title": "Skills",
+    "body": "A skill is a reusable instruction packet — a stance plus optional recommended tools. Enable a skill to compose its addendum into the system prompt.",
+    "library": "Library",
+    "newSkill": "+ new skill",
+    "empty": "No skills yet.",
+    "confirmDelete": "Delete skill \"{{name}}\"?",
+    "bundled": "bundled",
+    "enabled": "enabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "skillForm": {
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Researcher",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "One line summary",
+    "addendumLabel": "System prompt addendum",
+    "addendumHint": "Appended to the persona prompt when this skill is active.",
+    "addendumPlaceholder": "When answering, search before responding…",
+    "toolsLabel": "Recommended tools",
+    "toolsHint": "Comma-separated tool names matched against connected MCP tools.",
+    "toolsPlaceholder": "web_search, fetch_url",
+    "bodyLabel": "Notes",
+    "bodyHint": "Markdown body. Stored in the .md file but not injected into prompts.",
+    "bodyPlaceholder": "# Researcher\nUse this skill when factual accuracy matters.",
+    "saving": "saving…",
+    "saveChanges": "save changes",
+    "saveSkill": "save skill",
+    "cancel": "cancel"
+  },
   "settings": {
     "tabs": {
       "voices": "Voices",
       "personas": "Personas",
+      "skills": "Skills",
       "appearance": "Appearance",
       "about": "About"
     },
@@ -133,6 +167,17 @@
       "add": "+ introduce a voice",
       "empty": "No voices yet. Introduce one to begin.",
       "active": "● active"
+    },
+    "skills": {
+      "title": "Skills",
+      "body": "Reusable instruction packets — markdown with frontmatter — that compose into the system prompt.",
+      "configured": "Installed",
+      "add": "+ new skill",
+      "empty": "No skills installed.",
+      "bundled": "bundled",
+      "enabled": "enabled",
+      "enable": "Enable",
+      "disable": "Disable"
     },
     "appearance": {
       "title": "Appearance",

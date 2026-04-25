@@ -118,10 +118,44 @@
     "edit": "编辑",
     "delete": "删除"
   },
+  "skillsTab": {
+    "title": "技能",
+    "body": "技能是一段可复用的指令包——立场加上推荐工具。启用后会拼接到系统 Prompt 中。",
+    "library": "技能库",
+    "newSkill": "+ 新建技能",
+    "empty": "暂无技能。",
+    "confirmDelete": "确认删除技能 \"{{name}}\"？",
+    "bundled": "内置",
+    "enabled": "已启用",
+    "enable": "启用",
+    "disable": "停用",
+    "edit": "编辑",
+    "delete": "删除"
+  },
+  "skillForm": {
+    "nameLabel": "名称",
+    "namePlaceholder": "例如：Researcher",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "一句话简介",
+    "addendumLabel": "系统 Prompt 附加内容",
+    "addendumHint": "启用该技能时拼接到人格 Prompt 之后。",
+    "addendumPlaceholder": "回答前先搜索并引用来源…",
+    "toolsLabel": "推荐工具",
+    "toolsHint": "逗号分隔，将与已连接的 MCP 工具进行匹配。",
+    "toolsPlaceholder": "web_search, fetch_url",
+    "bodyLabel": "备注",
+    "bodyHint": "Markdown 正文，仅写入 .md 文件，不会注入到 Prompt。",
+    "bodyPlaceholder": "# Researcher\n当事实准确性重要时使用此技能。",
+    "saving": "保存中…",
+    "saveChanges": "保存修改",
+    "saveSkill": "保存技能",
+    "cancel": "取消"
+  },
   "settings": {
     "tabs": {
       "voices": "Voices",
       "personas": "人格",
+      "skills": "技能",
       "appearance": "外观",
       "about": "关于"
     },
@@ -133,6 +167,17 @@
       "add": "+ introduce a voice",
       "empty": "尚未配置任何声音，先添加一个吧。",
       "active": "● 已启用"
+    },
+    "skills": {
+      "title": "技能",
+      "body": "可复用的指令包——带 frontmatter 的 markdown——会拼接到系统 Prompt 中。",
+      "configured": "已安装",
+      "add": "+ 新建技能",
+      "empty": "尚未安装任何技能。",
+      "bundled": "内置",
+      "enabled": "已启用",
+      "enable": "启用",
+      "disable": "停用"
     },
     "appearance": {
       "title": "外观",
