@@ -107,13 +107,13 @@ export function ChatPage() {
 
   const activeSession = storeActive ?? sessions.find((s) => s.id === activeSessionId) ?? null;
 
-  const handleSend = async (text: string, mentions: string[]) => {
+  const handleSend = async (text: string, mentions: string[], attachmentIds: string[] = []) => {
     if (!activeSessionId) {
       const session = await useSessionStore.getState().createSession();
-      await sendMessage(session.id, text, mentions);
+      await sendMessage(session.id, text, mentions, attachmentIds);
       return;
     }
-    await sendMessage(activeSessionId, text, mentions);
+    await sendMessage(activeSessionId, text, mentions, attachmentIds);
   };
 
   const handleVisibilityChange = async (mode: 'independent' | 'full') => {

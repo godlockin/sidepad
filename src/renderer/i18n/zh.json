@@ -47,6 +47,14 @@
       "errorLabel": "错误",
       "expand": "展开",
       "collapse": "收起"
+    },
+    "attach": "添加附件",
+    "attachUrl": "附加网页",
+    "attachment": {
+      "parsing": "解析中…",
+      "ready": "就绪",
+      "error": "解析失败",
+      "tooLarge": "大文件 — 由 AI 按需读取"
     }
   },
   "sidebar": {

@@ -25,7 +25,7 @@ interface ChatState {
   toolCalls: Map<string, ToolCallView[]>; // msgId -> tool calls
 
   setMessages: (msgs: Message[]) => void;
-  sendMessage: (sessionId: string, text: string, mentions: string[]) => Promise<void>;
+  sendMessage: (sessionId: string, text: string, mentions: string[], attachmentIds?: string[]) => Promise<void>;
   stopStreaming: () => void;
   set: (partial: Partial<ChatState>) => void;
 }
@@ -41,10 +41,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setMessages: (msgs: Message[]) => set({ messages: msgs, streamingContent: new Map(), toolCalls: new Map() }),
 
-  sendMessage: async (sessionId: string, text: string, mentions: string[]) => {
+  sendMessage: async (sessionId: string, text: string, mentions: string[], attachmentIds?: string[]) => {
     const { subRef } = get();
     if (subRef) {
       subRef.unsubscribe();
+    }
+
+    // Resolve attachment markdown bodies and compose final user content.
+    let finalText = text;
+    const ids = attachmentIds ?? [];
+    if (ids.length > 0) {
+      try {
+        const rows = await Promise.all(
+          ids.map((id) => (trpc as any).attachment.get.query({ id })),
+        );
+        const valid = rows.filter((r: any) => r);
+        const totalTokens = valid.reduce(
+          (sum: number, r: any) => sum + (r.token_estimate ?? 0),
+          0,
+        );
+        const inline = totalTokens <= 8000;
+        const blocks = valid.map((r: any) => {
+          const ext = (r.filename ?? '').split('.').pop()?.toLowerCase() ?? '';
+          const tokens = r.token_estimate ?? 0;
+          if (inline) {
+            return `<attachment filename="${r.filename}" type="${ext}" tokens="${tokens}">\n${r.parsed_markdown ?? ''}\n</attachment>`;
+          }
+          return `<attachment id="${r.id}" filename="${r.filename}" type="${ext}" tokens="${tokens}">[Large file — use parse_document tool to read]</attachment>`;
+        });
+        finalText = [text, ...blocks].join('\n\n');
+      } catch (err) {
+        console.error('failed to resolve attachments', err);
+      }
     }
 
     // Optimistic: add user message to local state
@@ -75,7 +103,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     const sub = trpc.chat.send.subscribe(
-      { sessionId, text, mentions },
+      { sessionId, text: finalText, mentions, attachmentIds: ids },
       {
         onData: (ev: OrchestratorEvent) => {
           set((state) => ({ turnEvents: [...state.turnEvents, ev] }));

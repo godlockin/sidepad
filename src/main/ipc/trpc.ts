@@ -9,6 +9,7 @@ import { classifierRouter } from './routers/classifier-router.js';
 import { personaRouter } from './routers/persona-router.js';
 import { mcpRouter } from './routers/mcp-router.js';
 import { skillsRouter } from './routers/skills-router.js';
+import { attachmentRouter } from './routers/attachment-router.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -26,6 +27,7 @@ export const appRouter = t.router({
   persona: personaRouter,
   mcp: mcpRouter,
   skills: skillsRouter,
+  attachment: attachmentRouter,
 });
 
 export type AppRouter = typeof appRouter;

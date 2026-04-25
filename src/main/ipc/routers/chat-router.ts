@@ -190,6 +190,7 @@ export const chatRouter = t.router({
         sessionId: z.string(),
         text: z.string(),
         mentions: z.array(z.string()).default([]),
+        attachmentIds: z.array(z.string()).default([]),
       }),
     )
     .subscription(({ input }) => {
@@ -201,6 +202,23 @@ export const chatRouter = t.router({
           // Auto-add @-mentioned agents to the session participants list with default persona
           ensureMentionedParticipants(input.sessionId, input.mentions);
 
+          // Link any pending attachments to the most recent user message after turn:start.
+          const linkAttachments = (userMsgId: string): void => {
+            try {
+              const ids = input.attachmentIds ?? [];
+              if (ids.length === 0) return;
+              const db = (globalThis as any).sidepad?.db;
+              if (!db) return;
+              const stmt = db.prepare('UPDATE attachments SET message_id = ? WHERE id = ?');
+              const tx = db.transaction(() => {
+                for (const id of ids) stmt.run(userMsgId, id);
+              });
+              tx();
+            } catch {
+              /* best-effort */
+            }
+          };
+
           async function run() {
             try {
               for await (const event of orch.send(input, ac.signal)) {
@@ -208,6 +226,19 @@ export const chatRouter = t.router({
                 // Track the turnId from the turn:start event
                 if (event.type === 'turn:start') {
                   activeTurns.set(event.turnId, ac);
+                  // Best-effort: locate the user message just appended for this turn and
+                  // link attachments. session-store appended it synchronously above.
+                  try {
+                    const db = (globalThis as any).sidepad?.db;
+                    const row = db
+                      ?.prepare(
+                        "SELECT id FROM messages WHERE turn_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 1",
+                      )
+                      .get(event.turnId) as { id?: string } | undefined;
+                    if (row?.id) linkAttachments(row.id);
+                  } catch {
+                    /* ignore */
+                  }
                 }
                 if (event.type === 'turn:complete' || event.type === 'message:error') {
                   if (event.type === 'turn:complete') {

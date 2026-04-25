@@ -47,6 +47,14 @@
       "errorLabel": "error",
       "expand": "Expand",
       "collapse": "Collapse"
+    },
+    "attach": "Attach file",
+    "attachUrl": "Attach URL",
+    "attachment": {
+      "parsing": "parsing…",
+      "ready": "ready",
+      "error": "parse failed",
+      "tooLarge": "Large file — assistant will read on demand"
     }
   },
   "sidebar": {
