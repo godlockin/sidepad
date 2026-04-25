@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "pretest:e2e": "electron-rebuild -f -w better-sqlite3",
     "test:e2e": "playwright test",
+    "test:e2e:regression": "playwright test tests/e2e/regression",
     "posttest:e2e": "npm rebuild better-sqlite3",
     "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
     "rebuild:node": "npm rebuild better-sqlite3",

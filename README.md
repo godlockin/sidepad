@@ -25,8 +25,16 @@ npm run dev          # electron-vite dev server with HMR
 npm test             # vitest (unit + integration)
 npm run typecheck    # tsc --noEmit on main + node configs
 npm run test:e2e     # playwright (boots packaged Electron)
+npm run test:e2e:regression  # focused regression suite for shipped features
 npm run lint
 ```
+
+### Regression suite
+
+`npm run test:e2e:regression` runs the specs under `tests/e2e/regression/`.
+They are designed to pass on a fresh clone with **no API keys**: any
+cloud-dependent assertion is gated on env vars (e.g. `AZURE_OPENAI_*`,
+`BRAVE_API_KEY`, `TAVILY_API_KEY`) and is skipped when the env is missing.
 
 ## Build & package
 
