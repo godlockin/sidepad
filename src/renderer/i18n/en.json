@@ -284,7 +284,11 @@
       "enabled": "connected",
       "enable": "Connect",
       "disable": "Disconnect",
-      "remove": "Remove"
+      "remove": "Remove",
+      "webBrowse": {
+        "name": "Web Browser",
+        "description": "Headless browser for interactive web tasks"
+      }
     },
     "appearance": {
       "title": "Appearance",

@@ -284,7 +284,11 @@
       "enabled": "已连接",
       "enable": "连接",
       "disable": "断开",
-      "remove": "移除"
+      "remove": "移除",
+      "webBrowse": {
+        "name": "浏览器",
+        "description": "无头浏览器，用于交互式网页操作"
+      }
     },
     "appearance": {
       "title": "外观",

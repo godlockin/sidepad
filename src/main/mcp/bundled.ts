@@ -6,6 +6,7 @@ import { log } from '../logger.js';
 
 const BUNDLED_WEB_SEARCH_ID = 'bundled-web-search';
 const BUNDLED_PARSE_DOCUMENT_ID = 'bundled-parse-document';
+const BUNDLED_WEB_BROWSE_ID = 'bundled-web-browse';
 
 /**
  * Resolve the path to a bundled resource directory in both dev and packaged
@@ -105,6 +106,40 @@ export function seedBundledMcpServers(db: Database.Database): void {
         Date.now(),
       );
       log.info({ pdIndexJs, dbPath }, 'seeded bundled parse-document MCP server');
+    }
+
+    const existingWb = db
+      .prepare('SELECT id FROM mcp_servers WHERE id = ?')
+      .get(BUNDLED_WEB_BROWSE_ID);
+    if (!existingWb) {
+      const wbIndexJs = resolveBundledResourcePath(
+        'mcp-servers',
+        'web-browse',
+        'index.js',
+      );
+      const dbPath = (db as unknown as { name: string }).name;
+      // userData dir hosts screenshots + a local Playwright browser cache.
+      const userDataDir = path.dirname(dbPath);
+      const wbConfig = {
+        command: process.execPath,
+        args: [wbIndexJs],
+        env: {
+          ELECTRON_RUN_AS_NODE: '1',
+          SIDEPAD_USER_DATA: userDataDir,
+          PLAYWRIGHT_BROWSERS_PATH: path.join(userDataDir, 'playwright-browsers'),
+        },
+      };
+      db.prepare(
+        'INSERT OR IGNORE INTO mcp_servers (id,name,transport,config_json,enabled,created_at) VALUES (?,?,?,?,?,?)',
+      ).run(
+        BUNDLED_WEB_BROWSE_ID,
+        'Web Browser (bundled)',
+        'stdio',
+        JSON.stringify(wbConfig),
+        0,
+        Date.now(),
+      );
+      log.info({ wbIndexJs, userDataDir }, 'seeded bundled web-browse MCP server');
     }
   } catch (err) {
     log.warn({ err: String(err) }, 'failed to seed bundled MCP server');

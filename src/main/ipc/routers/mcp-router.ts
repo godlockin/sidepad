@@ -1,8 +1,11 @@
 import type Database from 'better-sqlite3';
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { createMCPStore } from '../../store/mcp-store.js';
 import type { MCPRegistry } from '../../mcp/registry.js';
+import { sidepadPaths } from '../../paths.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -71,5 +74,31 @@ export const mcpRouter = t.router({
       const reg = getRegistry();
       if (!reg.isConnected(input.id)) await reg.connect(rec);
       return reg.listTools(input.id);
+    }),
+
+  /**
+   * Install Playwright Chromium into the user's data dir. Required before
+   * the bundled web-browse MCP can launch a real browser. Returns when the
+   * `npx playwright install chromium` child process exits; the renderer is
+   * responsible for surfacing progress UX (TODO: follow-up ticket).
+   */
+  installBrowser: t.procedure
+    .input(z.object({ browser: z.enum(['chromium']).default('chromium') }).optional())
+    .mutation(async ({ input }) => {
+      const browser = input?.browser ?? 'chromium';
+      const paths = sidepadPaths();
+      const browsersPath = path.join(paths.dataDir, 'playwright-browsers');
+      return await new Promise<{ ok: boolean; code: number | null; browsersPath: string; stderr: string }>((resolve, reject) => {
+        const child = spawn('npx', ['--yes', 'playwright', 'install', browser], {
+          env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: browsersPath },
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        let stderr = '';
+        child.stderr.on('data', (b) => { stderr += b.toString(); });
+        child.on('error', (err) => reject(err));
+        child.on('close', (code) => {
+          resolve({ ok: code === 0, code, browsersPath, stderr });
+        });
+      });
     }),
 });
