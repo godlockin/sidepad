@@ -28,6 +28,7 @@
     "renameTitle": "Double-click to rename",
     "emptyStart": "Start a conversation. Use",
     "emptyEnd": "to address a voice.",
+    "export": "Export",
     "skills": {
       "title": "Skills",
       "attach": "Attach",

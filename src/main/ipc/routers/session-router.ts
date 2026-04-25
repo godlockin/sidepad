@@ -3,6 +3,7 @@ import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import { SessionStore } from '../../store/session-store.js';
 import { createSessionToolsStore } from '../../store/session-tools-store.js';
+import { PersonaStore, DEFAULT_PERSONA_ID } from '../../store/persona-store.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -207,5 +208,88 @@ export const sessionRouter = t.router({
       return createSessionToolsStore(getDb())
         .list(input.sessionId, 'mcp_tool')
         .map((r) => r.refId);
+    }),
+
+  exportMarkdown: t.procedure
+    .input(z.object({ sessionId: z.string() }))
+    .query(({ input }) => {
+      const store = getStore();
+      const session = store.getSession(input.sessionId);
+      if (!session) throw new Error(`Session "${input.sessionId}" not found`);
+      const messages = store.listMessages(input.sessionId);
+      const personaStore = new PersonaStore(getDb());
+
+      const personaForAgent = (agentId: string): string | null => {
+        const participant = session.participants.find((p) => p.agentId === agentId);
+        if (!participant) return null;
+        if (participant.personaId === DEFAULT_PERSONA_ID) return null;
+        const persona = personaStore.get(participant.personaId);
+        return persona?.name ?? null;
+      };
+
+      const fmtTime = (ts: number): string => {
+        const d = new Date(ts * 1000);
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+      };
+
+      const title = session.title ?? 'Untitled conversation';
+      const lines: string[] = [];
+      lines.push(`# ${title}`);
+      lines.push('');
+      lines.push(`_Exported ${new Date().toISOString()}_`);
+      lines.push('');
+
+      for (const msg of messages) {
+        let agentId = '';
+        let reasoning: string | null = null;
+        if (msg.metaJson) {
+          try {
+            const meta = JSON.parse(msg.metaJson) as Record<string, unknown>;
+            if (typeof meta.agentId === 'string') agentId = meta.agentId;
+            if (typeof meta.reasoning === 'string') reasoning = meta.reasoning;
+          } catch {
+            /* ignore */
+          }
+        }
+
+        // Also check for a reasoning column if it exists on the row.
+        try {
+          const row = getDb()
+            .prepare('SELECT reasoning FROM messages WHERE id = ?')
+            .get(msg.id) as { reasoning?: string | null } | undefined;
+          if (row && typeof row.reasoning === 'string' && row.reasoning) {
+            reasoning = row.reasoning;
+          }
+        } catch {
+          /* column doesn't exist yet */
+        }
+
+        let authorDisplay: string;
+        if (msg.role === 'user') {
+          authorDisplay = 'You';
+        } else {
+          authorDisplay = personaForAgent(agentId) ?? agentId ?? 'assistant';
+        }
+
+        const headerAgent = msg.role === 'user' ? 'user' : agentId || 'assistant';
+        lines.push(`## ${authorDisplay} · ${headerAgent} · ${fmtTime(msg.createdAt)}`);
+        lines.push('');
+        if (reasoning) {
+          lines.push('<details><summary>thinking</summary>');
+          lines.push('');
+          lines.push(reasoning);
+          lines.push('');
+          lines.push('</details>');
+          lines.push('');
+        }
+        lines.push(msg.content ?? '');
+        lines.push('');
+        lines.push('---');
+        lines.push('');
+      }
+
+      return lines.join('\n');
     }),
 });

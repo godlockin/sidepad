@@ -122,6 +122,28 @@ export function ChatPage() {
     useSessionStore.getState().selectSession(activeSessionId);
   };
 
+  const handleExport = async () => {
+    if (!activeSessionId || !activeSession) return;
+    const md = await trpc.session.exportMarkdown.query({ sessionId: activeSessionId });
+    const slug = (activeSession.title || 'conversation')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'conversation';
+    const d = new Date();
+    const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const filename = `sidepad-${slug}-${ymd}.md`;
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleEditInPlace = async (msgId: string, newContent: string) => {
     const idx = messages.findIndex((m) => m.id === msgId);
     if (idx < 0) return;
@@ -247,6 +269,14 @@ export function ChatPage() {
                 <option value="independent">{t('chat.visibilityIndependent')}</option>
                 <option value="full">{t('chat.visibilityFull')}</option>
               </select>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="text-[12px] text-ink hover:text-accent border border-rule rounded-[6px] px-2 py-1 cursor-pointer transition-colors hover:border-accent"
+                title={t('chat.export')}
+              >
+                {t('chat.export')} ↓
+              </button>
             </div>
           )}
         </header>

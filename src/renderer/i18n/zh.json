@@ -28,6 +28,7 @@
     "renameTitle": "双击重命名",
     "emptyStart": "开始对话。输入",
     "emptyEnd": "来指定一个声音回复。",
+    "export": "导出",
     "skills": {
       "title": "技能",
       "attach": "添加",
