@@ -113,6 +113,13 @@
     "baseURL": "Base URL",
     "baseURLPlaceholderOllama": "http://localhost:11434",
     "baseURLPlaceholder": "https://api.example.com/v1",
+    "modelLabel": "模型",
+    "modelHint": "该声音使用的模型，可在连接成功后从 provider 同步。",
+    "modelPlaceholder": "例如：gpt-4o-mini",
+    "modelRefresh": "刷新",
+    "modelProbing": "探测中…",
+    "modelProbeFailed": "无法获取模型列表，请手动输入",
+    "modelPick": "选择模型",
     "save": "save voice",
     "cancel": "取消",
     "types": {

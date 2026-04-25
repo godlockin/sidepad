@@ -44,6 +44,7 @@ export function SettingsPage() {
     type: string;
     apiKey: string;
     baseURL?: string;
+    defaultModel?: string;
   }) => {
     await addProvider(config as any);
     setShowForm(false);

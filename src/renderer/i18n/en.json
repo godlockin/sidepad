@@ -113,6 +113,13 @@
     "baseURL": "Base URL",
     "baseURLPlaceholderOllama": "http://localhost:11434",
     "baseURLPlaceholder": "https://api.example.com/v1",
+    "modelLabel": "Model",
+    "modelHint": "The model this voice will use. Synced from the provider when possible.",
+    "modelPlaceholder": "e.g. gpt-4o-mini",
+    "modelRefresh": "Refresh",
+    "modelProbing": "Probing…",
+    "modelProbeFailed": "Couldn't fetch model list — type one manually",
+    "modelPick": "Pick a model",
     "save": "save voice",
     "cancel": "cancel",
     "types": {

@@ -2,6 +2,11 @@ import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import { registry } from '../../providers/index.js';
 import { loadProviders } from '../../providers/factory.js';
+import { OpenAIProvider } from '../../providers/openai.js';
+import { AnthropicProvider } from '../../providers/anthropic.js';
+import { OllamaProvider } from '../../providers/ollama.js';
+import { OpenAICompatProvider } from '../../providers/openai-compat.js';
+import type { LLMProvider } from '../../providers/types.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -41,11 +46,54 @@ export const providerRouter = t.router({
     }),
 
   listModels: t.procedure
-    .input(z.object({ providerId: z.string() }))
+    .input(
+      z.object({
+        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat']),
+        baseURL: z.string().optional(),
+        apiKey: z.string().optional(),
+      }),
+    )
     .query(async ({ input }) => {
-      const provider = registry.get(input.providerId);
-      const models = await provider.listModels();
-      return models;
+      try {
+        let provider: LLMProvider;
+        switch (input.type) {
+          case 'openai':
+            provider = new OpenAIProvider(
+              '__probe__',
+              '__probe__',
+              input.apiKey ?? '',
+              input.baseURL || undefined,
+            );
+            break;
+          case 'anthropic':
+            provider = new AnthropicProvider('__probe__', '__probe__', input.apiKey ?? '');
+            break;
+          case 'ollama':
+            provider = new OllamaProvider('__probe__', '__probe__', input.baseURL || undefined);
+            break;
+          case 'openai-compat':
+            if (!input.baseURL) {
+              return { ok: false as const, error: 'baseURL required for openai-compat' };
+            }
+            provider = new OpenAICompatProvider(
+              '__probe__',
+              '__probe__',
+              input.apiKey ?? '',
+              input.baseURL,
+            );
+            break;
+        }
+        const models = await provider!.listModels();
+        return {
+          ok: true as const,
+          models: models.map((m) => ({ id: m.id, label: m.name })),
+        };
+      } catch (err) {
+        return {
+          ok: false as const,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
     }),
 
   configure: t.procedure

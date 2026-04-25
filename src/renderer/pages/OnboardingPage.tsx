@@ -55,6 +55,7 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
     type: string;
     apiKey: string;
     baseURL?: string;
+    defaultModel?: string;
   }) => {
     await addProvider(config as any);
     await createSession();

@@ -27,7 +27,7 @@ interface SettingsState {
 
   init: () => Promise<void>;
   setTheme: (theme: Theme) => void;
-  addProvider: (config: { id: string; type: string; apiKey: string; baseURL?: string }) => Promise<void>;
+  addProvider: (config: { id: string; type: string; apiKey: string; baseURL?: string; defaultModel?: string }) => Promise<void>;
   deleteProvider: (id: string) => Promise<void>;
   setProviderIcon: (configId: string, kind: 'emoji' | 'image' | null, value: string | null) => Promise<void>;
   refreshProviders: () => Promise<void>;
@@ -55,6 +55,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       type: config.type as any,
       apiKey: config.apiKey,
       baseURL: config.baseURL,
+      defaultModel: config.defaultModel,
     });
     await get().refreshProviders();
   },
