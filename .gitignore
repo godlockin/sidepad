@@ -1,7 +1,9 @@
 node_modules/
 dist/
+dist-app/
 out/
 release/
+code_repo/
 .vite/
 .worktrees/
 *.log

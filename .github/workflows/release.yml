@@ -1,0 +1,81 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos
+            arch: arm64
+            runner: macos-14
+            script: package:mac-arm
+          - os: macos
+            arch: x64
+            runner: macos-13
+            script: package:mac-x64
+          - os: windows
+            arch: x64
+            runner: windows-latest
+            script: package:win
+          - os: linux
+            arch: x64
+            runner: ubuntu-latest
+            script: package:linux
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild:electron
+
+      - name: Package
+        run: npm run ${{ matrix.script }}
+
+      - name: Archive (zip)
+        shell: bash
+        run: |
+          cd release
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            7z a -tzip "../sidepad-${{ matrix.os }}-${{ matrix.arch }}.zip" "sidepad-win32-${{ matrix.arch }}"
+          else
+            zip -ry "../sidepad-${{ matrix.os }}-${{ matrix.arch }}.zip" "sidepad-${{ matrix.os == 'macos' && 'darwin' || matrix.os }}-${{ matrix.arch }}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sidepad-${{ matrix.os }}-${{ matrix.arch }}
+          path: sidepad-${{ matrix.os }}-${{ matrix.arch }}.zip
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.zip
+          generate_release_notes: true

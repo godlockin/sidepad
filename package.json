@@ -16,6 +16,11 @@
     "posttest:e2e": "npm rebuild better-sqlite3",
     "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
     "rebuild:node": "npm rebuild better-sqlite3",
+    "package": "npm run build && electron-packager . sidepad --out=release --overwrite --asar --ignore=^/(release|dist-app|tests|docs|playwright-report|test-results|coverage|\\.github|\\.worktrees|\\.claude|jira|inbox|outbox|confluence|deployments|configs)$",
+    "package:mac-arm": "npm run package -- --platform=darwin --arch=arm64",
+    "package:mac-x64": "npm run package -- --platform=darwin --arch=x64",
+    "package:win": "npm run package -- --platform=win32 --arch=x64",
+    "package:linux": "npm run package -- --platform=linux --arch=x64",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
