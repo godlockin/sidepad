@@ -29,4 +29,14 @@ i18n
     },
   });
 
+// Keep <html lang> in sync with the active locale so CSS rules scoped to
+// `:root[lang="zh"]` (e.g. CJK font-weight calibration in globals.css) apply.
+if (typeof document !== 'undefined') {
+  const syncLang = (lng: string) => {
+    document.documentElement.lang = lng === 'zh' ? 'zh' : 'en';
+  };
+  syncLang(i18n.language || 'en');
+  i18n.on('languageChanged', syncLang);
+}
+
 export default i18n;

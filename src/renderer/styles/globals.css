@@ -25,8 +25,9 @@
   --warn: 245 158 11;            /* #F59E0B */
 
   /* Typography stacks */
-  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', system-ui, -apple-system, sans-serif;
+  --font-display: 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui: 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* Geometric tokens */
@@ -158,4 +159,19 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0ms !important;
   }
+}
+
+/* CJK weight calibration — Inter renders alongside fallback CJK at apparent
+   ~1 weight lighter; bump global weight when locale = zh. */
+:root[lang="zh"] body,
+html[lang="zh"] body {
+  font-weight: 450; /* default 400 + ~50 */
+}
+:root[lang="zh"] .font-medium,
+html[lang="zh"] .font-medium {
+  font-weight: 550; /* 500 + 50 */
+}
+:root[lang="zh"] .font-semibold,
+html[lang="zh"] .font-semibold {
+  font-weight: 650; /* 600 + 50 */
 }

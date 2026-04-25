@@ -1,4 +1,7 @@
 {
+  "common": {
+    "rename": "重命名"
+  },
   "nav": {
     "chat": "对话",
     "settings": "设置",
@@ -11,7 +14,8 @@
     "getStarted": "开始使用 →",
     "skip": "暂时跳过",
     "addFirstVoiceTitle": "添加第一个声音",
-    "addFirstVoiceBody": "连接一个 Provider，让 sidepad 有可以对话的对象。之后还可以在「设置」中继续添加。"
+    "addFirstVoiceBody": "连接一个 Provider，让 sidepad 有可以对话的对象。之后还可以在「设置」中继续添加。",
+    "ollamaDetected": "检测到本机 Ollama，已自动填入。"
   },
   "chat": {
     "newConversation": "新对话",
@@ -27,13 +31,13 @@
     "skills": {
       "title": "技能",
       "attach": "添加",
-      "none": "未关联技能",
+      "none": "未启用技能",
       "manage": "管理技能"
     },
     "tools": {
       "title": "工具",
       "attach": "添加",
-      "none": "未关联工具",
+      "none": "未启用工具",
       "manage": "管理工具"
     },
     "toolCall": {
@@ -214,15 +218,23 @@
       "personas": "人格",
       "mcp": "MCP",
       "skills": "技能",
+      "capabilities": "能力",
       "appearance": "外观",
       "about": "关于"
+    },
+    "capabilities": {
+      "title": "能力",
+      "body": "你的 AI 可以使用的技能与工具。技能是可复用的指令包；工具来自已连接的 MCP 服务。",
+      "filterAll": "全部",
+      "filterSkills": "技能",
+      "filterTools": "工具"
     },
     "voices": {
       "title": "声音",
       "bodyStart": "每个声音都是一个用",
       "bodyEnd": "调用的 LLM 端点。密钥仅加密保存在本机。",
       "configured": "已配置",
-      "add": "+ introduce a voice",
+      "add": "+ 添加 AI",
       "empty": "尚未配置任何声音，先添加一个吧。",
       "active": "● 已启用",
       "changeIcon": "点击修改图标"
