@@ -72,6 +72,7 @@ function rowToMessage(row: Record<string, unknown>): Message {
     error: (row.error as string | null) ?? null,
     parentMessageId: (row.parent_message_id as string | null) ?? null,
     metaJson: (row.meta_json as string | null) ?? null,
+    reasoning: (row.reasoning as string | null) ?? null,
     createdAt: row.created_at as number,
     finishedAt: (row.finished_at as number | null) ?? null,
   };
@@ -184,6 +185,11 @@ export class SessionStore {
 
   appendDelta(msgId: string, delta: string): void {
     this.db.prepare('UPDATE messages SET content = content || ? WHERE id = ?').run(delta, msgId);
+  }
+
+  /** Replace the reasoning column for an assistant message. */
+  setReasoning(msgId: string, reasoning: string): void {
+    this.db.prepare('UPDATE messages SET reasoning = ? WHERE id = ?').run(reasoning, msgId);
   }
 
   finalizeAssistant(msgId: string, meta: MessageMeta, finishReason: string, usage?: { promptTokens: number; completionTokens: number }): void {
@@ -331,8 +337,8 @@ export class SessionStore {
 
     const insertMsg = this.db.prepare(
       `INSERT INTO messages(id, session_id, turn_id, role, model_id, content, prompt_tokens,
-       completion_tokens, status, error, parent_message_id, meta_json, created_at, finished_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       completion_tokens, status, error, parent_message_id, meta_json, reasoning, created_at, finished_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
 
     const insertMany = this.db.transaction((rows: { old: Record<string, unknown>; newId: string; newParentId: string | null }[]) => {
@@ -351,6 +357,7 @@ export class SessionStore {
           old.error ?? null,
           r.newParentId,
           old.meta_json ?? null,
+          old.reasoning ?? null,
           old.created_at,
           old.finished_at ?? null,
         );

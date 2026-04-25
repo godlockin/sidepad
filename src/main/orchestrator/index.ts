@@ -180,6 +180,7 @@ export class ChatOrchestrator {
     let req: ChatRequest = initialReq;
     let rounds = 0;
     let finalContent = '';
+    let accumulatedReasoning = '';
 
     while (true) {
       if (rounds >= MAX_TOOL_ROUNDS) {
@@ -211,6 +212,16 @@ export class ChatOrchestrator {
             this.store.appendDelta(msgId, ev.delta);
             yield { type: 'message:delta', turnId, msgId, agentId, delta: ev.delta };
           }
+          if (ev.reasoningDelta) {
+            accumulatedReasoning += ev.reasoningDelta;
+            yield {
+              type: 'message:reasoning_delta',
+              turnId,
+              msgId,
+              agentId,
+              delta: ev.reasoningDelta,
+            };
+          }
           if (ev.finishReason) {
             roundFinish = ev.finishReason;
             roundUsage = ev.usage;
@@ -237,6 +248,9 @@ export class ChatOrchestrator {
       // No tool calls → done.
       if (!roundToolCalls || roundToolCalls.length === 0) {
         const finishReason = roundFinish ?? 'stop';
+        if (accumulatedReasoning.length > 0) {
+          try { this.store.setReasoning(msgId, accumulatedReasoning); } catch { /* non-fatal */ }
+        }
         this.store.finalizeAssistant(msgId, {} as any, finishReason, roundUsage);
         const finishEv: OrchestratorEvent & { __finalContent?: string } = {
           type: 'message:finish',

@@ -33,6 +33,7 @@ export interface ChatRequest {
 
 export interface ChatChunk {
   delta?: string;
+  reasoningDelta?: string;
   usage?: { promptTokens: number; completionTokens: number };
   finishReason?: 'stop' | 'length' | 'error' | 'tool_calls';
   toolCalls?: ToolCall[];

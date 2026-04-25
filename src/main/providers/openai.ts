@@ -66,6 +66,10 @@ export class OpenAIProvider implements LLMProvider {
         if (choice.delta?.content) {
           yield { delta: choice.delta.content };
         }
+        const rDelta = (choice.delta as any)?.reasoning_content ?? (choice.delta as any)?.reasoning;
+        if (typeof rDelta === 'string' && rDelta.length > 0) {
+          yield { reasoningDelta: rDelta };
+        }
         const tcDeltas = (choice.delta as any)?.tool_calls as Array<any> | undefined;
         if (tcDeltas) {
           for (const td of tcDeltas) {

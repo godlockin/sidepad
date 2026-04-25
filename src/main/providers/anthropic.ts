@@ -47,6 +47,7 @@ export class AnthropicProvider implements LLMProvider {
             input_schema: (t.inputSchema ?? { type: 'object', properties: {} }) as any,
           }))
         : undefined;
+    const thinkingEnabled = supportsExtendedThinking(req.model);
     try {
       const stream: any = await this.client.messages.stream(
         {
@@ -56,6 +57,7 @@ export class AnthropicProvider implements LLMProvider {
           temperature: req.temperature,
           max_tokens: req.maxTokens ?? 4096,
           ...(tools ? { tools } : {}),
+          ...(thinkingEnabled ? { thinking: { type: 'enabled', budget_tokens: 4096 } } : {}),
         } as any,
         { signal },
       );
@@ -76,6 +78,10 @@ export class AnthropicProvider implements LLMProvider {
         } else if (t === 'content_block_delta') {
           if (event.delta?.type === 'text_delta') {
             yield { delta: event.delta.text };
+          } else if (event.delta?.type === 'thinking_delta') {
+            if (typeof event.delta.thinking === 'string' && event.delta.thinking.length > 0) {
+              yield { reasoningDelta: event.delta.thinking };
+            }
           } else if (event.delta?.type === 'input_json_delta') {
             const buf = toolBuf.get(event.index);
             if (buf) buf.argText += event.delta.partial_json ?? '';
@@ -131,7 +137,20 @@ export class AnthropicProvider implements LLMProvider {
 }
 
 /**
- * Translate sidepad ChatMessage[] → Anthropic messages array.
+ * Whether a Claude model supports extended thinking. Currently:
+ *   - claude-3-7* (Sonnet 3.7)
+ *   - claude-opus-4*
+ *   - claude-sonnet-4-5*
+ */
+export function supportsExtendedThinking(model: string): boolean {
+  const m = model.toLowerCase();
+  if (m.startsWith('claude-3-7')) return true;
+  if (m.startsWith('claude-opus-4')) return true;
+  if (m.startsWith('claude-sonnet-4-5')) return true;
+  return false;
+}
+
+/**
  *
  * - system messages are stripped (passed via top-level `system` field).
  * - assistant.toolCalls become content blocks of type 'tool_use'.

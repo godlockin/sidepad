@@ -122,6 +122,18 @@ function AgentEntry({
         </div>
       )}
 
+      {/* Reasoning / thinking */}
+      {message.reasoning && message.reasoning.length > 0 && (
+        <details className="mb-2">
+          <summary className="text-[12px] text-ink-muted cursor-pointer select-none">
+            {t('messageBubble.thinking')}
+          </summary>
+          <div className="mt-1 text-[12px] text-ink-2 border-l-2 border-border pl-3 font-mono whitespace-pre-wrap">
+            {message.reasoning}
+          </div>
+        </details>
+      )}
+
       {/* Body */}
       <div
         className={`text-[14px] leading-[1.65] whitespace-pre-wrap ${

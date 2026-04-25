@@ -61,6 +61,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       error: null,
       parentMessageId: null,
       metaJson: null,
+      reasoning: null,
       createdAt: Date.now(),
       finishedAt: null,
     };
@@ -81,6 +82,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
           if (ev.type === 'turn:start') {
             set({ currentTurnId: ev.turnId });
+          }
+
+          if (ev.type === 'message:reasoning_delta') {
+            const { messages } = get();
+            const existing = messages.find((m) => m.id === ev.msgId);
+            if (existing) {
+              const prev = (existing as Message & { reasoning?: string }).reasoning ?? '';
+              set({
+                messages: messages.map((m) =>
+                  m.id === ev.msgId
+                    ? ({ ...m, reasoning: prev + ev.delta } as Message)
+                    : m,
+                ),
+              });
+            } else {
+              const assistantMsg: Message = {
+                id: ev.msgId,
+                sessionId,
+                turnId: ev.turnId,
+                role: 'assistant',
+                modelId: null,
+                content: '',
+                promptTokens: null,
+                completionTokens: null,
+                status: 'streaming',
+                error: null,
+                parentMessageId: null,
+                metaJson: JSON.stringify({ agentId: ev.agentId }),
+                reasoning: ev.delta,
+                createdAt: Date.now(),
+                finishedAt: null,
+              };
+              set({ messages: [...messages, assistantMsg] });
+            }
           }
 
           if (ev.type === 'message:delta') {
@@ -104,6 +139,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 error: null,
                 parentMessageId: null,
                 metaJson: JSON.stringify({ agentId: ev.agentId }),
+                reasoning: null,
                 createdAt: Date.now(),
                 finishedAt: null,
               };
@@ -143,6 +179,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               error: ev.message,
               parentMessageId: null,
               metaJson: JSON.stringify({ agentId: ev.agentId }),
+              reasoning: null,
               createdAt: Date.now(),
               finishedAt: null,
             };

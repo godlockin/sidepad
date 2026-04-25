@@ -39,6 +39,7 @@ export interface Message {
   error: string | null;
   parentMessageId: string | null;
   metaJson: string | null;
+  reasoning: string | null;
   createdAt: number;
   finishedAt: number | null;
 }

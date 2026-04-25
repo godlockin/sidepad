@@ -86,7 +86,8 @@
     "copied": "✓ Copied",
     "copy": "Copy",
     "editFork": "Edit / fork",
-    "agent": "agent"
+    "agent": "agent",
+    "thinking": "Show thinking"
   },
   "editFork": {
     "headingEdit": "Revise in place",

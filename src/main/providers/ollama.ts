@@ -95,9 +95,64 @@ export class OllamaProvider implements LLMProvider {
 
     try {
       const collectedToolCalls: ToolCall[] = [];
+      // Streaming <think>...</think> parser. We hold back up to 7 chars at the
+      // tail of the buffer so a tag straddling a chunk boundary is detected.
+      let buf = '';
+      let inThink = false;
+      const TAG_OPEN = '<think>';
+      const TAG_CLOSE = '</think>';
+      const LOOKBACK = 7; // max(len(TAG_OPEN), len(TAG_CLOSE)) - 1
+      const flush = function* (text: string): Generator<ChatChunk> {
+        buf += text;
+        // Process complete tags greedily; keep a small lookback when no tag found.
+        // Loop until we can't make progress.
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          if (!inThink) {
+            const idx = buf.indexOf(TAG_OPEN);
+            if (idx === -1) {
+              // emit everything except trailing lookback
+              if (buf.length > LOOKBACK) {
+                const out = buf.slice(0, buf.length - LOOKBACK);
+                buf = buf.slice(buf.length - LOOKBACK);
+                if (out) yield { delta: out };
+              }
+              break;
+            } else {
+              if (idx > 0) yield { delta: buf.slice(0, idx) };
+              buf = buf.slice(idx + TAG_OPEN.length);
+              inThink = true;
+            }
+          } else {
+            const idx = buf.indexOf(TAG_CLOSE);
+            if (idx === -1) {
+              if (buf.length > LOOKBACK) {
+                const out = buf.slice(0, buf.length - LOOKBACK);
+                buf = buf.slice(buf.length - LOOKBACK);
+                if (out) yield { reasoningDelta: out };
+              }
+              break;
+            } else {
+              if (idx > 0) yield { reasoningDelta: buf.slice(0, idx) };
+              buf = buf.slice(idx + TAG_CLOSE.length);
+              inThink = false;
+            }
+          }
+        }
+      };
+      const finalFlush = function* (): Generator<ChatChunk> {
+        if (buf.length > 0) {
+          if (inThink) yield { reasoningDelta: buf };
+          else yield { delta: buf };
+          buf = '';
+        }
+      };
+
       for await (const part of response) {
         if (signal.aborted) break;
-        if (part.message?.content) yield { delta: part.message.content };
+        if (part.message?.content) {
+          yield* flush(part.message.content);
+        }
         const tc = part.message?.tool_calls as Array<any> | undefined;
         if (tc && tc.length) {
           for (let i = 0; i < tc.length; i++) {
@@ -114,6 +169,7 @@ export class OllamaProvider implements LLMProvider {
           }
         }
         if (part.done) {
+          yield* finalFlush();
           const finishReason: ChatChunk['finishReason'] =
             collectedToolCalls.length > 0 ? 'tool_calls' : 'stop';
           yield {

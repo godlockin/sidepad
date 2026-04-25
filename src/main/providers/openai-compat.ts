@@ -60,6 +60,10 @@ export class OpenAICompatProvider extends OpenAIProvider {
         const choice = chunk.choices?.[0];
         if (!choice) continue;
         if (choice.delta?.content) yield { delta: choice.delta.content };
+        const rDelta = (choice.delta as any)?.reasoning_content ?? (choice.delta as any)?.reasoning;
+        if (typeof rDelta === 'string' && rDelta.length > 0) {
+          yield { reasoningDelta: rDelta };
+        }
         const tcDeltas = choice.delta?.tool_calls as Array<any> | undefined;
         if (tcDeltas) {
           for (const td of tcDeltas) {
