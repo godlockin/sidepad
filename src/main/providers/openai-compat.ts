@@ -1,6 +1,6 @@
 import OpenAI, { AzureOpenAI } from 'openai';
-import { OpenAIProvider } from './openai';
-import type { ChatRequest, ChatChunk } from './types';
+import { OpenAIProvider, toOpenAIMessages } from './openai';
+import type { ChatRequest, ChatChunk, ToolCall } from './types';
 import { normalizeError } from './errors';
 
 /**
@@ -31,9 +31,18 @@ export class OpenAICompatProvider extends OpenAIProvider {
       yield* super.chat(req, signal);
       return;
     }
-    const messages = (req as any).systemPrompt
-      ? [{ role: 'system' as const, content: (req as any).systemPrompt }, ...req.messages]
-      : req.messages;
+    const messages = toOpenAIMessages(req);
+    const tools =
+      req.tools && req.tools.length
+        ? req.tools.map((t) => ({
+            type: 'function' as const,
+            function: {
+              name: t.name,
+              description: t.description,
+              parameters: (t.inputSchema ?? { type: 'object', properties: {} }) as any,
+            },
+          }))
+        : undefined;
     try {
       const stream = await this.azureClient.chat.completions.create(
         {
@@ -42,25 +51,60 @@ export class OpenAICompatProvider extends OpenAIProvider {
           temperature: req.temperature,
           max_tokens: req.maxTokens,
           stream: true,
+          ...(tools ? { tools } : {}),
         },
         { signal },
       );
+      const toolBuf = new Map<number, { id: string; name: string; argText: string }>();
       for await (const chunk of stream as any) {
         const choice = chunk.choices?.[0];
         if (!choice) continue;
         if (choice.delta?.content) yield { delta: choice.delta.content };
+        const tcDeltas = choice.delta?.tool_calls as Array<any> | undefined;
+        if (tcDeltas) {
+          for (const td of tcDeltas) {
+            const idx = typeof td.index === 'number' ? td.index : 0;
+            let buf = toolBuf.get(idx);
+            if (!buf) {
+              buf = { id: td.id ?? '', name: td.function?.name ?? '', argText: '' };
+              toolBuf.set(idx, buf);
+            }
+            if (td.id) buf.id = td.id;
+            if (td.function?.name) buf.name = td.function.name;
+            if (typeof td.function?.arguments === 'string') buf.argText += td.function.arguments;
+          }
+        }
         if (choice.finish_reason) {
           const usage = chunk.usage
             ? { promptTokens: chunk.usage.prompt_tokens, completionTokens: chunk.usage.completion_tokens }
             : undefined;
+          let toolCalls: ToolCall[] | undefined;
+          if (choice.finish_reason === 'tool_calls' && toolBuf.size > 0) {
+            toolCalls = [];
+            const indices = Array.from(toolBuf.keys()).sort((a, b) => a - b);
+            for (const i of indices) {
+              const b = toolBuf.get(i)!;
+              let parsed: Record<string, unknown> = {};
+              try {
+                parsed = b.argText ? JSON.parse(b.argText) : {};
+              } catch {
+                parsed = { _raw: b.argText };
+              }
+              toolCalls.push({ id: b.id || `call_${i}`, name: b.name, arguments: parsed });
+            }
+          }
+          const finishReason: ChatChunk['finishReason'] =
+            choice.finish_reason === 'stop'
+              ? 'stop'
+              : choice.finish_reason === 'length'
+                ? 'length'
+                : choice.finish_reason === 'tool_calls'
+                  ? 'tool_calls'
+                  : 'error';
           yield {
-            finishReason:
-              choice.finish_reason === 'stop'
-                ? 'stop'
-                : choice.finish_reason === 'length'
-                  ? 'length'
-                  : 'error',
+            finishReason,
             usage,
+            ...(toolCalls ? { toolCalls } : {}),
           };
         }
       }
