@@ -4,6 +4,17 @@ import { trpc } from '../lib/trpc-client';
 import type { Message } from '../../main/store/types';
 import type { OrchestratorEvent } from '../../main/orchestrator/types';
 
+export interface ToolCallView {
+  id: string;
+  name: string;
+  serverId: string;
+  args: unknown;
+  result?: unknown;
+  isError?: boolean;
+  durationMs?: number;
+  status: 'pending' | 'done' | 'error';
+}
+
 interface ChatState {
   messages: Message[];
   streaming: boolean;
@@ -11,6 +22,7 @@ interface ChatState {
   subRef: Unsubscribable | null;
   turnEvents: OrchestratorEvent[];
   streamingContent: Map<string, string>; // msgId -> accumulated content
+  toolCalls: Map<string, ToolCallView[]>; // msgId -> tool calls
 
   setMessages: (msgs: Message[]) => void;
   sendMessage: (sessionId: string, text: string, mentions: string[]) => Promise<void>;
@@ -25,8 +37,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   subRef: null,
   turnEvents: [],
   streamingContent: new Map(),
+  toolCalls: new Map(),
 
-  setMessages: (msgs: Message[]) => set({ messages: msgs, streamingContent: new Map() }),
+  setMessages: (msgs: Message[]) => set({ messages: msgs, streamingContent: new Map(), toolCalls: new Map() }),
 
   sendMessage: async (sessionId: string, text: string, mentions: string[]) => {
     const { subRef } = get();
@@ -57,6 +70,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       streaming: true,
       turnEvents: [],
       streamingContent: new Map(),
+      toolCalls: new Map(),
     });
 
     const sub = trpc.chat.send.subscribe(
@@ -133,6 +147,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
               finishedAt: null,
             };
             set({ messages: [...messages, errMsg] });
+          }
+
+          if (ev.type === 'tool_call:start') {
+            const { toolCalls } = get();
+            const list = toolCalls.get(ev.msgId) ?? [];
+            list.push({
+              id: ev.toolCallId,
+              name: ev.toolName,
+              serverId: ev.serverId,
+              args: ev.args,
+              status: 'pending',
+            });
+            toolCalls.set(ev.msgId, list);
+            set({ toolCalls: new Map(toolCalls) });
+          }
+
+          if (ev.type === 'tool_call:result') {
+            const { toolCalls } = get();
+            const list = toolCalls.get(ev.msgId) ?? [];
+            const idx = list.findIndex((c) => c.id === ev.toolCallId);
+            if (idx >= 0) {
+              list[idx] = {
+                ...list[idx],
+                result: ev.result,
+                isError: ev.isError,
+                durationMs: ev.durationMs,
+                status: ev.isError ? 'error' : 'done',
+              };
+              toolCalls.set(ev.msgId, [...list]);
+              set({ toolCalls: new Map(toolCalls) });
+            }
           }
 
           if (ev.type === 'turn:complete') {

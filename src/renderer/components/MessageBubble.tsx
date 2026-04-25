@@ -5,6 +5,7 @@ import { EditForkModal } from './EditForkModal';
 import { PersonaPicker } from './PersonaPicker';
 import { useSessionStore } from '../stores/session-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
+import { useChatStore, type ToolCallView } from '../stores/chat-store';
 
 interface MessageBubbleProps {
   message: Message;
@@ -94,6 +95,7 @@ function AgentEntry({
   onEditFork: () => void;
 }) {
   const { t } = useTranslation();
+  const toolCalls = useChatStore((s) => s.toolCalls.get(message.id) ?? []);
   return (
     <div className="group relative">
       {/* Byline */}
@@ -108,6 +110,15 @@ function AgentEntry({
           </span>
         )}
       </header>
+
+      {/* Tool calls */}
+      {toolCalls.length > 0 && (
+        <div className="mb-2 space-y-1.5">
+          {toolCalls.map((c) => (
+            <ToolCallCard key={c.id} call={c} />
+          ))}
+        </div>
+      )}
 
       {/* Body */}
       <div
@@ -201,4 +212,69 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
       )}
     </>
   );
+}
+
+function ToolCallCard({ call }: { call: ToolCallView }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const status = call.status;
+  const dot =
+    status === 'pending' ? 'bg-accent animate-pulse'
+    : status === 'error' ? 'bg-danger'
+    : 'bg-success';
+  const dur = call.durationMs != null ? `${call.durationMs} ms` : '';
+  return (
+    <div className="border border-rule rounded-[8px] bg-surface-2 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer hover:bg-surface transition-colors"
+      >
+        <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot}`} />
+        <span className="font-mono text-[12px] text-ink">🔧 {call.name}</span>
+        {dur && <span className="text-[11px] text-ink-faint">· {dur}</span>}
+        <span className="ml-auto text-[10px] text-ink-faint uppercase tracking-wider">
+          {open ? t('chat.toolCall.collapse') : t('chat.toolCall.expand')}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-rule px-3 py-2 space-y-2">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-ink-faint mb-1">
+              {t('chat.toolCall.argsLabel')}
+            </div>
+            <pre className="font-mono text-[11px] text-ink whitespace-pre-wrap break-all bg-surface border border-rule rounded p-2">
+              {safeStringify(call.args)}
+            </pre>
+          </div>
+          {(call.result !== undefined || call.isError) && (
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-ink-faint mb-1">
+                {call.isError ? t('chat.toolCall.errorLabel') : t('chat.toolCall.resultLabel')}
+              </div>
+              <pre
+                className={`font-mono text-[11px] whitespace-pre-wrap break-all border rounded p-2 ${
+                  call.isError
+                    ? 'text-danger bg-danger/5 border-danger/30'
+                    : 'text-ink bg-surface border-rule'
+                }`}
+              >
+                {safeStringify(call.result)}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function safeStringify(v: unknown): string {
+  if (v === undefined) return '';
+  if (typeof v === 'string') return v;
+  try {
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return String(v);
+  }
 }
