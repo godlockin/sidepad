@@ -6,6 +6,8 @@ import { useSettingsStore } from '../stores/settings-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 import { useSkillStore } from '../stores/skill-store';
 import { useSessionSkillsStore } from '../stores/session-skills-store';
+import { useSessionToolsStore } from '../stores/session-tools-store';
+import { useMCPStore } from '../stores/mcp-store';
 import { Sidebar } from '../components/Sidebar';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatInput } from '../components/ChatInput';
@@ -25,6 +27,14 @@ export function ChatPage() {
   const loadSessionSkills = useSessionSkillsStore((s) => s.load);
   const attachSessionSkill = useSessionSkillsStore((s) => s.attach);
   const detachSessionSkill = useSessionSkillsStore((s) => s.detach);
+  const sessionToolsByMap = useSessionToolsStore((s) => s.attached);
+  const loadSessionTools = useSessionToolsStore((s) => s.load);
+  const attachSessionTool = useSessionToolsStore((s) => s.attach);
+  const detachSessionTool = useSessionToolsStore((s) => s.detach);
+  const mcpServers = useMCPStore((s) => s.servers);
+  const loadMcpServers = useMCPStore((s) => s.loadServers);
+  const listMcpTools = useMCPStore((s) => s.listTools);
+  const [availableTools, setAvailableTools] = useState<Array<{ name: string; description?: string }>>([]);
   const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [headerPicker, setHeaderPicker] = useState<{
@@ -34,16 +44,50 @@ export function ChatPage() {
   const [skillsPopover, setSkillsPopover] = useState<{
     anchor: { top: number; left: number };
   } | null>(null);
+  const [toolsPopover, setToolsPopover] = useState<{
+    anchor: { top: number; left: number };
+  } | null>(null);
 
   useEffect(() => {
     loadSessions();
     loadPersonas();
     loadSkills();
-  }, [loadSessions, loadPersonas, loadSkills]);
+    loadMcpServers();
+  }, [loadSessions, loadPersonas, loadSkills, loadMcpServers]);
 
   useEffect(() => {
-    if (activeSessionId) loadSessionSkills(activeSessionId);
-  }, [activeSessionId, loadSessionSkills]);
+    if (activeSessionId) {
+      loadSessionSkills(activeSessionId);
+      loadSessionTools(activeSessionId);
+    }
+  }, [activeSessionId, loadSessionSkills, loadSessionTools]);
+
+  // Load available tools across enabled MCP servers (union)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const enabled = mcpServers.filter((s) => s.enabled);
+      const all: Array<{ name: string; description?: string }> = [];
+      const seen = new Set<string>();
+      for (const srv of enabled) {
+        try {
+          const tools = await listMcpTools(srv.id);
+          for (const t of tools) {
+            if (!seen.has(t.name)) {
+              seen.add(t.name);
+              all.push({ name: t.name, description: t.description });
+            }
+          }
+        } catch {
+          /* skip dead server */
+        }
+      }
+      if (!cancelled) setAvailableTools(all);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mcpServers, listMcpTools]);
 
   useEffect(() => {
     const el = scrollRef.current;

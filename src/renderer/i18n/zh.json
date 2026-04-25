@@ -27,6 +27,19 @@
       "attach": "添加",
       "none": "未关联技能",
       "manage": "管理技能"
+    },
+    "tools": {
+      "title": "工具",
+      "attach": "添加",
+      "none": "未关联工具",
+      "manage": "管理工具"
+    },
+    "toolCall": {
+      "argsLabel": "参数",
+      "resultLabel": "结果",
+      "errorLabel": "错误",
+      "expand": "展开",
+      "collapse": "收起"
     }
   },
   "sidebar": {

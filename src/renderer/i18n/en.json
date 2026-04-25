@@ -27,6 +27,19 @@
       "attach": "Attach",
       "none": "No skills attached",
       "manage": "Manage skills"
+    },
+    "tools": {
+      "title": "Tools",
+      "attach": "Attach",
+      "none": "No tools attached",
+      "manage": "Manage tools"
+    },
+    "toolCall": {
+      "argsLabel": "args",
+      "resultLabel": "result",
+      "errorLabel": "error",
+      "expand": "Expand",
+      "collapse": "Collapse"
     }
   },
   "sidebar": {

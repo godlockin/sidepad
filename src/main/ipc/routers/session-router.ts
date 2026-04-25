@@ -167,4 +167,29 @@ export const sessionRouter = t.router({
         .list(input.sessionId, 'skill')
         .map((r) => r.refId);
     }),
+
+  attachTool: t.procedure
+    .input(z.object({ sessionId: z.string(), toolName: z.string() }))
+    .mutation(({ input }) => {
+      const store = getStore();
+      const session = store.getSession(input.sessionId);
+      if (!session) throw new Error(`Session "${input.sessionId}" not found`);
+      createSessionToolsStore(getDb()).attach(input.sessionId, 'mcp_tool', input.toolName);
+      return { ok: true };
+    }),
+
+  detachTool: t.procedure
+    .input(z.object({ sessionId: z.string(), toolName: z.string() }))
+    .mutation(({ input }) => {
+      createSessionToolsStore(getDb()).detach(input.sessionId, 'mcp_tool', input.toolName);
+      return { ok: true };
+    }),
+
+  listAttachedTools: t.procedure
+    .input(z.object({ sessionId: z.string() }))
+    .query(({ input }) => {
+      return createSessionToolsStore(getDb())
+        .list(input.sessionId, 'mcp_tool')
+        .map((r) => r.refId);
+    }),
 });
