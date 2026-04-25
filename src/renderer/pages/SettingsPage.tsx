@@ -6,14 +6,16 @@ import { ProviderForm } from '../components/ProviderForm';
 import { Heading, Button } from '../components/ui';
 import { PersonasTab } from './settings/PersonasTab';
 import { SkillsTab } from './settings/SkillsTab';
+import { MCPTab } from './settings/MCPTab';
 
-type SettingsTab = 'providers' | 'personas' | 'skills' | 'appearance' | 'about';
+type SettingsTab = 'providers' | 'personas' | 'mcp' | 'skills' | 'appearance' | 'about';
 
 export function SettingsPage() {
   const { t } = useTranslation();
   const TABS: { key: SettingsTab; label: string }[] = [
     { key: 'providers', label: t('settings.tabs.voices') },
     { key: 'personas', label: t('settings.tabs.personas') },
+    { key: 'mcp', label: t('settings.tabs.mcp') },
     { key: 'skills', label: t('settings.tabs.skills') },
     { key: 'appearance', label: t('settings.tabs.appearance') },
     { key: 'about', label: t('settings.tabs.about') },
@@ -132,6 +134,8 @@ export function SettingsPage() {
           )}
 
           {tab === 'personas' && <PersonasTab />}
+
+          {tab === 'mcp' && <MCPTab />}
 
           {tab === 'skills' && <SkillsTab />}
 

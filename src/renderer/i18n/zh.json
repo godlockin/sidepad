@@ -21,7 +21,13 @@
     "voices": "声音",
     "changePersona": "点击切换人格",
     "emptyStart": "开始对话。输入",
-    "emptyEnd": "来指定一个声音回复。"
+    "emptyEnd": "来指定一个声音回复。",
+    "skills": {
+      "title": "技能",
+      "attach": "添加",
+      "none": "未关联技能",
+      "manage": "管理技能"
+    }
   },
   "sidebar": {
     "sessions": "会话列表",
@@ -151,10 +157,46 @@
     "saveSkill": "保存技能",
     "cancel": "取消"
   },
+  "mcpTab": {
+    "title": "MCP 服务",
+    "body": "连接 Model Context Protocol 服务，为声音提供工具能力。Stdio 在本机以子进程运行；HTTP / SSE 连接远程端点。",
+    "library": "服务列表",
+    "newServer": "+ 添加服务",
+    "empty": "暂无 MCP 服务。",
+    "confirmDelete": "移除 MCP 服务 \"{{name}}\"？",
+    "stdioWarning": "该服务会在你的机器上运行代码，仅添加你信任的服务。",
+    "enabled": "已连接",
+    "enable": "连接",
+    "disable": "断开",
+    "delete": "移除",
+    "toolsCount": "{{value}} 个工具"
+  },
+  "mcpForm": {
+    "nameLabel": "名称",
+    "namePlaceholder": "例如：filesystem",
+    "transportLabel": "传输方式",
+    "transports": {
+      "stdio": "stdio（本地进程）",
+      "http": "http（远程）",
+      "sse": "sse（远程）"
+    },
+    "commandLabel": "命令",
+    "commandPlaceholder": "npx",
+    "argsLabel": "参数",
+    "argsHint": "每行一个参数。",
+    "argsPlaceholder": "-y\n@modelcontextprotocol/server-filesystem\n/Users/me/notes",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://example.com/mcp",
+    "enableNow": "保存后立即连接",
+    "saving": "保存中…",
+    "save": "保存服务",
+    "cancel": "取消"
+  },
   "settings": {
     "tabs": {
       "voices": "Voices",
       "personas": "人格",
+      "mcp": "MCP",
       "skills": "技能",
       "appearance": "外观",
       "about": "关于"
@@ -178,6 +220,18 @@
       "enabled": "已启用",
       "enable": "启用",
       "disable": "停用"
+    },
+    "mcp": {
+      "title": "MCP 服务",
+      "body": "连接 Model Context Protocol 服务，向声音暴露工具能力。",
+      "configured": "已连接",
+      "add": "+ 添加服务",
+      "empty": "尚未配置任何 MCP 服务。",
+      "stdioWarning": "该服务会在你的机器上运行代码，仅添加你信任的服务。",
+      "enabled": "已连接",
+      "enable": "连接",
+      "disable": "断开",
+      "remove": "移除"
     },
     "appearance": {
       "title": "外观",

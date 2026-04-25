@@ -21,7 +21,13 @@
     "voices": "voices",
     "changePersona": "Click to change persona",
     "emptyStart": "Start a conversation. Use",
-    "emptyEnd": "to address a voice."
+    "emptyEnd": "to address a voice.",
+    "skills": {
+      "title": "Skills",
+      "attach": "Attach",
+      "none": "No skills attached",
+      "manage": "Manage skills"
+    }
   },
   "sidebar": {
     "sessions": "Sessions",
@@ -151,10 +157,46 @@
     "saveSkill": "save skill",
     "cancel": "cancel"
   },
+  "mcpTab": {
+    "title": "MCP servers",
+    "body": "Connect Model Context Protocol servers to expose tools to your voices. Stdio servers run as local processes; HTTP and SSE servers connect to remote endpoints.",
+    "library": "Servers",
+    "newServer": "+ add server",
+    "empty": "No MCP servers yet.",
+    "confirmDelete": "Remove MCP server \"{{name}}\"?",
+    "stdioWarning": "This server can run code on your machine. Only add servers you trust.",
+    "enabled": "connected",
+    "enable": "Connect",
+    "disable": "Disconnect",
+    "delete": "Remove",
+    "toolsCount": "{{value}} tools"
+  },
+  "mcpForm": {
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. filesystem",
+    "transportLabel": "Transport",
+    "transports": {
+      "stdio": "stdio (local process)",
+      "http": "http (remote)",
+      "sse": "sse (remote)"
+    },
+    "commandLabel": "Command",
+    "commandPlaceholder": "npx",
+    "argsLabel": "Arguments",
+    "argsHint": "One argument per line.",
+    "argsPlaceholder": "-y\n@modelcontextprotocol/server-filesystem\n/Users/me/notes",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://example.com/mcp",
+    "enableNow": "Connect immediately after saving",
+    "saving": "saving…",
+    "save": "save server",
+    "cancel": "cancel"
+  },
   "settings": {
     "tabs": {
       "voices": "Voices",
       "personas": "Personas",
+      "mcp": "MCP",
       "skills": "Skills",
       "appearance": "Appearance",
       "about": "About"
@@ -178,6 +220,18 @@
       "enabled": "enabled",
       "enable": "Enable",
       "disable": "Disable"
+    },
+    "mcp": {
+      "title": "MCP servers",
+      "body": "Connect Model Context Protocol servers to expose tools to your voices.",
+      "configured": "Connected",
+      "add": "+ add server",
+      "empty": "No MCP servers configured.",
+      "stdioWarning": "This server can run code on your machine. Only add servers you trust.",
+      "enabled": "connected",
+      "enable": "Connect",
+      "disable": "Disconnect",
+      "remove": "Remove"
     },
     "appearance": {
       "title": "Appearance",
