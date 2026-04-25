@@ -105,6 +105,7 @@
   },
   "providerForm": {
     "kindLabel": "类型",
+    "presets": "快速预设",
     "nameLabel": "名称",
     "nameHint": "用于 @ 提及和侧边栏显示",
     "namePlaceholder": "my-openai",

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Field, Input, Select, Button } from './ui';
 import { trpc } from '../lib/trpc-client';
+import { PROVIDER_PRESETS } from '../lib/provider-presets';
 
 type ProviderType = 'openai' | 'anthropic' | 'ollama' | 'openai-compat';
 
@@ -172,6 +173,25 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 anim-fade-up">
+      <div className="space-y-1">
+        <p className="text-[12px] text-ink-faint">{t('providerForm.presets')}</p>
+        <div className="flex flex-wrap gap-2">
+          {PROVIDER_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => {
+                setType(preset.type);
+                setBaseURL(preset.baseURL ?? '');
+                if (!name.trim()) setName(preset.label);
+              }}
+              className="rounded-full bg-surface-2 hover:bg-accent-soft px-3 py-1 text-[12px] transition-colors"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label={t('providerForm.kindLabel')}>
           <Select value={type} onChange={(e) => setType(e.target.value as ProviderType)}>

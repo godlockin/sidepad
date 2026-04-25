@@ -105,6 +105,7 @@
   },
   "providerForm": {
     "kindLabel": "Kind",
+    "presets": "Quick presets",
     "nameLabel": "Name",
     "nameHint": "Shown in @ mentions and sidebar",
     "namePlaceholder": "my-openai",
