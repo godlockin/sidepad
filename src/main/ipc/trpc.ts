@@ -7,6 +7,7 @@ import { chatRouter } from './routers/chat-router.js';
 import { providerRouter } from './routers/provider-router.js';
 import { classifierRouter } from './routers/classifier-router.js';
 import { personaRouter } from './routers/persona-router.js';
+import { mcpRouter } from './routers/mcp-router.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -22,6 +23,7 @@ export const appRouter = t.router({
   classifier: classifierRouter,
   secret: secretRouter,
   persona: personaRouter,
+  mcp: mcpRouter,
 });
 
 export type AppRouter = typeof appRouter;

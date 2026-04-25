@@ -8,6 +8,7 @@ import { SecretStore } from './secret/secret-store.js';
 import { appRouter } from './ipc/trpc.js';
 import { registry } from './providers/index.js';
 import { loadProviders } from './providers/factory.js';
+import { createMCPRegistry } from './mcp/registry.js';
 import { log } from './logger.js';
 
 // electron-trpc 0.7.1 ships a single ESM bundle that statically imports
@@ -50,7 +51,8 @@ if (!gotLock) {
     }
 
     // expose to global for IPC routers in Task 11
-    (globalThis as any).sidepad = { db, secrets, paths };
+    const mcp = createMCPRegistry();
+    (globalThis as any).sidepad = { db, secrets, paths, mcp };
 
     // load configured providers
     loadProviders(db, secrets, registry);
