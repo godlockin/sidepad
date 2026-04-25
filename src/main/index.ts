@@ -9,6 +9,7 @@ import { appRouter } from './ipc/trpc.js';
 import { registry } from './providers/index.js';
 import { loadProviders } from './providers/factory.js';
 import { createMCPRegistry } from './mcp/registry.js';
+import { seedBundledMcpServers } from './mcp/bundled.js';
 import { log } from './logger.js';
 
 // electron-trpc 0.7.1 ships a single ESM bundle that statically imports
@@ -43,6 +44,7 @@ if (!gotLock) {
     const paths = sidepadPaths();
     log.info({ dbPath: paths.dbPath }, 'opening sidepad db');
     const db = openSidepadDb(paths.dbPath);
+    seedBundledMcpServers(db);
     const secrets = new SecretStore(db);
     log.info({ encryption: secrets.isEncryptionAvailable() }, 'secret store ready');
 
