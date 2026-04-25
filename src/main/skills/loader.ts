@@ -77,7 +77,15 @@ export function writeUserSkill(
   fs.mkdirSync(userDir, { recursive: true });
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.md$/, '');
   const filePath = path.join(userDir, `${safeName}.md`);
-  const fm = matter.stringify(body ?? '', manifest as unknown as Record<string, unknown>);
+  // js-yaml refuses to dump `undefined`; gray-matter passes our object straight to it.
+  // Strip undefined entries (and empty arrays) so optional manifest fields don't break save.
+  const cleanManifest: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(manifest)) {
+    if (v === undefined) continue;
+    if (Array.isArray(v) && v.length === 0) continue;
+    cleanManifest[k] = v;
+  }
+  const fm = matter.stringify(body ?? '', cleanManifest);
   fs.writeFileSync(filePath, fm, 'utf8');
   return { id: `user:${safeName}`, filePath };
 }
