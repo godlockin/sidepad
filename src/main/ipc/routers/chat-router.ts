@@ -2,12 +2,15 @@ import { initTRPC } from '@trpc/server';
 import { observable } from '@trpc/server/observable';
 import type { Observer, TeardownLogic } from '@trpc/server/observable';
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 import { SessionStore } from '../../store/session-store.js';
 import { PersonaStore } from '../../store/persona-store.js';
-import { ChatOrchestrator } from '../../orchestrator/index.js';
+import { createSessionToolsStore } from '../../store/session-tools-store.js';
+import { ChatOrchestrator, type SessionToolResolver } from '../../orchestrator/index.js';
 import { getSessionSkillAddenda } from '../../skills/composer.js';
 import type { OrchestratorEvent } from '../../orchestrator/types.js';
 import { registry } from '../../providers/index.js';
+import type { ToolDefinition } from '../../providers/types.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -83,9 +86,91 @@ function getOrchestrator(): ChatOrchestrator {
         return '';
       }
     },
+    buildSessionToolResolver(db),
   );
 
   return orchestrator;
+}
+
+/**
+ * Build a SessionToolResolver bound to the live MCP registry on globalThis.
+ * - Reads enabled tool names per session from `session_tools` (kind='mcp_tool').
+ * - Resolves each name → serverId via `mcp.listAllTools()`.
+ * - Persists every invocation to `mcp_tool_usage`.
+ * Returns null if no MCP registry is wired (preserves chat-only behavior).
+ */
+function buildSessionToolResolver(db: any): SessionToolResolver | null {
+  const mcp = (globalThis as any).sidepad?.mcp as
+    | {
+        listAllTools(): Promise<
+          Array<{ serverId: string; name: string; description?: string; inputSchema: unknown }>
+        >;
+        callTool(
+          serverId: string,
+          name: string,
+          args: Record<string, unknown>,
+        ): Promise<unknown>;
+      }
+    | undefined;
+  if (!mcp) return null;
+
+  const sessionToolsStore = createSessionToolsStore(db);
+
+  return {
+    async listToolsForSession(sessionId: string) {
+      const attached = sessionToolsStore.list(sessionId, 'mcp_tool');
+      if (attached.length === 0) return [];
+      let allTools: Array<{ serverId: string; name: string; description?: string; inputSchema: unknown }>;
+      try {
+        allTools = await mcp.listAllTools();
+      } catch {
+        return [];
+      }
+      const wanted = new Set(attached.map((a) => a.refId));
+      const out: Array<{ tool: ToolDefinition; serverId: string }> = [];
+      for (const t of allTools) {
+        if (wanted.has(t.name)) {
+          out.push({
+            tool: { name: t.name, description: t.description, inputSchema: t.inputSchema },
+            serverId: t.serverId,
+          });
+        }
+      }
+      return out;
+    },
+    async callTool(serverId, name, args, _signal) {
+      try {
+        const r = (await mcp.callTool(serverId, name, args)) as {
+          content?: unknown;
+          isError?: boolean;
+        };
+        return { result: r, isError: !!r?.isError };
+      } catch (err) {
+        return {
+          result: { error: err instanceof Error ? err.message : String(err) },
+          isError: true,
+        };
+      }
+    },
+    recordUsage({ messageId, serverId, toolName, args, result, error }) {
+      try {
+        db.prepare(
+          'INSERT INTO mcp_tool_usage (id, message_id, server_id, tool_name, args_json, result_json, error, created_at) VALUES (?,?,?,?,?,?,?,?)',
+        ).run(
+          randomUUID(),
+          messageId,
+          serverId,
+          toolName,
+          JSON.stringify(args ?? {}),
+          result === undefined ? null : JSON.stringify(result),
+          error ?? null,
+          Date.now(),
+        );
+      } catch {
+        // never fail the loop on persistence error
+      }
+    },
+  };
 }
 
 /** Auto-add @-mentioned agents as participants of the session before send. */
