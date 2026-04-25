@@ -8,11 +8,37 @@ const t = initTRPC.create({ isServer: true });
 export const providerRouter = t.router({
   list: t.procedure.query(() => {
     const providers = registry.list();
+    const db = (globalThis as any).sidepad?.db;
+    const rows = db
+      ? (db
+          .prepare('SELECT id, icon_kind, icon_value FROM provider_configs')
+          .all() as Array<{ id: string; icon_kind: string | null; icon_value: string | null }>)
+      : [];
+    const iconMap = new Map(rows.map((r) => [r.id, { kind: r.icon_kind, value: r.icon_value }]));
     return providers.map((p) => ({
       id: p.id,
       configId: p.configId,
+      iconKind: (iconMap.get(p.configId)?.kind ?? null) as 'emoji' | 'image' | null,
+      iconValue: iconMap.get(p.configId)?.value ?? null,
     }));
   }),
+
+  setIcon: t.procedure
+    .input(
+      z.object({
+        configId: z.string(),
+        kind: z.enum(['emoji', 'image']).nullable(),
+        value: z.string().nullable(),
+      }),
+    )
+    .mutation(({ input }) => {
+      const db = (globalThis as any).sidepad?.db;
+      if (!db) throw new Error('Database not available');
+      db.prepare(
+        'UPDATE provider_configs SET icon_kind = ?, icon_value = ? WHERE id = ?',
+      ).run(input.kind, input.value, input.configId);
+      return { ok: true };
+    }),
 
   listModels: t.procedure
     .input(z.object({ providerId: z.string() }))

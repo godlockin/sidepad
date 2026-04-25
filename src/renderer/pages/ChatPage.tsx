@@ -12,6 +12,8 @@ import { Sidebar } from '../components/Sidebar';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatInput } from '../components/ChatInput';
 import { PersonaPicker } from '../components/PersonaPicker';
+import { Avatar } from '../components/Avatar';
+import { IconEditor } from '../components/IconEditor';
 import { trpc } from '../lib/trpc-client';
 
 export function ChatPage() {
@@ -47,6 +49,11 @@ export function ChatPage() {
   const [toolsPopover, setToolsPopover] = useState<{
     anchor: { top: number; left: number };
   } | null>(null);
+  const [headerIconEdit, setHeaderIconEdit] = useState<{ top: number; left: number } | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const setSessionIcon = useSessionStore((s) => s.setSessionIcon);
+  const renameSession = useSessionStore((s) => s.renameSession);
 
   useEffect(() => {
     loadSessions();
@@ -143,11 +150,60 @@ export function ChatPage() {
       <section className="flex-1 flex flex-col bg-paper min-w-0">
         {/* Header */}
         <header className="px-6 h-12 border-b border-rule flex items-center justify-between gap-4 bg-surface">
-          <h2 className="text-[14px] font-medium text-ink truncate">
-            {activeSession?.title || (
-              <span className="text-ink-faint font-normal">{t('chat.newConversation')}</span>
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {activeSession && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  setHeaderIconEdit({ top: rect.bottom + 6, left: rect.left });
+                }}
+                title={t('chat.changeIcon')}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                <Avatar
+                  kind={activeSession.iconKind}
+                  value={activeSession.iconValue}
+                  name={activeSession.title || activeSession.id}
+                  size={22}
+                  rounded="md"
+                />
+              </button>
             )}
-          </h2>
+            {editingTitle && activeSession ? (
+              <input
+                autoFocus
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={async () => {
+                  if (titleDraft.trim() && titleDraft.trim() !== activeSession.title) {
+                    await renameSession(activeSession.id, titleDraft.trim());
+                    await useSessionStore.getState().refreshActiveSession();
+                  }
+                  setEditingTitle(false);
+                }}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Escape') setEditingTitle(false);
+                }}
+                className="flex-1 bg-transparent border-0 px-0 py-0 text-[14px] font-medium text-ink focus:outline-none"
+              />
+            ) : (
+              <h2
+                className="text-[14px] font-medium text-ink truncate cursor-text"
+                onDoubleClick={() => {
+                  if (!activeSession) return;
+                  setTitleDraft(activeSession.title || '');
+                  setEditingTitle(true);
+                }}
+                title={activeSession ? t('chat.renameTitle') : undefined}
+              >
+                {activeSession?.title || (
+                  <span className="text-ink-faint font-normal">{t('chat.newConversation')}</span>
+                )}
+              </h2>
+            )}
+          </div>
           {activeSession && (
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
@@ -198,6 +254,19 @@ export function ChatPage() {
               );
             })}
           </div>
+        )}
+
+        {headerIconEdit && activeSession && (
+          <IconEditor
+            name={activeSession.title || activeSession.id}
+            kind={activeSession.iconKind}
+            value={activeSession.iconValue}
+            anchor={headerIconEdit}
+            onSave={async (k, v) => {
+              await setSessionIcon(activeSession.id, k, v);
+            }}
+            onClose={() => setHeaderIconEdit(null)}
+          />
         )}
 
         {headerPicker && (

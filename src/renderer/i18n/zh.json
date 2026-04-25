@@ -20,6 +20,8 @@
     "visibilityFull": "全员可见",
     "voices": "声音",
     "changePersona": "点击切换人格",
+    "changeIcon": "点击修改图标",
+    "renameTitle": "双击重命名",
     "emptyStart": "开始对话。输入",
     "emptyEnd": "来指定一个声音回复。",
     "skills": {
@@ -47,6 +49,7 @@
     "newShort": "+ 新建",
     "newAria": "新建会话",
     "deleteAria": "删除会话",
+    "changeIcon": "点击修改图标",
     "confirmDelete": "确认删除该会话？",
     "untitled": "未命名",
     "emptyLine1": "还没有任何对话。",
@@ -221,7 +224,8 @@
       "configured": "已配置",
       "add": "+ introduce a voice",
       "empty": "尚未配置任何声音，先添加一个吧。",
-      "active": "● 已启用"
+      "active": "● 已启用",
+      "changeIcon": "点击修改图标"
     },
     "skills": {
       "title": "技能",

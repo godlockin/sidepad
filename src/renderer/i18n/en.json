@@ -20,6 +20,8 @@
     "visibilityFull": "Full",
     "voices": "voices",
     "changePersona": "Click to change persona",
+    "changeIcon": "Click to change icon",
+    "renameTitle": "Double-click to rename",
     "emptyStart": "Start a conversation. Use",
     "emptyEnd": "to address a voice.",
     "skills": {
@@ -47,6 +49,7 @@
     "newShort": "+ new",
     "newAria": "New session",
     "deleteAria": "Delete session",
+    "changeIcon": "Click to change icon",
     "confirmDelete": "Delete this session?",
     "untitled": "Untitled",
     "emptyLine1": "No conversations yet.",
@@ -221,7 +224,8 @@
       "configured": "Configured",
       "add": "+ introduce a voice",
       "empty": "No voices yet. Introduce one to begin.",
-      "active": "● active"
+      "active": "● active",
+      "changeIcon": "Click to change icon"
     },
     "skills": {
       "title": "Skills",

@@ -4,6 +4,8 @@ import { useSettingsStore } from '../stores/settings-store';
 import { applyTheme, type Theme } from '../lib/theme';
 import { ProviderForm } from '../components/ProviderForm';
 import { Heading, Button } from '../components/ui';
+import { Avatar } from '../components/Avatar';
+import { IconEditor } from '../components/IconEditor';
 import { PersonasTab } from './settings/PersonasTab';
 import { SkillsTab } from './settings/SkillsTab';
 import { MCPTab } from './settings/MCPTab';
@@ -22,7 +24,14 @@ export function SettingsPage() {
   ];
   const [tab, setTab] = useState<SettingsTab>('providers');
   const [showForm, setShowForm] = useState(false);
-  const { providers, theme, init, setTheme, addProvider } = useSettingsStore();
+  const [iconEdit, setIconEdit] = useState<{
+    configId: string;
+    name: string;
+    kind: 'emoji' | 'image' | null;
+    value: string | null;
+    anchor: { top: number; left: number };
+  } | null>(null);
+  const { providers, theme, init, setTheme, addProvider, setProviderIcon } = useSettingsStore();
 
   useEffect(() => {
     init();
@@ -105,6 +114,29 @@ export function SettingsPage() {
                   <ol className="divide-y divide-rule">
                     {providers.map((p) => (
                       <li key={p.id} className="px-4 py-3 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            setIconEdit({
+                              configId: p.configId,
+                              name: p.id,
+                              kind: p.iconKind,
+                              value: p.iconValue,
+                              anchor: { top: rect.bottom + 6, left: rect.left },
+                            });
+                          }}
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          title={t('settings.voices.changeIcon')}
+                        >
+                          <Avatar
+                            kind={p.iconKind}
+                            value={p.iconValue}
+                            name={p.id}
+                            size={28}
+                            rounded="full"
+                          />
+                        </button>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-[13px] text-ink bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px]">
@@ -185,6 +217,18 @@ export function SettingsPage() {
           )}
         </div>
       </article>
+      {iconEdit && (
+        <IconEditor
+          name={iconEdit.name}
+          kind={iconEdit.kind}
+          value={iconEdit.value}
+          anchor={iconEdit.anchor}
+          onSave={async (k, v) => {
+            await setProviderIcon(iconEdit.configId, k, v);
+          }}
+          onClose={() => setIconEdit(null)}
+        />
+      )}
     </div>
   );
 }

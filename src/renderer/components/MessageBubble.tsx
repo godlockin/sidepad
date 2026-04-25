@@ -6,6 +6,8 @@ import { PersonaPicker } from './PersonaPicker';
 import { useSessionStore } from '../stores/session-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 import { useChatStore, type ToolCallView } from '../stores/chat-store';
+import { useSettingsStore } from '../stores/settings-store';
+import { Avatar } from './Avatar';
 
 interface MessageBubbleProps {
   message: Message;
@@ -170,6 +172,7 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
   const activeSession = useSessionStore((s) => s.activeSession);
   const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
   const personas = usePersonaStore((s) => s.personas);
+  const providers = useSettingsStore((s) => s.providers);
 
   if (!agentId) {
     return <span className="text-[12px] font-medium text-ink-muted">{t('messageBubble.agent')}</span>;
@@ -180,6 +183,7 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
     DEFAULT_PERSONA_ID;
   const persona = personas.find((p) => p.id === personaId);
   const showPersona = personaId !== DEFAULT_PERSONA_ID && persona;
+  const provider = providers.find((p) => p.id === agentId);
 
   return (
     <>
@@ -192,6 +196,13 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
         className="inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-muted hover:text-accent cursor-pointer transition-colors"
         title={t('chat.changePersona')}
       >
+        <Avatar
+          kind={provider?.iconKind ?? null}
+          value={provider?.iconValue ?? null}
+          name={agentId}
+          size={18}
+          rounded="full"
+        />
         <span className="font-mono text-[11px] bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px] text-ink">
           {agentId}
         </span>

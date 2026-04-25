@@ -53,6 +53,8 @@ function rowToSession(row: Record<string, unknown>): Session {
     pinned: (row.pinned as number) === 1,
     archived: (row.archived as number) === 1,
     parentMessageId: (row.parent_message_id as string | null) ?? null,
+    iconKind: ((row.icon_kind as string | null) ?? null) as 'emoji' | 'image' | null,
+    iconValue: (row.icon_value as string | null) ?? null,
   };
 }
 
@@ -117,6 +119,12 @@ export class SessionStore {
 
   setVisibilityMode(sessionId: string, mode: 'independent' | 'full'): void {
     this.db.prepare('UPDATE sessions SET visibility_mode = ?, updated_at = ? WHERE id = ?').run(mode, now(), sessionId);
+  }
+
+  setIcon(sessionId: string, kind: 'emoji' | 'image' | null, value: string | null): void {
+    this.db
+      .prepare('UPDATE sessions SET icon_kind = ?, icon_value = ?, updated_at = ? WHERE id = ?')
+      .run(kind, value, now(), sessionId);
   }
 
   /** Idempotently add an agent to the session's participant list with the default persona. */
@@ -289,8 +297,9 @@ export class SessionStore {
     this.db
       .prepare(
         `INSERT INTO sessions(id, title, created_at, updated_at, system_prompt, visibility_mode, group_mode,
-         default_agent_id, participants, folder_id, project_id, pinned, archived, parent_message_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         default_agent_id, participants, folder_id, project_id, pinned, archived, parent_message_id,
+         icon_kind, icon_value)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         newId,
@@ -307,6 +316,8 @@ export class SessionStore {
         sourceSession.pinned ? 1 : 0,
         sourceSession.archived ? 1 : 0,
         parentMessageId,
+        sourceSession.iconKind,
+        sourceSession.iconValue,
       );
 
     // Copy messages up to and including the parent message (using rowid for reliable ordering)

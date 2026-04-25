@@ -117,6 +117,22 @@ export const sessionRouter = t.router({
       return store.getSession(input.sessionId)!;
     }),
 
+  setIcon: t.procedure
+    .input(
+      z.object({
+        sessionId: z.string(),
+        kind: z.enum(['emoji', 'image']).nullable(),
+        value: z.string().nullable(),
+      }),
+    )
+    .mutation(({ input }) => {
+      const store = getStore();
+      const session = store.getSession(input.sessionId);
+      if (!session) throw new Error(`Session "${input.sessionId}" not found`);
+      store.setIcon(input.sessionId, input.kind, input.value);
+      return store.getSession(input.sessionId)!;
+    }),
+
   search: t.procedure
     .input(z.object({ query: z.string() }))
     .query(({ input }) => {

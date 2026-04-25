@@ -20,7 +20,11 @@ export interface Session {
   pinned: boolean;
   archived: boolean;
   parentMessageId: string | null;
+  iconKind: 'emoji' | 'image' | null;
+  iconValue: string | null;
 }
+
+export type IconKind = 'emoji' | 'image';
 
 export interface Message {
   id: string;

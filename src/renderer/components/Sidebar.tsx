@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../stores/session-store';
+import { Avatar } from './Avatar';
+import { IconEditor } from './IconEditor';
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const { sessions, activeSessionId, createSession, deleteSession, selectSession, renameSession } =
+  const { sessions, activeSessionId, createSession, deleteSession, selectSession, renameSession, setSessionIcon } =
     useSessionStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [iconEdit, setIconEdit] = useState<{ id: string; anchor: { top: number; left: number } } | null>(null);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -55,6 +58,25 @@ export function Sidebar() {
                     : 'text-ink-muted hover:text-ink hover:bg-surface'
                 }`}
               >
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    setIconEdit({ id: s.id, anchor: { top: rect.bottom + 6, left: rect.left } });
+                  }}
+                  title={t('sidebar.changeIcon')}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <Avatar
+                    kind={s.iconKind}
+                    value={s.iconValue}
+                    name={s.title || s.id}
+                    size={20}
+                    rounded="md"
+                  />
+                </span>
                 <span className="flex-1 min-w-0">
                   {editingId === s.id ? (
                     <input
@@ -116,6 +138,22 @@ export function Sidebar() {
           {t('sidebar.footer')}
         </span>
       </div>
+      {iconEdit && (() => {
+        const sess = sessions.find((s) => s.id === iconEdit.id);
+        if (!sess) return null;
+        return (
+          <IconEditor
+            name={sess.title || t('sidebar.untitled')}
+            kind={sess.iconKind}
+            value={sess.iconValue}
+            anchor={iconEdit.anchor}
+            onSave={async (k, v) => {
+              await setSessionIcon(sess.id, k, v);
+            }}
+            onClose={() => setIconEdit(null)}
+          />
+        );
+      })()}
     </aside>
   );
 }

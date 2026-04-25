@@ -15,6 +15,7 @@ interface SessionState {
   createSession: (title?: string) => Promise<Session>;
   deleteSession: (id: string) => Promise<void>;
   renameSession: (id: string, title: string) => Promise<void>;
+  setSessionIcon: (id: string, kind: 'emoji' | 'image' | null, value: string | null) => Promise<void>;
   forkSession: (parentMessageId: string, title?: string) => Promise<Session>;
   setParticipantPersona: (agentId: string, personaId: string) => Promise<void>;
   refreshActiveSession: () => Promise<void>;
@@ -76,6 +77,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const { sessions } = get();
     set({
       sessions: sessions.map((s) => (s.id === id ? { ...s, title } : s)),
+    });
+  },
+
+  setSessionIcon: async (id, kind, value) => {
+    const updated = await trpc.session.setIcon.mutate({ sessionId: id, kind, value });
+    const { sessions, activeSession } = get();
+    set({
+      sessions: sessions.map((s) => (s.id === id ? updated : s)),
+      activeSession: activeSession?.id === id ? updated : activeSession,
     });
   },
 
