@@ -6,6 +6,7 @@ import type {
   Model,
   ChatMessage,
   ToolCall,
+  ProviderCapabilities,
 } from './types';
 import { normalizeError } from './errors';
 
@@ -132,6 +133,13 @@ export class OpenAIProvider implements LLMProvider {
     if (modelId.includes('gpt-3.5-turbo')) return 16_385;
     return 8_192;
   }
+
+  capabilities(model: string): ProviderCapabilities {
+    return {
+      vision: /(gpt-4o|gpt-4-turbo|gpt-4-vision|o1|o3|o4)/i.test(model),
+      tools: true,
+    };
+  }
 }
 
 /**
@@ -163,7 +171,20 @@ export function toOpenAIMessages(req: ChatRequest): any[] {
     } else if (m.role === 'system') {
       out.push({ role: 'system', content: m.content });
     } else {
-      out.push({ role: 'user', content: m.content, ...(m.name ? { name: m.name } : {}) });
+      const userImgs = (m as any).images as Array<{ mime: string; base64: string }> | undefined;
+      if (userImgs && userImgs.length) {
+        const blocks: any[] = [];
+        if (m.content) blocks.push({ type: 'text', text: m.content });
+        for (const img of userImgs) {
+          blocks.push({
+            type: 'image_url',
+            image_url: { url: `data:${img.mime};base64,${img.base64}` },
+          });
+        }
+        out.push({ role: 'user', content: blocks, ...(m.name ? { name: m.name } : {}) });
+      } else {
+        out.push({ role: 'user', content: m.content, ...(m.name ? { name: m.name } : {}) });
+      }
     }
   }
   return out;

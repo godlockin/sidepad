@@ -221,7 +221,28 @@ export const chatRouter = t.router({
 
           async function run() {
             try {
-              for await (const event of orch.send(input, ac.signal)) {
+              // Resolve attachment rows for the vision router. Best-effort —
+              // if anything fails we just send without images and the model
+              // sees the OCR'd text inlined by the renderer.
+              let attachments: Array<{ filename: string; mime: string | null; storage_path: string }> = [];
+              try {
+                const ids = input.attachmentIds ?? [];
+                if (ids.length > 0) {
+                  const db = (globalThis as any).sidepad?.db;
+                  if (db) {
+                    const stmt = db.prepare(
+                      'SELECT filename, mime, storage_path FROM attachments WHERE id = ?',
+                    );
+                    attachments = ids
+                      .map((id: string) => stmt.get(id) as any)
+                      .filter(Boolean);
+                  }
+                }
+              } catch {
+                /* best-effort */
+              }
+              const orchInput = { ...input, attachments };
+              for await (const event of orch.send(orchInput, ac.signal)) {
                 if (ac.signal.aborted) return;
                 // Track the turnId from the turn:start event
                 if (event.type === 'turn:start') {

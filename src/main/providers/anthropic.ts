@@ -6,6 +6,7 @@ import type {
   Model,
   ChatMessage,
   ToolCall,
+  ProviderCapabilities,
 } from './types';
 import { normalizeError } from './errors';
 
@@ -134,6 +135,15 @@ export class AnthropicProvider implements LLMProvider {
       throw n;
     }
   }
+
+  capabilities(model: string): ProviderCapabilities {
+    // All currently-shipping Claude models support vision input.
+    return {
+      vision: /(claude-3|claude-opus|claude-sonnet|claude-haiku)/i.test(model),
+      reasoning: supportsExtendedThinking(model),
+      tools: true,
+    };
+  }
 }
 
 /**
@@ -190,7 +200,20 @@ export function toAnthropicMessages(messages: ChatMessage[]): any[] {
       continue;
     }
     // user
-    out.push({ role: 'user', content: m.content });
+    const userImgs = (m as any).images as Array<{ mime: string; base64: string }> | undefined;
+    if (userImgs && userImgs.length) {
+      const blocks: any[] = [];
+      for (const img of userImgs) {
+        blocks.push({
+          type: 'image',
+          source: { type: 'base64', media_type: img.mime, data: img.base64 },
+        });
+      }
+      if (m.content) blocks.push({ type: 'text', text: m.content });
+      out.push({ role: 'user', content: blocks });
+    } else {
+      out.push({ role: 'user', content: m.content });
+    }
   }
   return out;
 }

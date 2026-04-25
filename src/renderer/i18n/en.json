@@ -2,6 +2,12 @@
   "common": {
     "rename": "Rename"
   },
+  "parser": {
+    "ocr": {
+      "downloading": "Downloading OCR language data (first time only)…",
+      "failed": "OCR failed"
+    }
+  },
   "nav": {
     "chat": "Chat",
     "settings": "Settings",

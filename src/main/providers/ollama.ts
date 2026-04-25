@@ -6,6 +6,7 @@ import type {
   Model,
   ChatMessage,
   ToolCall,
+  ProviderCapabilities,
 } from './types';
 import { normalizeError } from './errors';
 
@@ -47,6 +48,16 @@ export class OllamaProvider implements LLMProvider {
             function: { name: tc.name, arguments: tc.arguments ?? {} },
           })),
         } as any;
+      }
+      if (m.role === 'user') {
+        const userImgs = (m as any).images as Array<{ mime: string; base64: string }> | undefined;
+        if (userImgs && userImgs.length) {
+          return {
+            role: 'user',
+            content: m.content,
+            images: userImgs.map((i) => i.base64),
+          } as any;
+        }
       }
       return { role: m.role, content: m.content };
     });
@@ -190,6 +201,13 @@ export class OllamaProvider implements LLMProvider {
     if (n.includes('llama3') || n.includes('llama-3')) return 8_192;
     if (n.includes('mistral')) return 32_768;
     return 4_096;
+  }
+
+  capabilities(model: string): ProviderCapabilities {
+    return {
+      vision: /(llava|llama.*vision|qwen.*vl|moondream|bakllava|llama3\.2-vision)/i.test(model),
+      tools: true,
+    };
   }
 }
 

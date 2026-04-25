@@ -2,6 +2,12 @@
   "common": {
     "rename": "重命名"
   },
+  "parser": {
+    "ocr": {
+      "downloading": "正在下载 OCR 语言包（仅首次）…",
+      "failed": "OCR 失败"
+    }
+  },
   "nav": {
     "chat": "对话",
     "settings": "设置",

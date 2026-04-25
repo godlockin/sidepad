@@ -5,6 +5,10 @@ import { resolveMode, type ClassifierResult } from './mode-resolver';
 import { buildContext } from './context-builder';
 import { segmentByMentions } from './segment-mentions';
 import type { OrchestratorEvent } from './types';
+import {
+  transformMessagesForVision,
+  type AttachmentLike,
+} from './vision-router';
 import type {
   LLMProvider,
   ChatRequest,
@@ -21,6 +25,12 @@ export interface OrchestratorSendInput {
   sessionId: string;
   text: string;
   mentions: string[];
+  /**
+   * Optional list of attachments linked to this turn's user message. Used by
+   * the vision router to attach raw image bytes when the active model
+   * supports vision.
+   */
+  attachments?: AttachmentLike[];
 }
 
 export interface SessionToolResolver {
@@ -376,6 +386,7 @@ export class ChatOrchestrator {
       });
       ctx.model = model;
       if (tools.length) ctx.tools = tools;
+      ctx.messages = transformMessagesForVision(ctx.messages, input.attachments ?? [], provider, model);
 
       for await (const ev of this.runWithTools(provider, ctx, { turnId, msgId: msg.id, agentId }, serverByName, signal)) {
         // strip private __finalContent before forwarding
@@ -413,6 +424,7 @@ export class ChatOrchestrator {
       });
       ctx.model = leadModel;
       if (tools.length) ctx.tools = tools;
+      ctx.messages = transformMessagesForVision(ctx.messages, input.attachments ?? [], leadProvider, leadModel);
       for await (const ev of this.runWithTools(leadProvider, ctx, { turnId, msgId: leadMsg.id, agentId: leadId }, serverByName, signal)) {
         if ((ev as any).__finalContent !== undefined) leadContent = (ev as any).__finalContent;
         const { __finalContent: _drop, ...clean } = ev as any;
@@ -443,6 +455,7 @@ export class ChatOrchestrator {
       ctxMessages.push({ role: 'assistant', content: leadContent, name: leadId });
 
       const req: ChatRequest = { model: commenterModel, messages: ctxMessages, ...(tools.length ? { tools } : {}) };
+      req.messages = transformMessagesForVision(req.messages, input.attachments ?? [], commenterProvider, commenterModel);
       for await (const ev of this.runWithTools(commenterProvider, req, { turnId, msgId: cmsg.id, agentId: commenterId }, serverByName, signal)) {
         const { __finalContent: _drop, ...clean } = ev as any;
         void _drop;
@@ -505,6 +518,7 @@ export class ChatOrchestrator {
       ctxMessages.push({ role: 'user', content: userContent });
 
       const req: ChatRequest = { model, messages: ctxMessages, ...(tools.length ? { tools } : {}) };
+      req.messages = transformMessagesForVision(req.messages, input.attachments ?? [], provider, model);
       let agentContent = '';
       let errored = false;
       for await (const ev of this.runWithTools(provider, req, { turnId, msgId: msg.id, agentId }, serverByName, signal)) {

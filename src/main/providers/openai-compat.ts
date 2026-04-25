@@ -1,6 +1,6 @@
 import OpenAI, { AzureOpenAI } from 'openai';
 import { OpenAIProvider, toOpenAIMessages } from './openai';
-import type { ChatRequest, ChatChunk, ToolCall } from './types';
+import type { ChatRequest, ChatChunk, ToolCall, ProviderCapabilities } from './types';
 import { normalizeError } from './errors';
 
 /**
@@ -117,5 +117,12 @@ export class OpenAICompatProvider extends OpenAIProvider {
       if (n.code === 'ABORTED') return;
       throw n;
     }
+  }
+
+  capabilities(model: string): ProviderCapabilities {
+    return {
+      vision: /(gpt-4o|qwen.*vl|qwen2.*vl|qwen3.*vl|deepseek.*vl|glm.*v|yi.*vl)/i.test(model),
+      tools: true,
+    };
   }
 }
