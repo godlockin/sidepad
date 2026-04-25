@@ -244,7 +244,8 @@
       "skills": "技能",
       "capabilities": "能力",
       "appearance": "外观",
-      "about": "关于"
+      "about": "关于",
+      "tools": "工具"
     },
     "capabilities": {
       "title": "能力",
@@ -304,6 +305,14 @@
       "name": "sidepad",
       "tagline": "—— 一个并排与多个 LLM 对话的桌面工作台。版本",
       "subtitle": "本地存储 · 零遥测 · 开源。"
+    },
+    "tools": {
+      "title": "工具",
+      "searchBackends": "搜索后端",
+      "braveKey": "Brave 搜索 API 密钥",
+      "tavilyKey": "Tavily API 密钥",
+      "configured": "已配置",
+      "searchHint": "未配置时回退到 DuckDuckGo。"
     }
   }
 }

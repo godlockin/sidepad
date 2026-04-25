@@ -244,7 +244,8 @@
       "skills": "Skills",
       "capabilities": "Capabilities",
       "appearance": "Appearance",
-      "about": "About"
+      "about": "About",
+      "tools": "Tools"
     },
     "capabilities": {
       "title": "Capabilities",
@@ -304,6 +305,14 @@
       "name": "sidepad",
       "tagline": "— a desktop workspace for talking with multiple LLMs at once. Version",
       "subtitle": "Local storage · zero telemetry · open source."
+    },
+    "tools": {
+      "title": "Tools",
+      "searchBackends": "Search backends",
+      "braveKey": "Brave Search API key",
+      "tavilyKey": "Tavily API key",
+      "configured": "configured",
+      "searchHint": "Used by the bundled web_search tool. Without keys, falls back to free DuckDuckGo HTML scrape (rate-limited)."
     }
   }
 }
