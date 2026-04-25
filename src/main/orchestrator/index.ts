@@ -3,6 +3,7 @@ import type { ProviderRegistry } from '../providers';
 import type { ClassifierAgent } from './classifier';
 import { resolveMode, type ClassifierResult } from './mode-resolver';
 import { buildContext } from './context-builder';
+import { segmentByMentions } from './segment-mentions';
 import type { OrchestratorEvent } from './types';
 import type {
   LLMProvider,
@@ -444,9 +445,24 @@ export class ChatOrchestrator {
     signal: AbortSignal,
   ): AsyncIterable<OrchestratorEvent> {
     const { tools, serverByName } = await this.resolveTools(session.id);
-    const successfulOutputs = new Map<string, string>();
 
-    for (const agentId of agentIds) {
+    // Directed sequential relay: segment by @<agent> boundaries; each agent
+    // sees the prefix + its own segment + all prior segments with prior
+    // replies inlined as plain text (NOT as separate assistant messages).
+    const { prefix, parts } = segmentByMentions(input.text, agentIds);
+
+    // Defensive fallback: no mention boundaries found → treat the whole text
+    // as a single segment for agentIds[0]. This shouldn't normally happen
+    // because mode-resolver only routes to relay when mentions ≥ 2.
+    const effectiveParts = parts.length > 0
+      ? parts
+      : agentIds.map((id) => ({ agentId: id, segment: input.text }));
+    const effectivePrefix = parts.length > 0 ? prefix : '';
+
+    const replies: string[] = [];
+
+    for (let i = 0; i < effectiveParts.length; i++) {
+      const agentId = effectiveParts[i].agentId;
       const provider = this.getProviderForAgent(agentId);
       const model = this.getModelForAgent(agentId);
 
@@ -454,30 +470,38 @@ export class ChatOrchestrator {
         const msg = this.store.startAssistantMessage(session.id, turnId, agentId, 'unknown', model);
         this.store.markError(msg.id, 'PROVIDER_NOT_CONFIGURED', `Provider not found for agent ${agentId}`);
         yield { type: 'message:error', turnId, msgId: msg.id, agentId, code: 'PROVIDER_NOT_CONFIGURED', message: 'Provider not found', retriable: false };
-        continue;
+        // Stop the chain — subsequent agents don't run.
+        return;
       }
 
       const msg = this.store.startAssistantMessage(session.id, turnId, agentId, provider.id, model);
 
+      // Compose cumulative user content.
+      const pieces: string[] = [];
+      if (effectivePrefix.trim()) pieces.push(effectivePrefix.trim());
+      for (let j = 0; j <= i; j++) {
+        pieces.push(effectiveParts[j].segment);
+        if (j < i) pieces.push(`@${effectiveParts[j].agentId}: ${replies[j]}`);
+      }
+      const userContent = pieces.join('\n\n');
+
       const ctxMessages: ChatMessage[] = [];
       const sysPrompt = this.composedSystemPrompt(session.id, agentId, session.systemPrompt);
       if (sysPrompt) ctxMessages.push({ role: 'system', content: sysPrompt });
-      for (const [prevAgent, output] of successfulOutputs) {
-        ctxMessages.push({ role: 'assistant', content: output, name: prevAgent });
-      }
-      ctxMessages.push({ role: 'user', content: input.text });
+      ctxMessages.push({ role: 'user', content: userContent });
 
       const req: ChatRequest = { model, messages: ctxMessages, ...(tools.length ? { tools } : {}) };
       let agentContent = '';
+      let errored = false;
       for await (const ev of this.runWithTools(provider, req, { turnId, msgId: msg.id, agentId }, serverByName, signal)) {
         if ((ev as any).__finalContent !== undefined) agentContent = (ev as any).__finalContent;
         const { __finalContent: _drop, ...clean } = ev as any;
         void _drop;
         yield clean as OrchestratorEvent;
-        if (clean.type === 'message:finish') {
-          successfulOutputs.set(agentId, agentContent);
-        }
+        if (clean.type === 'message:error') errored = true;
       }
+      if (errored) return; // stop the chain on agent error
+      replies.push(agentContent);
     }
   }
 }

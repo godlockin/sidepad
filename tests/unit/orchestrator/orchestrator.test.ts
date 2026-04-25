@@ -162,11 +162,17 @@ describe('ChatOrchestrator', () => {
     expect((events[0] as any).code).toBe('NO_DEFAULT_AGENT');
   });
 
-  it('should run parallel mode with multiple agents', async () => {
+  it('should run parallel mode with multiple agents (classifier override)', async () => {
+    // With the new directed-relay default, 2+ mentions normally go to relay.
+    // Use a confident classifier result to force parallel mode here.
+    const classifier = {
+      isEnabled: () => true,
+      classify: vi.fn(async () => ({ mode: 'parallel' as const, confidence: 0.9 })),
+    } as any;
     const orchestrator = new ChatOrchestrator(
       store,
       registry,
-      null,
+      classifier,
       (agentId: string) =>
         agentId === 'agent-a' ? providerA : agentId === 'agent-b' ? providerB : null,
       () => 'gpt-4o-mini',
@@ -182,6 +188,8 @@ describe('ChatOrchestrator', () => {
     const types = events.map((e) => e.type);
     expect(types).toContain('turn:start');
     expect(types).toContain('turn:complete');
+    const startEvent = events.find((e) => e.type === 'turn:start');
+    expect((startEvent as any)?.mode).toBe('parallel');
     // Both agents should produce finish events
     const finishes = events.filter((e) => e.type === 'message:finish');
     expect(finishes.length).toBeGreaterThanOrEqual(1);
@@ -221,6 +229,68 @@ describe('ChatOrchestrator', () => {
         ),
       ),
     ).rejects.toThrow('Session not found');
+  });
+
+  it('should run directed sequential relay with one cumulative user message per agent', async () => {
+    // Capture the ChatRequest each provider sees.
+    const seenA: any[] = [];
+    const seenB: any[] = [];
+    const provA: LLMProvider = {
+      id: 'openai',
+      configId: 'config-openai',
+      listModels: vi.fn(async () => []),
+      async *chat(req: any, _signal: AbortSignal) {
+        seenA.push(req);
+        yield { delta: 'reply-from-a', finishReason: 'stop' } as ChatChunk;
+      },
+    };
+    const provB: LLMProvider = {
+      id: 'anthropic',
+      configId: 'config-anthropic',
+      listModels: vi.fn(async () => []),
+      async *chat(req: any, _signal: AbortSignal) {
+        seenB.push(req);
+        yield { delta: 'reply-from-b', finishReason: 'stop' } as ChatChunk;
+      },
+    };
+
+    const orchestrator = new ChatOrchestrator(
+      store,
+      registry,
+      null,
+      (agentId: string) => (agentId === 'agent-a' ? provA : agentId === 'agent-b' ? provB : null),
+      () => 'gpt-4o-mini',
+    );
+
+    const text = '@agent-a first question @agent-b second question';
+    const events = await collectEvents(
+      orchestrator.send(
+        { sessionId: 'session-1', text, mentions: ['agent-a', 'agent-b'] },
+        signal,
+      ),
+    );
+
+    const startEv = events.find((e) => e.type === 'turn:start');
+    expect((startEv as any)?.mode).toBe('relay');
+
+    // Each provider received exactly one chat() invocation.
+    expect(seenA.length).toBe(1);
+    expect(seenB.length).toBe(1);
+
+    // agent-a sees only its own segment, as a single user message.
+    const aMsgs = seenA[0].messages.filter((m: any) => m.role === 'user');
+    expect(aMsgs).toHaveLength(1);
+    expect(aMsgs[0].content).toBe('@agent-a first question');
+    // No assistant messages injected (cumulative is embedded in user content).
+    expect(seenA[0].messages.filter((m: any) => m.role === 'assistant')).toHaveLength(0);
+
+    // agent-b sees cumulative content with prior agent's reply inlined.
+    const bMsgs = seenB[0].messages.filter((m: any) => m.role === 'user');
+    expect(bMsgs).toHaveLength(1);
+    expect(bMsgs[0].content).toBe(
+      '@agent-a first question\n\n@agent-a: reply-from-a\n\n@agent-b second question',
+    );
+    expect(seenB[0].messages.filter((m: any) => m.role === 'assistant')).toHaveLength(0);
   });
 });
 

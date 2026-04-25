@@ -38,8 +38,8 @@ describe('resolveMode', () => {
     const r = resolveMode(makeSession(), '你先回答', ['a', 'b']);
     expect(r.mode).toBe('lead-and-comment'); expect(r.leadAgentId).toBe('a');
   });
-  it('2+ mentions, no lead → session groupMode', () => {
-    const r = resolveMode(makeSession({ groupMode: 'relay' }), 'hello', ['a', 'b']);
+  it('2+ mentions, no lead → relay (directed sequential, default)', () => {
+    const r = resolveMode(makeSession({ groupMode: 'parallel' }), 'hello', ['a', 'b']);
     expect(r.mode).toBe('relay');
   });
   it('classifier result overrides when confident', () => {
@@ -47,9 +47,9 @@ describe('resolveMode', () => {
       { mode: 'lead-and-comment', leadAgentId: 'b', commenterAgentIds: ['a', 'c'], confidence: 0.8 });
     expect(r.mode).toBe('lead-and-comment'); expect(r.leadAgentId).toBe('b');
   });
-  it('classifier low confidence falls back to rules', () => {
+  it('classifier low confidence falls back to rules → relay default for 2+ mentions', () => {
     const r = resolveMode(makeSession({ groupMode: 'parallel' }), 'hello', ['a', 'b'],
       { mode: 'lead-and-comment', leadAgentId: 'a', confidence: 0.3 });
-    expect(r.mode).toBe('parallel');
+    expect(r.mode).toBe('relay');
   });
 });

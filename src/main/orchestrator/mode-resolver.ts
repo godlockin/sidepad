@@ -49,5 +49,11 @@ export function resolveMode(
   if (scanLead(text)) {
     return { mode: 'lead-and-comment', agentIds: mentions, leadAgentId: mentions[0], commenterAgentIds: mentions.slice(1) };
   }
-  return { mode: session.groupMode, agentIds: mentions };
+  // Directed sequential relay is now the default for 2+ mentions without
+  // a lead trigger. The orchestrator's runRelayInternal segments the text
+  // by @<id> boundaries, so each agent sees its own targeted segment plus
+  // prior agents' inline replies. session.groupMode is intentionally
+  // ignored here — 'parallel' is only reached via classifier override or
+  // 0/1-mention paths.
+  return { mode: 'relay', agentIds: mentions };
 }
