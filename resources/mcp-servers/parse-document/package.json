@@ -1,0 +1,11 @@
+{
+  "name": "sidepad-parse-document-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "bin": { "sidepad-parse-document": "index.js" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "better-sqlite3": "^12.9.0"
+  }
+}

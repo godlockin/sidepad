@@ -5,6 +5,7 @@ import type Database from 'better-sqlite3';
 import { log } from '../logger.js';
 
 const BUNDLED_WEB_SEARCH_ID = 'bundled-web-search';
+const BUNDLED_PARSE_DOCUMENT_ID = 'bundled-parse-document';
 
 /**
  * Resolve the path to a bundled resource directory in both dev and packaged
@@ -49,29 +50,62 @@ export function seedBundledMcpServers(db: Database.Database): void {
     const existing = db
       .prepare('SELECT id FROM mcp_servers WHERE id = ?')
       .get(BUNDLED_WEB_SEARCH_ID);
-    if (existing) return;
+    if (!existing) {
+      const indexJs = resolveBundledResourcePath(
+        'mcp-servers',
+        'web-search',
+        'index.js',
+      );
+      const config = {
+        command: process.execPath,
+        args: [indexJs],
+        env: { ELECTRON_RUN_AS_NODE: '1' },
+      };
+      db.prepare(
+        'INSERT OR IGNORE INTO mcp_servers (id,name,transport,config_json,enabled,created_at) VALUES (?,?,?,?,?,?)',
+      ).run(
+        BUNDLED_WEB_SEARCH_ID,
+        'Web Search (bundled)',
+        'stdio',
+        JSON.stringify(config),
+        0,
+        Date.now(),
+      );
+      log.info({ indexJs }, 'seeded bundled web-search MCP server');
+    }
 
-    const indexJs = resolveBundledResourcePath(
-      'mcp-servers',
-      'web-search',
-      'index.js',
-    );
-    const config = {
-      command: process.execPath,
-      args: [indexJs],
-      env: { ELECTRON_RUN_AS_NODE: '1' },
-    };
-    db.prepare(
-      'INSERT OR IGNORE INTO mcp_servers (id,name,transport,config_json,enabled,created_at) VALUES (?,?,?,?,?,?)',
-    ).run(
-      BUNDLED_WEB_SEARCH_ID,
-      'Web Search (bundled)',
-      'stdio',
-      JSON.stringify(config),
-      0,
-      Date.now(),
-    );
-    log.info({ indexJs }, 'seeded bundled web-search MCP server');
+    const existingPd = db
+      .prepare('SELECT id FROM mcp_servers WHERE id = ?')
+      .get(BUNDLED_PARSE_DOCUMENT_ID);
+    if (!existingPd) {
+      const pdIndexJs = resolveBundledResourcePath(
+        'mcp-servers',
+        'parse-document',
+        'index.js',
+      );
+      // db.name is the filesystem path the better-sqlite3 connection was
+      // opened with — reuse it so the child mcp process reads the same file.
+      const dbPath = (db as unknown as { name: string }).name;
+      const pdConfig = {
+        command: process.execPath,
+        args: [pdIndexJs],
+        env: {
+          ELECTRON_RUN_AS_NODE: '1',
+          SIDEPAD_DB_PATH: dbPath,
+        },
+      };
+      db.prepare(
+        'INSERT OR IGNORE INTO mcp_servers (id,name,transport,config_json,enabled,created_at) VALUES (?,?,?,?,?,?)',
+      ).run(
+        BUNDLED_PARSE_DOCUMENT_ID,
+        'Parse Document (bundled)',
+        'stdio',
+        JSON.stringify(pdConfig),
+        1,
+        Date.now(),
+      );
+      log.info({ pdIndexJs, dbPath }, 'seeded bundled parse-document MCP server');
+    }
   } catch (err) {
     log.warn({ err: String(err) }, 'failed to seed bundled MCP server');
   }
