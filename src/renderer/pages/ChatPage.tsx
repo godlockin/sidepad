@@ -150,7 +150,7 @@ export function ChatPage() {
       <section className="flex-1 flex flex-col bg-paper min-w-0">
         {/* Header */}
         <header className="px-6 h-12 border-b border-rule flex items-center justify-between gap-4 bg-surface">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 group">
             {activeSession && (
               <button
                 type="button"
@@ -167,6 +167,7 @@ export function ChatPage() {
                   name={activeSession.title || activeSession.id}
                   size={22}
                   rounded="md"
+                  fallback="empty"
                 />
               </button>
             )}
@@ -202,6 +203,33 @@ export function ChatPage() {
                   <span className="text-ink-faint font-normal">{t('chat.newConversation')}</span>
                 )}
               </h2>
+            )}
+            {activeSession && !editingTitle && (
+              <span
+                onClick={() => {
+                  setTitleDraft(activeSession.title || '');
+                  setEditingTitle(true);
+                }}
+                role="button"
+                tabIndex={-1}
+                aria-label={t('common.rename')}
+                title={t('common.rename')}
+                className="text-ink-faint hover:text-accent cursor-pointer transition-colors opacity-0 group-hover:opacity-70 hover:!opacity-100"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M11.5 1.5l3 3-9 9H2.5v-3l9-9z" />
+                </svg>
+              </span>
             )}
           </div>
           {activeSession && (

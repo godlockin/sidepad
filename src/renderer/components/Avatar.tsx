@@ -9,6 +9,7 @@ export interface AvatarProps {
   className?: string;
   onClick?: (e: React.MouseEvent) => void;
   title?: string;
+  fallback?: 'hash' | 'empty';
 }
 
 /**
@@ -44,6 +45,7 @@ export function Avatar({
   className = '',
   onClick,
   title,
+  fallback = 'hash',
 }: AvatarProps) {
   const radius = rounded === 'full' ? '9999px' : `${Math.max(4, size * 0.22)}px`;
   const baseStyle: React.CSSProperties = {
@@ -90,6 +92,9 @@ export function Avatar({
   }
 
   // Hash-color initial fallback
+  if (fallback === 'empty') {
+    return <span style={baseStyle} className={`inline-block ${className}`} />;
+  }
   const { bg, fg } = hashColor(name || '?');
   return (
     <span

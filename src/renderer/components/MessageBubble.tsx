@@ -142,6 +142,22 @@ function AgentEntry({
       )}
 
       {/* Actions */}
+      {!isStreaming && !isError && (() => {
+        const tok = (message.promptTokens ?? 0) + (message.completionTokens ?? 0);
+        const dur =
+          message.finishedAt && message.createdAt
+            ? `${(message.finishedAt - message.createdAt).toFixed(1)}s`
+            : null;
+        const parts: string[] = [];
+        parts.push(message.modelId ?? '—');
+        if (tok > 0) parts.push(`${tok} tok`);
+        if (dur) parts.push(dur);
+        return (
+          <div className="text-[11px] font-mono text-ink-faint mt-1.5">
+            {parts.join(' · ')}
+          </div>
+        );
+      })()}
       {!isStreaming && (
         <footer className="mt-2 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--dur)]">
           {message.content && (
@@ -202,6 +218,7 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
           name={agentId}
           size={18}
           rounded="full"
+          fallback="empty"
         />
         <span className="font-mono text-[11px] bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px] text-ink">
           {agentId}
