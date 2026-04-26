@@ -1,5 +1,9 @@
 import type { ParseResult } from './index.js';
-import { ocrImage } from '../ocr/tesseract.js';
+import { ocrImage, type OcrProgress } from '../ocr/tesseract.js';
+
+export interface ImageParseOptions {
+  onProgress?: (p: OcrProgress) => void;
+}
 
 /**
  * Image parser — OCR fallback path.
@@ -14,6 +18,7 @@ export async function parseImage(
   buffer: Buffer,
   _filename: string,
   _mime?: string,
+  opts: ImageParseOptions = {},
 ): Promise<ParseResult> {
-  return ocrImage(buffer);
+  return ocrImage(buffer, { onProgress: opts.onProgress });
 }

@@ -6,7 +6,8 @@
 // Backend chain (first one with a usable key/response wins):
 //   1. Brave Search API   — requires BRAVE_API_KEY
 //   2. Tavily Search API  — requires TAVILY_API_KEY
-//   3. DuckDuckGo HTML    — free fallback (rate-limited scrape)
+//   3. SearXNG JSON       — free fallback over public instance pool
+//   4. DuckDuckGo HTML    — free fallback (rate-limited scrape)
 //
 // Backends with missing keys are skipped silently. The chosen backend is
 // logged to stderr so the host process can surface it for debugging.
@@ -92,6 +93,90 @@ async function searchTavily(query, max) {
   }));
 }
 
+// Public SearXNG instances known to support `?format=json` for the general
+// category. Many of these aggressively rate-limit by IP; the runtime tries up
+// to 3 random instances per query before giving up and falling through to DDG.
+const SEARXNG_INSTANCES = [
+  'https://search.brave4u.com',
+  'https://searx.be',
+  'https://priv.au',
+  'https://search.disroot.org',
+  'https://baresearch.org',
+  'https://searx.tiekoetter.com',
+  'https://search.inetol.net',
+  'https://opnxng.com',
+  'https://search.hbubli.cc',
+  'https://search.rhscz.eu',
+];
+
+function pickInstances(pool, n) {
+  const arr = pool.slice();
+  const out = [];
+  for (let i = 0; i < n && arr.length > 0; i++) {
+    const idx = Math.floor(Math.random() * arr.length);
+    out.push(arr.splice(idx, 1)[0]);
+  }
+  return out;
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function searchSearxng(query, max) {
+  const tries = pickInstances(SEARXNG_INSTANCES, 3);
+  let lastErr = null;
+  for (const instance of tries) {
+    const url = `${instance}/search?q=${encodeURIComponent(
+      query,
+    )}&format=json&categories=general`;
+    try {
+      const res = await fetchWithTimeout(
+        url,
+        {
+          headers: {
+            Accept: 'application/json',
+            'User-Agent': 'sidepad-search/0.1',
+          },
+        },
+        8000,
+      );
+      process.stderr.write(
+        `[web-search] searxng instance=${instance} status=${res.status}\n`,
+      );
+      if (!res.ok) {
+        lastErr = new Error(`searxng ${instance}: HTTP ${res.status}`);
+        continue;
+      }
+      const data = await res.json();
+      const items = (data && data.results) || [];
+      if (items.length === 0) {
+        lastErr = new Error(`searxng ${instance}: empty results`);
+        continue;
+      }
+      const results = items.slice(0, max).map((r) => ({
+        title: String(r.title ?? ''),
+        url: String(r.url ?? ''),
+        snippet: String(r.content ?? ''),
+      }));
+      return { results, instance };
+    } catch (err) {
+      lastErr = err;
+      process.stderr.write(
+        `[web-search] searxng instance=${instance} failed: ${String(err)}\n`,
+      );
+    }
+  }
+  if (lastErr) throw lastErr;
+  return { results: [], instance: null };
+}
+
 async function searchDuckDuckGo(query, maxResults) {
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
   const res = await fetch(url, {
@@ -122,17 +207,24 @@ async function runSearchChain(query, max) {
   const chain = [
     { name: 'brave', fn: searchBrave },
     { name: 'tavily', fn: searchTavily },
+    { name: 'searxng', fn: searchSearxng },
     { name: 'duckduckgo', fn: searchDuckDuckGo },
   ];
   let lastErr = null;
   for (const backend of chain) {
     try {
-      const results = await backend.fn(query, max);
-      if (results === null) continue; // missing key — skip silently
+      const out = await backend.fn(query, max);
+      if (out === null) continue; // missing key — skip silently
+      // searxng returns {results, instance}; everything else returns array.
+      const results = Array.isArray(out) ? out : out.results;
+      const tag =
+        backend.name === 'searxng' && out.instance
+          ? `searxng:${out.instance}`
+          : backend.name;
       process.stderr.write(
-        `[web-search] backend=${backend.name} results=${results.length}\n`,
+        `[web-search] backend=${tag} results=${results.length}\n`,
       );
-      return { results, backend: backend.name };
+      return { results, backend: tag };
     } catch (err) {
       lastErr = err;
       process.stderr.write(
@@ -155,7 +247,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'web_search',
       description:
-        'Search the web (Brave → Tavily → DuckDuckGo fallback) and return a list of results with title, url, and snippet.',
+        'Search the web (Brave → Tavily → SearXNG → DuckDuckGo fallback) and return a list of results with title, url, and snippet.',
       inputSchema: {
         type: 'object',
         properties: {

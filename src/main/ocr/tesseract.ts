@@ -14,10 +14,24 @@ import { app } from 'electron';
  * Errors are *swallowed* (logged + returned as a placeholder string) so a
  * failed OCR does not break the parser pipeline / upload flow.
  */
+export interface OcrProgress {
+  status: string;
+  progress?: number;
+}
+
+export interface OcrOptions {
+  langs?: string[];
+  onProgress?: (p: OcrProgress) => void;
+}
+
 export async function ocrImage(
   buffer: Buffer,
-  langs: string[] = ['eng', 'chi_sim'],
+  opts: OcrOptions | string[] = {},
 ): Promise<{ markdown: string; tokenEstimate: number }> {
+  // Backward compat: previously accepted `langs: string[]` as 2nd arg.
+  const options: OcrOptions = Array.isArray(opts) ? { langs: opts } : opts;
+  const langs = options.langs ?? ['eng', 'chi_sim'];
+  const onProgress = options.onProgress;
   try {
     const dir = ocrDataDir();
     fs.mkdirSync(dir, { recursive: true });
@@ -30,11 +44,25 @@ export async function ocrImage(
       throw new Error('tesseract.js: createWorker not available');
     }
 
-    const worker = await createWorker(langs, 1, {
+    const workerOpts: any = {
       langPath: dir,
       cachePath: dir,
       gzip: true,
-    });
+    };
+    if (onProgress) {
+      workerOpts.logger = (m: any) => {
+        try {
+          onProgress({
+            status: String(m?.status ?? ''),
+            progress: typeof m?.progress === 'number' ? m.progress : undefined,
+          });
+        } catch {
+          /* ignore */
+        }
+      };
+    }
+
+    const worker = await createWorker(langs, 1, workerOpts);
     try {
       const { data } = await worker.recognize(buffer);
       const text = (data?.text ?? '').trim();

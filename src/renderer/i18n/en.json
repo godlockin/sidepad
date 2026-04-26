@@ -62,8 +62,8 @@
       "error": "parse failed",
       "tooLarge": "Large file — assistant will read on demand",
       "ocr": {
-        "downloading": "Downloading {lang} ({pct}%)",
-        "recognizing": "Recognizing ({pct}%)"
+        "downloading": "Downloading {{lang}} ({{pct}}%)",
+        "recognizing": "Recognizing ({{pct}}%)"
       }
     }
   },

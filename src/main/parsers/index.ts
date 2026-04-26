@@ -3,10 +3,15 @@ import { parseDocx, parseXlsx, parsePptx } from './office.js';
 import { parsePlaintext } from './plaintext.js';
 import { parseHtml } from './html.js';
 import { parseImage } from './image.js';
+import type { OcrProgress } from '../ocr/tesseract.js';
 
 export interface ParseResult {
   markdown: string;
   tokenEstimate: number;
+}
+
+export interface DispatchParseOptions {
+  onProgress?: (p: OcrProgress) => void;
 }
 
 export function estimateTokens(text: string): number {
@@ -22,6 +27,7 @@ export async function dispatchParse(
   buffer: Buffer,
   filename: string,
   mime?: string,
+  opts: DispatchParseOptions = {},
 ): Promise<ParseResult> {
   const ext = extOf(filename);
   const m = (mime || '').toLowerCase();
@@ -51,7 +57,7 @@ export async function dispatchParse(
       ext === 'bmp' ||
       m.startsWith('image/')
     ) {
-      return await parseImage(buffer, filename, mime);
+      return await parseImage(buffer, filename, mime, { onProgress: opts.onProgress });
     }
     // text-ish fallback
     return await parsePlaintext(buffer, filename);

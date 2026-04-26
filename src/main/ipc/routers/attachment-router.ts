@@ -48,6 +48,26 @@ function safeName(name: string): string {
 type Listener = (row: AttachmentRow) => void;
 const listeners = new Map<string, Set<Listener>>(); // sessionId -> listeners
 
+// Per-attachment progress pub/sub (OCR + future streaming parsers).
+export interface ParseProgress {
+  status: string;
+  progress?: number;
+}
+type ProgressListener = (p: ParseProgress) => void;
+const progressListeners = new Map<string, Set<ProgressListener>>(); // attachmentId -> listeners
+
+function publishProgress(attachmentId: string, p: ParseProgress): void {
+  const set = progressListeners.get(attachmentId);
+  if (!set) return;
+  for (const l of set) {
+    try {
+      l(p);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 function emit(sessionId: string, row: AttachmentRow): void {
   const set = listeners.get(sessionId);
   if (!set) return;
@@ -93,7 +113,9 @@ function setStatus(
 async function runParseAsync(id: string, buffer: Buffer, filename: string, mime?: string): Promise<void> {
   setStatus(id, 'parsing');
   try {
-    const result = await dispatchParse(buffer, filename, mime);
+    const result = await dispatchParse(buffer, filename, mime, {
+      onProgress: (p) => publishProgress(id, p),
+    });
     setStatus(id, 'ready', {
       parsed_markdown: result.markdown,
       token_estimate: result.tokenEstimate,
@@ -101,6 +123,10 @@ async function runParseAsync(id: string, buffer: Buffer, filename: string, mime?
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     setStatus(id, 'error', { parse_error: msg });
+  } finally {
+    // Drop any lingering progress listeners — terminal states are signalled
+    // through the existing onParsed channel.
+    progressListeners.delete(id);
   }
 }
 
@@ -224,6 +250,23 @@ export const attachmentRouter = t.router({
           listeners.get(input.sessionId)!.add(fn);
           return () => {
             listeners.get(input.sessionId)?.delete(fn);
+          };
+        },
+      );
+    }),
+
+  onProgress: t.procedure
+    .input(z.object({ attachmentId: z.string() }))
+    .subscription(({ input }) => {
+      return observable<ParseProgress, Error>(
+        (observer: Observer<ParseProgress, Error>): TeardownLogic => {
+          const fn: ProgressListener = (p) => observer.next(p);
+          if (!progressListeners.has(input.attachmentId)) {
+            progressListeners.set(input.attachmentId, new Set());
+          }
+          progressListeners.get(input.attachmentId)!.add(fn);
+          return () => {
+            progressListeners.get(input.attachmentId)?.delete(fn);
           };
         },
       );

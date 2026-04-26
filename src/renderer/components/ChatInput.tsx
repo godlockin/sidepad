@@ -22,12 +22,38 @@ interface AttachmentChip {
   status: 'parsing' | 'ready' | 'error';
   tokenEstimate?: number;
   error?: string;
+  progress?: { status: string; progress?: number };
 }
 
 function fmtBytes(b: number): string {
   if (b < 1024) return `${b}b`;
   if (b < 1024 * 1024) return `${Math.round(b / 1024)}kb`;
   return `${(b / (1024 * 1024)).toFixed(1)}mb`;
+}
+
+function fmtPct(p?: number): string {
+  if (typeof p !== 'number' || isNaN(p)) return '0';
+  return Math.round(Math.max(0, Math.min(1, p)) * 100).toString();
+}
+
+function formatProgress(
+  prog: { status: string; progress?: number } | undefined,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  fallback: string,
+): string {
+  if (!prog || !prog.status) return fallback;
+  const s = prog.status.toLowerCase();
+  const pct = fmtPct(prog.progress);
+  if (s.startsWith('downloading') || s.startsWith('loading lang')) {
+    // tesseract emits e.g. "downloading chi_sim" or "loading language traineddata"
+    const lang = s.replace(/^downloading\s+/, '').replace(/^loading lang.*/, 'lang').trim();
+    return t('chat.attachment.ocr.downloading', { lang: lang || 'lang', pct });
+  }
+  if (s.startsWith('recognizing') || s.startsWith('initializing') || s.startsWith('initialized')) {
+    return t('chat.attachment.ocr.recognizing', { pct });
+  }
+  // Unknown intermediate status — surface raw + percent for debugging visibility.
+  return `${prog.status} (${pct}%)`;
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -118,6 +144,39 @@ export function ChatInput({
     );
     return () => sub.unsubscribe();
   }, [activeSession?.id]);
+
+  // Subscribe to per-attachment OCR/parse progress for each parsing chip.
+  const parsingIds = attachments
+    .filter((a) => a.status === 'parsing')
+    .map((a) => a.id)
+    .join(',');
+  useEffect(() => {
+    const ids = parsingIds ? parsingIds.split(',') : [];
+    if (ids.length === 0) return;
+    const subs = ids.map((attachmentId) =>
+      (trpc as any).attachment.onProgress.subscribe(
+        { attachmentId },
+        {
+          onData: (p: { status: string; progress?: number }) => {
+            setAttachments((prev) =>
+              prev.map((a) =>
+                a.id === attachmentId ? { ...a, progress: p } : a,
+              ),
+            );
+          },
+        },
+      ),
+    );
+    return () => {
+      for (const s of subs) {
+        try {
+          s.unsubscribe();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+  }, [parsingIds]);
 
   const uploadFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -244,7 +303,7 @@ export function ChatInput({
                   ? `${t('chat.attachment.ready')}${a.tokenEstimate != null ? ` · ~${a.tokenEstimate} tok` : ''}`
                   : a.status === 'error'
                     ? t('chat.attachment.error')
-                    : t('chat.attachment.parsing');
+                    : formatProgress(a.progress, t as any, t('chat.attachment.parsing'));
               return (
                 <span
                   key={a.id}

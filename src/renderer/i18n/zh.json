@@ -60,7 +60,11 @@
       "parsing": "解析中…",
       "ready": "就绪",
       "error": "解析失败",
-      "tooLarge": "大文件 — 由 AI 按需读取"
+      "tooLarge": "大文件 — 由 AI 按需读取",
+      "ocr": {
+        "downloading": "下载 {{lang}}（{{pct}}%）",
+        "recognizing": "识别中（{{pct}}%）"
+      }
     }
   },
   "sidebar": {
