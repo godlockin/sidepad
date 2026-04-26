@@ -1,4 +1,5 @@
 import { scanLead, scanComment } from './trigger-lexicon';
+import type { Participant } from '../store/types';
 
 export interface ModeResult {
   mode: 'single' | 'parallel' | 'relay' | 'lead-and-comment' | 'error';
@@ -16,7 +17,7 @@ export interface ClassifierResult {
 }
 
 export function resolveMode(
-  session: { defaultAgentId: string | null; groupMode: 'parallel' | 'relay'; participants: string[] },
+  session: { defaultAgentId: string | null; groupMode: 'parallel' | 'relay'; participants: Participant[] | string[] },
   text: string,
   mentions: string[],
   classifierResult?: ClassifierResult,
@@ -39,7 +40,10 @@ export function resolveMode(
   // 1 mention
   if (mentions.length === 1) {
     if (scanLead(text)) {
-      const commenters = session.participants.filter(id => id !== mentions[0]);
+      const participantIds = (session.participants as Array<Participant | string>).map((p) =>
+        typeof p === 'string' ? p : p.agentId,
+      );
+      const commenters = participantIds.filter((id) => id !== mentions[0]);
       return { mode: 'lead-and-comment', agentIds: mentions, leadAgentId: mentions[0], commenterAgentIds: commenters };
     }
     return { mode: 'single', agentIds: mentions };

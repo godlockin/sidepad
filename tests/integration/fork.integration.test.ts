@@ -7,8 +7,8 @@ vi.mock('electron', () => ({
   safeStorage: { isEncryptionAvailable: () => false, encryptString: (s: string) => Buffer.from(s), decryptString: (b: Buffer) => b.toString() },
 }));
 
-import { SessionStore } from '../../../src/main/store/session-store';
-import { sessionRouter } from '../../../src/main/ipc/routers/session-router';
+import { SessionStore } from '../../src/main/store/session-store';
+import { sessionRouter } from '../../src/main/ipc/routers/session-router';
 
 let db: Database.Database;
 

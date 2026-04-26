@@ -18,12 +18,18 @@ function makeMockSession(overrides: Partial<Session> = {}): Session {
     visibilityMode: 'independent',
     groupMode: 'parallel',
     defaultAgentId: 'agent-a',
-    participants: ['agent-a', 'agent-b', 'agent-c'],
+    participants: [
+      { agentId: 'agent-a', personaId: 'p-a' },
+      { agentId: 'agent-b', personaId: 'p-b' },
+      { agentId: 'agent-c', personaId: 'p-c' },
+    ],
     folderId: null,
     projectId: null,
     pinned: false,
     archived: false,
     parentMessageId: null,
+    iconKind: null,
+    iconValue: null,
     ...overrides,
   };
 }
@@ -304,7 +310,10 @@ describe('ChatOrchestrator - lead-and-comment mode', () => {
 
   beforeEach(() => {
     session = makeMockSession({
-      participants: ['agent-a', 'agent-b'],
+      participants: [
+        { agentId: 'agent-a', personaId: 'p-a' },
+        { agentId: 'agent-b', personaId: 'p-b' },
+      ],
     });
     providerA = makeMockProvider('openai', [
       { delta: 'Lead answer', finishReason: 'stop' },
