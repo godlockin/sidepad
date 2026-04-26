@@ -1,13 +1,18 @@
 import type Database from 'better-sqlite3';
 import { initTRPC } from '@trpc/server';
+import { observable } from '@trpc/server/observable';
 import { z } from 'zod';
-import { spawn } from 'node:child_process';
-import path from 'node:path';
 import { createMCPStore } from '../../store/mcp-store.js';
 import type { MCPRegistry } from '../../mcp/registry.js';
-import { sidepadPaths } from '../../paths.js';
+import {
+  installChromium,
+  isChromiumInstalled,
+  getBrowsersPath,
+} from '../../mcp/browser-installer.js';
 
 const t = initTRPC.create({ isServer: true });
+
+const BROWSER_DEPENDENT_IDS = new Set(['bundled-web-browse', 'bundled-web-crawl']);
 
 function getDb(): Database.Database {
   const db = (globalThis as any).sidepad?.db as Database.Database | undefined;
@@ -53,6 +58,11 @@ export const mcpRouter = t.router({
       const reg = getRegistry();
       if (input.enabled) await reg.connect(rec);
       else await reg.disconnect(input.id);
+      const requiresBrowser =
+        input.enabled &&
+        BROWSER_DEPENDENT_IDS.has(input.id) &&
+        !isChromiumInstalled();
+      return { ok: true, requiresBrowser };
     }),
 
   remove: t.procedure
@@ -77,28 +87,45 @@ export const mcpRouter = t.router({
     }),
 
   /**
-   * Install Playwright Chromium into the user's data dir. Required before
-   * the bundled web-browse MCP can launch a real browser. Returns when the
-   * `npx playwright install chromium` child process exits; the renderer is
-   * responsible for surfacing progress UX (TODO: follow-up ticket).
+   * Lightweight check: is Playwright Chromium present in the user's data dir?
+   * Used by the renderer to render install prompts in Settings → Tools.
    */
-  installBrowser: t.procedure
-    .input(z.object({ browser: z.enum(['chromium']).default('chromium') }).optional())
-    .mutation(async ({ input }) => {
-      const browser = input?.browser ?? 'chromium';
-      const paths = sidepadPaths();
-      const browsersPath = path.join(paths.dataDir, 'playwright-browsers');
-      return await new Promise<{ ok: boolean; code: number | null; browsersPath: string; stderr: string }>((resolve, reject) => {
-        const child = spawn('npx', ['--yes', 'playwright', 'install', browser], {
-          env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: browsersPath },
-          stdio: ['ignore', 'pipe', 'pipe'],
+  isBrowserInstalled: t.procedure.query(() => isChromiumInstalled()),
+
+  /**
+   * Install Playwright Chromium into the user's data dir using the bundled
+   * Playwright client driven by the Electron binary in node mode (no `npx`).
+   * Streams stdout/stderr lines to the renderer as a tRPC subscription.
+   */
+  installBrowser: t.procedure.subscription(() => {
+    type Event =
+      | { type: 'progress'; line: string }
+      | { type: 'done'; ok: boolean; code: number; browsersPath: string; error?: string }
+      | { type: 'error'; line: string };
+    return observable<Event>((emit) => {
+      let cancelled = false;
+      installChromium((line) => {
+        if (!cancelled) emit.next({ type: 'progress', line });
+      })
+        .then((res) => {
+          if (cancelled) return;
+          emit.next({
+            type: 'done',
+            ok: res.ok,
+            code: res.code,
+            browsersPath: getBrowsersPath(),
+            error: res.error,
+          });
+          emit.complete();
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          emit.next({ type: 'error', line: String(err) });
+          emit.complete();
         });
-        let stderr = '';
-        child.stderr.on('data', (b) => { stderr += b.toString(); });
-        child.on('error', (err) => reject(err));
-        child.on('close', (code) => {
-          resolve({ ok: code === 0, code, browsersPath, stderr });
-        });
-      });
-    }),
+      return () => {
+        cancelled = true;
+      };
+    });
+  }),
 });

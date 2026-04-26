@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Heading, Button } from '../../components/ui';
 import { trpc } from '../../lib/trpc-client';
@@ -19,14 +19,35 @@ export function ToolsTab() {
   });
   const [saving, setSaving] = useState<ToolKeyName | null>(null);
 
+  const [browserInstalled, setBrowserInstalled] = useState<boolean | null>(null);
+  const [installing, setInstalling] = useState(false);
+  const [installLog, setInstallLog] = useState<string[]>([]);
+  const logBoxRef = useRef<HTMLDivElement | null>(null);
+
   const refresh = async () => {
     const res = (await trpc.settings.getToolKeys.query()) as KeyStatus;
     setStatus(res);
   };
 
+  const refreshBrowser = async () => {
+    try {
+      const installed = (await (trpc as any).mcp.isBrowserInstalled.query()) as boolean;
+      setBrowserInstalled(installed);
+    } catch {
+      setBrowserInstalled(false);
+    }
+  };
+
   useEffect(() => {
     void refresh();
+    void refreshBrowser();
   }, []);
+
+  // Auto-scroll the install log to the bottom whenever it grows.
+  useEffect(() => {
+    const el = logBoxRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [installLog]);
 
   const save = async (key: ToolKeyName) => {
     setSaving(key);
@@ -37,6 +58,41 @@ export function ToolsTab() {
     } finally {
       setSaving(null);
     }
+  };
+
+  const startInstall = () => {
+    if (installing) return;
+    setInstalling(true);
+    setInstallLog([]);
+    const sub = (trpc as any).mcp.installBrowser.subscribe(undefined, {
+      onData: (evt: { type: string; line?: string; ok?: boolean }) => {
+        if (evt.type === 'progress' && evt.line) {
+          setInstallLog((prev) => [...prev, evt.line!]);
+        } else if (evt.type === 'error' && evt.line) {
+          setInstallLog((prev) => [...prev, `[error] ${evt.line!}`]);
+        } else if (evt.type === 'done') {
+          setInstallLog((prev) => [
+            ...prev,
+            evt.ok ? '✓ done' : `✗ failed (code ${(evt as any).code})`,
+          ]);
+          setInstalling(false);
+          void refreshBrowser();
+        }
+      },
+      onError: (err: unknown) => {
+        setInstallLog((prev) => [...prev, `[error] ${String(err)}`]);
+        setInstalling(false);
+      },
+      onComplete: () => {
+        setInstalling(false);
+        void refreshBrowser();
+        try {
+          sub?.unsubscribe?.();
+        } catch {
+          /* ignore */
+        }
+      },
+    });
   };
 
   const rows: { key: ToolKeyName; label: string }[] = [
@@ -102,6 +158,58 @@ export function ToolsTab() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
+          {t('settings.tools.browser.title')}
+        </span>
+
+        <div className="mt-3 border border-rule rounded-[10px] bg-surface overflow-hidden">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-medium text-ink">
+                  {t('settings.tools.browser.title')}
+                </span>
+                {browserInstalled === true && (
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-success">
+                    ✓ {t('settings.tools.browser.installed')}
+                  </span>
+                )}
+                {browserInstalled === false && (
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-ink-faint">
+                    ✗ {t('settings.tools.browser.notInstalled')}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-[12px] text-ink-muted">
+                {t('settings.tools.browser.required')}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={startInstall}
+              disabled={installing || browserInstalled === true}
+            >
+              {installing
+                ? t('settings.tools.browser.installing')
+                : t('settings.tools.browser.install')}
+            </Button>
+          </div>
+
+          {(installing || installLog.length > 0) && (
+            <div className="border-t border-rule px-4 py-3">
+              <div
+                ref={logBoxRef}
+                className="max-h-40 overflow-auto rounded-[6px] border border-rule bg-paper p-2 font-mono text-[11px] leading-[1.5] text-ink whitespace-pre-wrap"
+              >
+                {installLog.length === 0 ? '…' : installLog.join('\n')}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

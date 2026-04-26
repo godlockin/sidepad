@@ -312,7 +312,15 @@
       "braveKey": "Brave 搜索 API 密钥",
       "tavilyKey": "Tavily API 密钥",
       "configured": "已配置",
-      "searchHint": "未配置时回退到 DuckDuckGo。"
+      "searchHint": "未配置时回退到 DuckDuckGo。",
+      "browser": {
+        "title": "无头浏览器",
+        "installed": "已安装",
+        "notInstalled": "未安装（约 170 MB）",
+        "install": "安装浏览器",
+        "installing": "安装中…",
+        "required": "web_browse 和 web_crawl 工具需要此组件。"
+      }
     }
   }
 }

@@ -60,7 +60,11 @@
       "parsing": "parsing…",
       "ready": "ready",
       "error": "parse failed",
-      "tooLarge": "Large file — assistant will read on demand"
+      "tooLarge": "Large file — assistant will read on demand",
+      "ocr": {
+        "downloading": "Downloading {lang} ({pct}%)",
+        "recognizing": "Recognizing ({pct}%)"
+      }
     }
   },
   "sidebar": {
@@ -312,7 +316,15 @@
       "braveKey": "Brave Search API key",
       "tavilyKey": "Tavily API key",
       "configured": "configured",
-      "searchHint": "Used by the bundled web_search tool. Without keys, falls back to free DuckDuckGo HTML scrape (rate-limited)."
+      "searchHint": "Used by the bundled web_search tool. Without keys, falls back to free DuckDuckGo HTML scrape (rate-limited).",
+      "browser": {
+        "title": "Headless browser",
+        "installed": "Installed",
+        "notInstalled": "Not installed (~170 MB)",
+        "install": "Install browser",
+        "installing": "Installing…",
+        "required": "Required by web_browse and web_crawl tools."
+      }
     }
   }
 }
