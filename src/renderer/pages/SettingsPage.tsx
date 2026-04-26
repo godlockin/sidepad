@@ -9,8 +9,9 @@ import { IconEditor } from '../components/IconEditor';
 import { PersonasTab } from './settings/PersonasTab';
 import { CapabilitiesTab } from './settings/CapabilitiesTab';
 import { ToolsTab } from './settings/ToolsTab';
+import { KnowledgeTab } from './settings/KnowledgeTab';
 
-type SettingsTab = 'providers' | 'personas' | 'capabilities' | 'tools' | 'appearance' | 'about';
+type SettingsTab = 'providers' | 'personas' | 'capabilities' | 'tools' | 'knowledge' | 'appearance' | 'about';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -19,6 +20,7 @@ export function SettingsPage() {
     { key: 'personas', label: t('settings.tabs.personas') },
     { key: 'capabilities', label: t('settings.tabs.capabilities') },
     { key: 'tools', label: t('settings.tabs.tools') },
+    { key: 'knowledge', label: t('settings.tabs.knowledge') },
     { key: 'appearance', label: t('settings.tabs.appearance') },
     { key: 'about', label: t('settings.tabs.about') },
   ];
@@ -171,6 +173,8 @@ export function SettingsPage() {
           {tab === 'capabilities' && <CapabilitiesTab />}
 
           {tab === 'tools' && <ToolsTab />}
+
+          {tab === 'knowledge' && <KnowledgeTab />}
 
           {tab === 'appearance' && (
             <section>

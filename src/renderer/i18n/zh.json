@@ -249,7 +249,8 @@
       "capabilities": "能力",
       "appearance": "外观",
       "about": "关于",
-      "tools": "工具"
+      "tools": "工具",
+      "knowledge": "知识库"
     },
     "capabilities": {
       "title": "能力",
@@ -257,6 +258,17 @@
       "filterAll": "全部",
       "filterSkills": "技能",
       "filterTools": "工具"
+    },
+    "knowledge": {
+      "embedder": "嵌入模型",
+      "documents": "文档",
+      "addFile": "添加文件",
+      "addFolder": "添加文件夹",
+      "indexing": "索引中… {{phase}} {{current}}/{{total}}",
+      "ready": "就绪（{{chunks}} 块）",
+      "error": "错误",
+      "search": "搜索知识库",
+      "searchPlaceholder": "搜索什么…"
     },
     "voices": {
       "title": "声音",

@@ -8,6 +8,7 @@ const BUNDLED_WEB_SEARCH_ID = 'bundled-web-search';
 const BUNDLED_PARSE_DOCUMENT_ID = 'bundled-parse-document';
 const BUNDLED_WEB_BROWSE_ID = 'bundled-web-browse';
 const BUNDLED_WEB_CRAWL_ID = 'bundled-web-crawl';
+const BUNDLED_KB_ID = 'bundled-kb';
 
 /**
  * Resolve the path to a bundled resource directory in both dev and packaged
@@ -174,6 +175,37 @@ export function seedBundledMcpServers(db: Database.Database): void {
         Date.now(),
       );
       log.info({ wcIndexJs, userDataDir }, 'seeded bundled web-crawl MCP server');
+    }
+
+    const existingKb = db
+      .prepare('SELECT id FROM mcp_servers WHERE id = ?')
+      .get(BUNDLED_KB_ID);
+    if (!existingKb) {
+      const kbIndexJs = resolveBundledResourcePath(
+        'mcp-servers',
+        'kb',
+        'index.js',
+      );
+      const dbPath = (db as unknown as { name: string }).name;
+      const kbConfig = {
+        command: process.execPath,
+        args: [kbIndexJs],
+        env: {
+          ELECTRON_RUN_AS_NODE: '1',
+          SIDEPAD_DB_PATH: dbPath,
+        },
+      };
+      db.prepare(
+        'INSERT OR IGNORE INTO mcp_servers (id,name,transport,config_json,enabled,created_at) VALUES (?,?,?,?,?,?)',
+      ).run(
+        BUNDLED_KB_ID,
+        'Knowledge Base (bundled)',
+        'stdio',
+        JSON.stringify(kbConfig),
+        0,
+        Date.now(),
+      );
+      log.info({ kbIndexJs, dbPath }, 'seeded bundled kb MCP server');
     }
   } catch (err) {
     log.warn({ err: String(err) }, 'failed to seed bundled MCP server');

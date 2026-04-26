@@ -249,7 +249,8 @@
       "capabilities": "Capabilities",
       "appearance": "Appearance",
       "about": "About",
-      "tools": "Tools"
+      "tools": "Tools",
+      "knowledge": "Knowledge"
     },
     "capabilities": {
       "title": "Capabilities",
@@ -257,6 +258,17 @@
       "filterAll": "All",
       "filterSkills": "Skills",
       "filterTools": "Tools"
+    },
+    "knowledge": {
+      "embedder": "Embedder",
+      "documents": "Documents",
+      "addFile": "Add file",
+      "addFolder": "Add folder",
+      "indexing": "Indexing… {{phase}} {{current}}/{{total}}",
+      "ready": "Ready ({{chunks}} chunks)",
+      "error": "Error",
+      "search": "Search KB",
+      "searchPlaceholder": "What to find…"
     },
     "voices": {
       "title": "Voices",
