@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>pty-hello</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <span class="title">pty-hello · T-DESIGN-002</span>
+      <span id="status" class="status">starting…</span>
+      <span class="spacer"></span>
+      <button id="btn-echo" type="button">Send <code>echo hello</code></button>
+      <button id="btn-kill" type="button" class="danger">Kill PTY</button>
+    </header>
+    <main id="term"></main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

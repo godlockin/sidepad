@@ -1,0 +1,28 @@
+{
+  "name": "pty-hello-spike",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Minimal Electron + node-pty + xterm.js spike for sidepad agentic-cockpit (T-DESIGN-002)",
+  "type": "module",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "rebuild": "electron-rebuild -f -w node-pty",
+    "postinstall": "electron-rebuild -f -w node-pty || true"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "node-pty": "^1.1.0-beta36"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@types/node": "^22.19.17",
+    "electron": "^41.3.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.4.5",
+    "vite": "^7.3.2"
+  }
+}
