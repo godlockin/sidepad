@@ -147,11 +147,12 @@ body {
   animation: fade-up var(--dur-slow) var(--ease-out) both;
 }
 
+/* .anim-caret — replaced by Framer Motion in MessageBubble.tsx
 .anim-caret {
   display: inline-block;
   width: 0.5ch;
   animation: caret-blink 1.1s infinite;
-}
+} */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

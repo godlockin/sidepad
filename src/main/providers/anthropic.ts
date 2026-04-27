@@ -9,6 +9,7 @@ import type {
   ProviderCapabilities,
 } from './types';
 import { normalizeError } from './errors';
+import { inferCaps } from './caps-heuristics';
 
 export class AnthropicProvider implements LLMProvider {
   public readonly id: string;
@@ -28,12 +29,13 @@ export class AnthropicProvider implements LLMProvider {
         id: m.id,
         name: m.id,
         contextWindow: (m as any)?.metadata?.context_window_size ?? 200_000,
+        caps: inferCaps(m.id),
       }));
     } catch {
       return [
-        { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', contextWindow: 200_000 },
-        { id: 'claude-opus-4-0', name: 'Claude Opus 4', contextWindow: 200_000 },
-        { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', contextWindow: 200_000 },
+        { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', contextWindow: 200_000, caps: inferCaps('claude-sonnet-4-20250514') },
+        { id: 'claude-opus-4-0', name: 'Claude Opus 4', contextWindow: 200_000, caps: inferCaps('claude-opus-4-0') },
+        { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', contextWindow: 200_000, caps: inferCaps('claude-haiku-4-5-20251001') },
       ];
     }
   }

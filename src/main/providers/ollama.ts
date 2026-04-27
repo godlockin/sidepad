@@ -9,6 +9,7 @@ import type {
   ProviderCapabilities,
 } from './types';
 import { normalizeError } from './errors';
+import { inferCaps } from './caps-heuristics';
 
 export class OllamaProvider implements LLMProvider {
   public readonly id: string;
@@ -28,6 +29,7 @@ export class OllamaProvider implements LLMProvider {
         id: m.name,
         name: m.name,
         contextWindow: this.estimateContextWindow(m.name),
+        caps: inferCaps(m.name),
       }));
     } catch {
       return [];

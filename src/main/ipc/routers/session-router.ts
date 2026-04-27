@@ -210,6 +210,16 @@ export const sessionRouter = t.router({
         .map((r) => r.refId);
     }),
 
+  editMessage: t.procedure
+    .input(z.object({ messageId: z.string(), content: z.string() }))
+    .mutation(({ input }) => {
+      const store = getStore();
+      const msg = store.getMessage(input.messageId);
+      if (!msg) throw new Error(`Message "${input.messageId}" not found`);
+      store.updateMessageContent(input.messageId, input.content);
+      return store.getMessage(input.messageId)!;
+    }),
+
   exportMarkdown: t.procedure
     .input(z.object({ sessionId: z.string() }))
     .query(({ input }) => {

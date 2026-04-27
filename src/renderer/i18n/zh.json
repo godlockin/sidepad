@@ -107,6 +107,8 @@
   "chatInput": {
     "addressedTo": "发送给",
     "placeholder": "发送消息…  用 @ 指定声音",
+    "noProvider": "请先在设置中添加一个声音",
+    "noAgent": "请在顶栏选择一个智能体后开始对话",
     "send": "发送",
     "stop": "停止",
     "composing": "正在生成回复…",
@@ -172,7 +174,30 @@
       "anthropic": "Anthropic",
       "ollama": "Ollama (本地)",
       "openaiCompat": "OpenAI 兼容"
-    }
+    },
+    "modelCustom": "自定义…",
+    "modelCustomBack": "← 返回列表",
+    "modelCustomPlaceholder": "例如：gpt-4.5-turbo",
+    "modelPickOrType": "从列表选择或手动输入模型 ID",
+    "modelTestOk": "✓ 模型可用",
+    "modelTestFail": "✗ 模型不存在或无法访问",
+    "modelTesting": "测试中…",
+    "modelRequired": "请先选择或输入模型后再保存",
+    "apiKeyEditHint": "留空则保留已保存的密钥",
+    "apiKeyEditPlaceholder": "已保存，留空不修改",
+    "modelPlaceholderNoKey": "请先填写 API Key",
+    "modelSearch": "搜索模型…",
+    "modelNoMatch": "无匹配模型",
+    "modelCount": "个模型",
+    "capFree": "免费",
+    "capTools": "工具调用",
+    "capVision": "多模态",
+    "capReasoning": "深度推理",
+    "capWeb": "联网",
+    "capFast": "快速",
+    "capClear": "清除筛选",
+    "debugShow": "查看请求/响应",
+    "debugHide": "收起"
   },
   "personaForm": {
     "namePlaceholder": "例如：产品经理",
@@ -302,7 +327,13 @@
       "add": "+ 添加 AI",
       "empty": "尚未配置任何声音，先添加一个吧。",
       "active": "● 已启用",
-      "changeIcon": "点击修改图标"
+      "changeIcon": "点击修改图标",
+      "edit": "编辑",
+      "delete": "删除",
+      "editing": "正在编辑",
+      "confirmDelete": "确认删除？",
+      "confirmYes": "确认",
+      "confirmNo": "取消"
     },
     "skills": {
       "title": "技能",

@@ -53,7 +53,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     await trpc.provider.configure.mutate({
       id: config.id,
       type: config.type as any,
-      apiKey: config.apiKey,
+      // empty string = keep existing key (edit mode); only send if non-empty
+      apiKey: config.apiKey || undefined,
       baseURL: config.baseURL,
       defaultModel: config.defaultModel,
     });
@@ -61,8 +62,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   deleteProvider: async (id: string) => {
-    // No delete endpoint yet — disable by reconfiguring with enabled=false
-    // For now, just refresh
+    await trpc.provider.remove.mutate({ id });
     await get().refreshProviders();
   },
 

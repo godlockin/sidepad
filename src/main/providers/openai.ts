@@ -9,6 +9,7 @@ import type {
   ProviderCapabilities,
 } from './types';
 import { normalizeError } from './errors';
+import { inferCaps } from './caps-heuristics';
 
 export class OpenAIProvider implements LLMProvider {
   public readonly id: string;
@@ -24,7 +25,7 @@ export class OpenAIProvider implements LLMProvider {
   async listModels(): Promise<Model[]> {
     try {
       const res = await this.client.models.list();
-      return res.data.map(m => ({ id: m.id, name: m.id, contextWindow: this.estimateContextWindow(m.id) }));
+      return res.data.map(m => ({ id: m.id, name: m.id, contextWindow: this.estimateContextWindow(m.id), caps: inferCaps(m.id) }));
     } catch {
       return [];
     }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Message } from '../../main/store/types';
+import type { Message } from '../../shared/types';
 import { Button, Input } from './ui';
 
 interface EditForkModalProps {

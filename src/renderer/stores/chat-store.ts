@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import type { Unsubscribable } from '@trpc/server/observable';
+import { getQueryClient } from '../lib/query-client';
+import { messagesKey } from '../hooks/useMessages';
 import { trpc } from '../lib/trpc-client';
-import type { Message } from '../../main/store/types';
-import type { OrchestratorEvent } from '../../main/orchestrator/types';
+import type { Message, OrchestratorEvent } from '../../shared/types';
 
 export interface ToolCallView {
   id: string;
@@ -16,7 +17,7 @@ export interface ToolCallView {
 }
 
 interface ChatState {
-  messages: Message[];
+  // UI-only state
   streaming: boolean;
   currentTurnId: string | null;
   subRef: Unsubscribable | null;
@@ -24,14 +25,12 @@ interface ChatState {
   streamingContent: Map<string, string>; // msgId -> accumulated content
   toolCalls: Map<string, ToolCallView[]>; // msgId -> tool calls
 
-  setMessages: (msgs: Message[]) => void;
   sendMessage: (sessionId: string, text: string, mentions: string[], attachmentIds?: string[]) => Promise<void>;
   stopStreaming: () => void;
   set: (partial: Partial<ChatState>) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  messages: [],
   streaming: false,
   currentTurnId: null,
   subRef: null,
@@ -39,13 +38,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingContent: new Map(),
   toolCalls: new Map(),
 
-  setMessages: (msgs: Message[]) => set({ messages: msgs, streamingContent: new Map(), toolCalls: new Map() }),
-
   sendMessage: async (sessionId: string, text: string, mentions: string[], attachmentIds?: string[]) => {
     const { subRef } = get();
     if (subRef) {
       subRef.unsubscribe();
     }
+
+    const optimisticId = `optimistic-user-${Date.now()}`;
 
     // Resolve attachment markdown bodies and compose final user content.
     let finalText = text;
@@ -53,15 +52,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (ids.length > 0) {
       try {
         const rows = await Promise.all(
-          ids.map((id) => (trpc as any).attachment.get.query({ id })),
+          ids.map((id) => trpc.attachment.get.query({ id })),
         );
-        const valid = rows.filter((r: any) => r);
+        const valid = rows.filter((r): r is NonNullable<typeof r> => r != null);
         const totalTokens = valid.reduce(
-          (sum: number, r: any) => sum + (r.token_estimate ?? 0),
+          (sum, r) => sum + (r.token_estimate ?? 0),
           0,
         );
         const inline = totalTokens <= 8000;
-        const blocks = valid.map((r: any) => {
+        const blocks = valid.map((r) => {
           const ext = (r.filename ?? '').split('.').pop()?.toLowerCase() ?? '';
           const tokens = r.token_estimate ?? 0;
           if (inline) {
@@ -72,12 +71,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         finalText = [text, ...blocks].join('\n\n');
       } catch (err) {
         console.error('failed to resolve attachments', err);
+        set({ streaming: false });
+        return;
       }
     }
 
-    // Optimistic: add user message to local state
+    // Optimistic: inject user message into query cache
+    const qc = getQueryClient();
+    const key = messagesKey(sessionId);
+    const prevMsgs = qc.getQueryData<Message[]>(key) ?? [];
     const userMsg: Message = {
-      id: `optimistic-user-${Date.now()}`,
+      id: optimisticId,
       sessionId,
       turnId: '',
       role: 'user',
@@ -93,9 +97,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       createdAt: Date.now(),
       finishedAt: null,
     };
+    qc.setQueryData<Message[]>(key, [...prevMsgs, userMsg]);
 
     set({
-      messages: [...get().messages, userMsg],
       streaming: true,
       turnEvents: [],
       streamingContent: new Map(),
@@ -113,17 +117,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }
 
           if (ev.type === 'message:reasoning_delta') {
-            const { messages } = get();
-            const existing = messages.find((m) => m.id === ev.msgId);
+            const msgs = qc.getQueryData<Message[]>(key) ?? [];
+            const existing = msgs.find((m) => m.id === ev.msgId);
             if (existing) {
-              const prev = (existing as Message & { reasoning?: string }).reasoning ?? '';
-              set({
-                messages: messages.map((m) =>
+              const prevReasoning = (existing as Message & { reasoning?: string }).reasoning ?? '';
+              qc.setQueryData<Message[]>(
+                key,
+                msgs.map((m) =>
                   m.id === ev.msgId
-                    ? ({ ...m, reasoning: prev + ev.delta } as Message)
+                    ? ({ ...m, reasoning: prevReasoning + ev.delta } as Message)
                     : m,
                 ),
-              });
+              );
             } else {
               const assistantMsg: Message = {
                 id: ev.msgId,
@@ -142,7 +147,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 createdAt: Date.now(),
                 finishedAt: null,
               };
-              set({ messages: [...messages, assistantMsg] });
+              qc.setQueryData<Message[]>(key, [...(qc.getQueryData<Message[]>(key) ?? []), assistantMsg]);
             }
           }
 
@@ -151,9 +156,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const current = streamingContent.get(ev.msgId) || '';
             streamingContent.set(ev.msgId, current + ev.delta);
 
-            // Create or update assistant message in local state
-            const { messages } = get();
-            if (!messages.find((m) => m.id === ev.msgId)) {
+            const msgs = qc.getQueryData<Message[]>(key) ?? [];
+            if (!msgs.find((m) => m.id === ev.msgId)) {
               const assistantMsg: Message = {
                 id: ev.msgId,
                 sessionId,
@@ -171,29 +175,34 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 createdAt: Date.now(),
                 finishedAt: null,
               };
-              set({ messages: [...messages, assistantMsg] });
+              qc.setQueryData<Message[]>(key, [...msgs, assistantMsg]);
             } else {
-              set({
-                messages: messages.map((m) =>
-                  m.id === ev.msgId ? { ...m, content: streamingContent.get(ev.msgId) || '', status: 'streaming' as const } : m,
+              qc.setQueryData<Message[]>(
+                key,
+                msgs.map((m) =>
+                  m.id === ev.msgId
+                    ? { ...m, content: streamingContent.get(ev.msgId) || '', status: 'streaming' as const }
+                    : m,
                 ),
-              });
+              );
             }
           }
 
           if (ev.type === 'message:finish') {
-            const { messages, streamingContent } = get();
-            set({
-              messages: messages.map((m) =>
+            const { streamingContent } = get();
+            const msgs = qc.getQueryData<Message[]>(key) ?? [];
+            qc.setQueryData<Message[]>(
+              key,
+              msgs.map((m) =>
                 m.id === ev.msgId
                   ? { ...m, content: streamingContent.get(ev.msgId) || '', status: 'done' as const }
                   : m,
               ),
-            });
+            );
           }
 
           if (ev.type === 'message:error') {
-            const { messages } = get();
+            const msgs = qc.getQueryData<Message[]>(key) ?? [];
             const errMsg: Message = {
               id: ev.msgId || `error-${Date.now()}`,
               sessionId,
@@ -211,7 +220,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               createdAt: Date.now(),
               finishedAt: null,
             };
-            set({ messages: [...messages, errMsg] });
+            qc.setQueryData<Message[]>(key, [...msgs, errMsg]);
           }
 
           if (ev.type === 'tool_call:start') {
@@ -247,11 +256,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
           if (ev.type === 'turn:complete') {
             set({ streaming: false, currentTurnId: null, subRef: null });
+            // Sync cache with DB after turn finishes
+            void qc.invalidateQueries({ queryKey: key });
           }
         },
         onError: (err) => {
           console.error('Chat stream error:', err);
           set({ streaming: false, currentTurnId: null, subRef: null });
+          void qc.invalidateQueries({ queryKey: key });
         },
         onComplete: () => {
           set({ streaming: false, currentTurnId: null, subRef: null });

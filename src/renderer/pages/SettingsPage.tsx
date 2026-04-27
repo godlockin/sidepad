@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../stores/settings-store';
 import { applyTheme, type Theme } from '../lib/theme';
@@ -10,8 +10,16 @@ import { PersonasTab } from './settings/PersonasTab';
 import { CapabilitiesTab } from './settings/CapabilitiesTab';
 import { ToolsTab } from './settings/ToolsTab';
 import { KnowledgeTab } from './settings/KnowledgeTab';
+import { trpc } from '../lib/trpc-client';
 
 type SettingsTab = 'providers' | 'personas' | 'capabilities' | 'tools' | 'knowledge' | 'appearance' | 'about';
+
+type EditingProvider = {
+  id: string;
+  type: 'openai' | 'anthropic' | 'ollama' | 'openai-compat';
+  baseURL?: string;
+  defaultModel?: string;
+};
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -26,6 +34,9 @@ export function SettingsPage() {
   ];
   const [tab, setTab] = useState<SettingsTab>('providers');
   const [showForm, setShowForm] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<EditingProvider | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const editFormRef = useRef<HTMLDivElement>(null);
   const [iconEdit, setIconEdit] = useState<{
     configId: string;
     name: string;
@@ -33,7 +44,7 @@ export function SettingsPage() {
     value: string | null;
     anchor: { top: number; left: number };
   } | null>(null);
-  const { providers, theme, init, setTheme, addProvider, setProviderIcon } = useSettingsStore();
+  const { providers, theme, init, setTheme, addProvider, deleteProvider, setProviderIcon } = useSettingsStore();
 
   useEffect(() => {
     init();
@@ -42,6 +53,13 @@ export function SettingsPage() {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  // Scroll edit form into view when editing starts
+  useEffect(() => {
+    if (editingProvider) {
+      editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [editingProvider]);
 
   const handleAddProvider = async (config: {
     id: string;
@@ -52,6 +70,25 @@ export function SettingsPage() {
   }) => {
     await addProvider(config as any);
     setShowForm(false);
+    setEditingProvider(null);
+  };
+
+  const handleStartEdit = async (providerId: string) => {
+    setConfirmDeleteId(null); // mutual exclusion
+    try {
+      const cfg = await trpc.provider.getConfig.query({ id: providerId });
+      if (cfg) {
+        setEditingProvider(cfg);
+        setShowForm(false);
+      }
+    } catch (e) {
+      console.error('[handleStartEdit]', e);
+    }
+  };
+
+  const handleDeleteProvider = async (id: string) => {
+    await deleteProvider(id);
+    setConfirmDeleteId(null);
   };
 
   return (
@@ -99,14 +136,14 @@ export function SettingsPage() {
                 <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
                   {t('settings.voices.configured')} · {providers.length.toString().padStart(2, '0')}
                 </span>
-                {!showForm && (
+                {!showForm && !editingProvider && (
                   <Button variant="ghost" size="sm" onClick={() => setShowForm(true)}>
                     {t('settings.voices.add')}
                   </Button>
                 )}
               </div>
 
-              <div className="border border-rule rounded-[10px] bg-surface overflow-hidden">
+              <div className="border border-rule rounded-[10px] bg-surface">
                 {!showForm && providers.length === 0 && (
                   <p className="text-[13px] text-ink-faint py-10 text-center">
                     {t('settings.voices.empty')}
@@ -116,7 +153,7 @@ export function SettingsPage() {
                 {providers.length > 0 && (
                   <ol className="divide-y divide-rule">
                     {providers.map((p) => (
-                      <li key={p.id} className="px-4 py-3 flex items-center gap-3">
+                      <li key={p.id} className="px-4 py-3 flex items-center gap-3 group">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -148,19 +185,73 @@ export function SettingsPage() {
                             <span className="text-[12px] text-ink-muted">{p.configId}</span>
                           </div>
                         </div>
-                        <span className="text-[11px] uppercase tracking-[0.06em] text-success">
-                          {t('settings.voices.active')}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(p.configId)}
+                            className="text-[11px] text-ink-faint hover:text-accent transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                          >
+                            {t('settings.voices.edit')}
+                          </button>
+                          {confirmDeleteId === p.configId ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-[11px] text-danger">{t('settings.voices.confirmDelete')}</span>
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteProvider(p.configId)}
+                                className="text-[11px] text-danger font-medium hover:underline"
+                              >
+                                {t('settings.voices.confirmYes')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="text-[11px] text-ink-faint hover:text-ink"
+                              >
+                                {t('settings.voices.confirmNo')}
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(p.configId)}
+                              className="text-[11px] text-ink-faint hover:text-danger transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                            >
+                              {t('settings.voices.delete')}
+                            </button>
+                          )}
+                          <span className="text-[11px] uppercase tracking-[0.06em] text-success">
+                            {t('settings.voices.active')}
+                          </span>
+                        </div>
                       </li>
                     ))}
                   </ol>
                 )}
 
-                {showForm && (
+                {showForm && !editingProvider && (
                   <div className="p-5">
                     <ProviderForm
                       onSubmit={handleAddProvider}
                       onCancel={() => setShowForm(false)}
+                    />
+                  </div>
+                )}
+
+                {editingProvider && (
+                  <div ref={editFormRef} className="p-5 border-t border-rule">
+                    <p className="text-[11px] text-ink-faint mb-3 uppercase tracking-[0.08em]">
+                      {t('settings.voices.editing')} @{editingProvider.id}
+                    </p>
+                    <ProviderForm
+                      onSubmit={handleAddProvider}
+                      onCancel={() => setEditingProvider(null)}
+                      initial={{
+                        id: editingProvider.id,
+                        type: editingProvider.type,
+                        baseURL: editingProvider.baseURL,
+                        defaultModel: editingProvider.defaultModel,
+                      }}
                     />
                   </div>
                 )}

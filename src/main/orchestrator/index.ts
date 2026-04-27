@@ -17,7 +17,7 @@ import type {
   ToolCall,
 } from '../providers/types';
 
-function uuid(): string { return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; }
+function uuid(): string { return crypto.randomUUID(); }
 
 const MAX_TOOL_ROUNDS = 6;
 
@@ -66,6 +66,7 @@ export class ChatOrchestrator {
     private getPersonaPromptForAgent: (sessionId: string, agentId: string) => string | null = () => null,
     private getSessionSkillAddendum: (sessionId: string) => string = () => '',
     private toolResolver: SessionToolResolver | null = null,
+    private getContextWindowForModel: (agentId: string, model: string) => number = () => 8000,
   ) {}
 
   /**
@@ -382,7 +383,7 @@ export class ChatOrchestrator {
         visibilityMode: session.visibilityMode,
         systemPrompt: this.composedSystemPrompt(session.id, agentId, session.systemPrompt),
         currentTurn: [{ role: 'user' as const, content: input.text }],
-        modelContextWindow: 8000,
+        modelContextWindow: this.getContextWindowForModel(agentId, model),
       });
       ctx.model = model;
       if (tools.length) ctx.tools = tools;
@@ -420,7 +421,7 @@ export class ChatOrchestrator {
         visibilityMode: session.visibilityMode,
         systemPrompt: this.composedSystemPrompt(session.id, leadId, session.systemPrompt),
         currentTurn: [{ role: 'user' as const, content: input.text }],
-        modelContextWindow: 8000,
+        modelContextWindow: this.getContextWindowForModel(leadId, leadModel),
       });
       ctx.model = leadModel;
       if (tools.length) ctx.tools = tools;

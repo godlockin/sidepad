@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ProviderForm } from '../components/ProviderForm';
 import { useSettingsStore } from '../stores/settings-store';
@@ -64,7 +65,20 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
 
   return (
     <div className="h-full flex items-center justify-center bg-paper px-6">
-      <div className="w-full max-w-[560px] anim-fade-up">
+      <motion.div
+        className="w-full max-w-[560px]"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.2 }}
+          >
         {step === 1 && (
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-[12px] bg-accent text-white text-[24px] font-semibold mb-6">
@@ -80,7 +94,7 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
               <Button onClick={() => setStep(2)} variant="primary">
                 {t('onboarding.getStarted')}
               </Button>
-              <Button onClick={onSkip} variant="link">
+              <Button onClick={async () => { await createSession(); onSkip(); }} variant="link">
                 {t('onboarding.skip')}
               </Button>
             </div>
@@ -117,13 +131,15 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
               />
             </div>
             <div className="mt-3 text-center">
-              <Button onClick={onSkip} variant="link">
+              <Button onClick={async () => { await createSession(); onSkip(); }} variant="link">
                 {t('onboarding.skip')}
               </Button>
             </div>
           </div>
         )}
-      </div>
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 }

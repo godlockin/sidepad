@@ -5,7 +5,7 @@ import type { Session, Message, MessageMeta, ChatRequest, Participant } from './
 const DEFAULT_PERSONA_ID = '_default';
 
 function uuid(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return crypto.randomUUID();
 }
 
 function now(): number {
@@ -378,6 +378,10 @@ export class SessionStore {
   }
 
   // ── Internal helpers ────────────────────────────────────
+
+  updateMessageContent(messageId: string, content: string): void {
+    this.db.prepare('UPDATE messages SET content = ? WHERE id = ?').run(content, messageId);
+  }
 
   getMessage(id: string): Message | null {
     const row = this.db.prepare('SELECT * FROM messages WHERE id = ?').get(id) as Record<string, unknown> | undefined;

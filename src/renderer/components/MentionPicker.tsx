@@ -35,11 +35,16 @@ export function MentionPicker({ providers, onSelect, onClose }: MentionPickerPro
 
   if (providers.length === 0) return null;
 
+  const activeOptionId = providers[selectedIndex]
+    ? `mention-option-${providers[selectedIndex].id}`
+    : undefined;
+
   return (
     <div
       ref={containerRef}
       role="listbox"
       aria-label={t('mentionPicker.title')}
+      aria-activedescendant={activeOptionId}
       className="absolute bottom-full left-0 mb-2 min-w-[240px] bg-surface border border-rule rounded-[8px] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up z-40"
     >
       <div className="px-3 pt-2 pb-1.5 flex items-center justify-between">
@@ -56,8 +61,9 @@ export function MentionPicker({ providers, onSelect, onClose }: MentionPickerPro
         {providers.map((p, i) => {
           const active = i === selectedIndex;
           return (
-            <li key={p.id}>
+            <li key={p.id} role="presentation">
               <button
+                id={`mention-option-${p.id}`}
                 role="option"
                 aria-selected={active}
                 onClick={() => onSelect(p.id)}

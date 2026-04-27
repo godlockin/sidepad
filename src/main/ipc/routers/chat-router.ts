@@ -40,14 +40,20 @@ function getOrchestrator(): ChatOrchestrator {
         if (row.params_json) {
           try {
             const p = JSON.parse(row.params_json);
-            if (p?.defaultModel) return p.defaultModel as string;
+            if (p?.defaultModel) {
+              // Warm context window cache for this agent/model
+              void resolveContextWindow(agentId, p.defaultModel as string);
+              return p.defaultModel as string;
+            }
           } catch { /* ignore */ }
         }
         if (row.model_list_json) {
           try {
             const list = JSON.parse(row.model_list_json);
             if (Array.isArray(list) && list.length > 0) {
-              return typeof list[0] === 'string' ? list[0] : (list[0]?.id ?? list[0]?.name);
+              const m = typeof list[0] === 'string' ? list[0] : (list[0]?.id ?? list[0]?.name);
+              void resolveContextWindow(agentId, m as string);
+              return m as string;
             }
           } catch { /* ignore */ }
         }
@@ -57,6 +63,27 @@ function getOrchestrator(): ChatOrchestrator {
       }
     } catch { /* ignore */ }
     return 'gpt-4o-mini';
+  }
+
+  // Cache: agentId → Map<modelId, contextWindow>
+  const modelContextWindowCache = new Map<string, Map<string, number>>();
+
+  async function resolveContextWindow(agentId: string, model: string): Promise<number> {
+    let modelMap = modelContextWindowCache.get(agentId);
+    if (!modelMap) {
+      modelMap = new Map();
+      modelContextWindowCache.set(agentId, modelMap);
+    }
+    if (modelMap.has(model)) return modelMap.get(model)!;
+    try {
+      const provider = registry.has(agentId) ? registry.get(agentId) : (registry.list()[0] ?? null);
+      if (provider) {
+        const models = await provider.listModels();
+        for (const m of models) modelMap.set(m.id, m.contextWindow);
+        if (modelMap.has(model)) return modelMap.get(model)!;
+      }
+    } catch { /* ignore */ }
+    return 8000;
   }
 
   orchestrator = new ChatOrchestrator(
@@ -87,6 +114,14 @@ function getOrchestrator(): ChatOrchestrator {
       }
     },
     buildSessionToolResolver(db),
+    (agentId: string, model: string) => {
+      // Fire-and-forget async lookup; return cached value synchronously or fallback
+      const cached = modelContextWindowCache.get(agentId)?.get(model);
+      if (cached !== undefined) return cached;
+      // Trigger cache population asynchronously (next call will hit cache)
+      void resolveContextWindow(agentId, model);
+      return 8000;
+    },
   );
 
   return orchestrator;

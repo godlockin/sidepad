@@ -1,23 +1,15 @@
-export interface ModelCaps {
-  free?: boolean;      // no cost (e.g. OpenRouter :free)
-  tools?: boolean;     // function / tool calling
-  vision?: boolean;    // image / multimodal input
-  reasoning?: boolean; // extended CoT / thinking mode
-  web?: boolean;       // built-in web search
-  fast?: boolean;      // small / low-latency variant
-}
+// Shared provider/LLM types — pure interfaces, no implementation
 
 export interface Model {
   id: string;
   name: string;
   contextWindow: number;
-  caps?: ModelCaps;
 }
 
 export interface ToolDefinition {
   name: string;
   description?: string;
-  inputSchema: unknown; // JSON schema
+  inputSchema: unknown;
 }
 
 export interface ToolCall {
@@ -26,16 +18,8 @@ export interface ToolCall {
   arguments: Record<string, unknown>;
 }
 
-/**
- * Vision input block. Attached to a user message when the active model has
- * `capabilities(model).vision === true`. Providers translate this into their
- * own native format (OpenAI: `image_url`; Anthropic: `image` source/base64;
- * Ollama: top-level `images` field on the message).
- */
 export interface ImageInput {
-  /** MIME type, e.g. `image/png`, `image/jpeg`, `image/webp`, `image/gif`. */
   mime: string;
-  /** Raw base64-encoded image data (no data: prefix). */
   base64: string;
 }
 
@@ -62,12 +46,6 @@ export interface ChatChunk {
   toolCalls?: ToolCall[];
 }
 
-/**
- * Per-model capability flags. Providers may implement `capabilities(model)`
- * to declare whether a given model id supports vision / extended reasoning /
- * tool calls. Consumers (e.g. the vision router) treat `undefined` as "not
- * supported" — only an explicit `true` enables capability-specific code paths.
- */
 export interface ProviderCapabilities {
   vision?: boolean;
   reasoning?: boolean;

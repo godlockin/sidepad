@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../stores/session-store';
 import { useChatStore } from '../stores/chat-store';
+import { useMessages, messagesKey } from '../hooks/useMessages';
+import { getQueryClient } from '../lib/query-client';
 import { useSettingsStore } from '../stores/settings-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 import { useSkillStore } from '../stores/skill-store';
@@ -19,7 +21,8 @@ import { trpc } from '../lib/trpc-client';
 export function ChatPage() {
   const { t } = useTranslation();
   const { sessions, activeSessionId, activeSession: storeActive, loadSessions } = useSessionStore();
-  const { sendMessage, stopStreaming, streaming, messages } = useChatStore();
+  const { sendMessage, stopStreaming, streaming } = useChatStore();
+  const { data: messages = [] } = useMessages(activeSessionId);
   const { providers } = useSettingsStore();
   const personas = usePersonaStore((s) => s.personas);
   const loadPersonas = usePersonaStore((s) => s.loadPersonas);
@@ -107,6 +110,15 @@ export function ChatPage() {
 
   const activeSession = storeActive ?? sessions.find((s) => s.id === activeSessionId) ?? null;
 
+  // Auto-assign first provider if session has no default agent
+  useEffect(() => {
+    if (!activeSession || activeSession.defaultAgentId || providers.length === 0) return;
+    void trpc.session.setDefaultAgent.mutate({
+      sessionId: activeSession.id,
+      agentId: providers[0].id,
+    }).then(() => useSessionStore.getState().selectSession(activeSession.id));
+  }, [activeSession?.id, activeSession?.defaultAgentId, providers]);
+
   const handleSend = async (text: string, mentions: string[], attachmentIds: string[] = []) => {
     if (!activeSessionId) {
       const session = await useSessionStore.getState().createSession();
@@ -146,11 +158,12 @@ export function ChatPage() {
 
   const handleEditInPlace = async (msgId: string, newContent: string) => {
     const idx = messages.findIndex((m) => m.id === msgId);
-    if (idx < 0) return;
+    if (idx < 0 || !activeSessionId) return;
+    await trpc.session.editMessage.mutate({ messageId: msgId, content: newContent });
     const updated = messages
       .map((m, i) => (i === idx ? { ...m, content: newContent } : m))
       .slice(0, idx + 1);
-    useChatStore.getState().setMessages(updated);
+    getQueryClient().setQueryData(messagesKey(activeSessionId), updated);
   };
 
   const handleFork = async (msgId: string, _content: string, title?: string) => {
@@ -344,6 +357,22 @@ export function ChatPage() {
 
         {activeSession && (() => {
           const enabledSkills = skills.filter((s) => s.enabled);
+          if (enabledSkills.length === 0) {
+            return (
+              <div className="px-6 py-2 border-b border-rule flex items-center gap-2 bg-surface">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    setSkillsPopover({ anchor: { top: rect.bottom + 6, left: rect.left } });
+                  }}
+                  className="inline-flex items-center text-[12px] rounded-full bg-surface-2 border border-rule px-2.5 py-0.5 text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors"
+                >
+                  {t('chat.skills.manage')}
+                </button>
+              </div>
+            );
+          }
           const attachedIds = new Set(sessionSkillsByMap[activeSession.id] ?? []);
           const visible = enabledSkills.filter((s) => attachedIds.has(s.id));
           return (
@@ -351,11 +380,6 @@ export function ChatPage() {
               <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
                 {t('chat.skills.title')}
               </span>
-              {visible.length === 0 && (
-                <span className="text-[12px] text-ink-faint">
-                  {t('chat.skills.none')}
-                </span>
-              )}
               {visible.map((s) => (
                 <span
                   key={s.id}
@@ -453,8 +477,15 @@ export function ChatPage() {
           onSend={handleSend}
           onStop={stopStreaming}
           streaming={streaming}
-          disabled={!activeSessionId && sessions.length === 0}
+          disabled={providers.length === 0 || !activeSession?.defaultAgentId}
           providers={providerList}
+          placeholder={
+            providers.length === 0
+              ? t('chatInput.noProvider')
+              : !activeSession?.defaultAgentId
+              ? t('chatInput.noAgent')
+              : undefined
+          }
         />
       </section>
     </div>

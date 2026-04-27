@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, Fragment } from 'react';
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import type { Message } from '../../main/store/types';
+import type { Message } from '../../shared/types';
 import { EditForkModal } from './EditForkModal';
 import { PersonaPicker } from './PersonaPicker';
 import { useSessionStore } from '../stores/session-store';
@@ -31,11 +32,14 @@ export function MessageBubble({ message, index = 0, onEditInPlace, onFork }: Mes
     setTimeout(() => setCopied(false), 1400);
   };
 
-  const delay = Math.min(index * 30, 180);
-
   return (
     <>
-      <article className="anim-fade-up py-3" style={{ animationDelay: `${delay}ms` }}>
+      <motion.article
+      className="py-3"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, delay: Math.min(index * 0.03, 0.18) }}
+    >
         {isUser ? (
           <UserEntry message={message} />
         ) : (
@@ -49,7 +53,7 @@ export function MessageBubble({ message, index = 0, onEditInPlace, onFork }: Mes
             onEditFork={() => setShowModal(true)}
           />
         )}
-      </article>
+      </motion.article>
 
       {showModal && (
         <EditForkModal
@@ -136,13 +140,17 @@ function AgentEntry({
 
       {/* Body */}
       <div
-        className={`text-[14px] leading-[1.65] whitespace-pre-wrap ${
+        className={`text-[14px] ${
           isError ? 'text-ink-muted' : 'text-ink'
-        }`}
+        } ${isStreaming ? 'leading-[1.65] whitespace-pre-wrap' : ''}`}
       >
-        {message.content}
+        {isStreaming ? message.content : renderMarkdown(message.content)}
         {isStreaming && (
-          <span className="anim-caret bg-accent h-[1.05em] align-[-2px] translate-y-[2px]">▍</span>
+          <motion.span
+            className="inline-block bg-accent h-[1.05em] w-[2px] align-middle ml-[1px]"
+            animate={{ opacity: [1, 0, 1] }}
+            transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+          />
         )}
       </div>
 
@@ -317,4 +325,71 @@ function safeStringify(v: unknown): string {
   } catch {
     return String(v);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Inline Markdown renderer (no external deps)
+// ---------------------------------------------------------------------------
+function renderMarkdown(text: string): React.ReactNode {
+  const nodes: React.ReactNode[] = [];
+  const fenceRe = /^```(\w*)\n([\s\S]*?)^```/gm;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = fenceRe.exec(text)) !== null) {
+    if (m.index > last) nodes.push(...renderLines(text.slice(last, m.index), m.index));
+    const lang = m[1];
+    nodes.push(
+      <pre key={`cb-${m.index}`} className="font-mono text-[12px] bg-surface-2 border border-rule rounded-[6px] px-3 py-2 my-2 overflow-x-auto whitespace-pre">
+        <code>{m[2].replace(/\n$/, '')}</code>
+        {lang && <span className="block text-[10px] text-ink-faint mt-1 text-right">{lang}</span>}
+      </pre>
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(...renderLines(text.slice(last), last));
+  return <>{nodes}</>;
+}
+
+function renderLines(text: string, keyOffset: number = 0): React.ReactNode[] {
+  const lines = text.split('\n');
+  const result: React.ReactNode[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const key = keyOffset + i;
+    const h1 = /^# (.+)$/.exec(line);
+    const h2 = /^## (.+)$/.exec(line);
+    const h3 = /^### (.+)$/.exec(line);
+    if (h1) { result.push(<h3 key={key} className="text-[16px] font-semibold text-ink mt-3 mb-1">{renderInline(h1[1])}</h3>); i++; continue; }
+    if (h2) { result.push(<h4 key={key} className="text-[14px] font-semibold text-ink mt-2 mb-1">{renderInline(h2[1])}</h4>); i++; continue; }
+    if (h3) { result.push(<h5 key={key} className="text-[13px] font-semibold text-ink mt-2 mb-0.5">{renderInline(h3[1])}</h5>); i++; continue; }
+    if (/^[-*] /.test(line)) {
+      const items: React.ReactNode[] = [];
+      while (i < lines.length && /^[-*] /.test(lines[i])) { items.push(<li key={keyOffset + i}>{renderInline(lines[i].replace(/^[-*] /, ''))}</li>); i++; }
+      result.push(<ul key={`ul-${key}`} className="list-disc pl-5 my-1 space-y-0.5">{items}</ul>); continue;
+    }
+    if (/^\d+\. /.test(line)) {
+      const items: React.ReactNode[] = [];
+      while (i < lines.length && /^\d+\. /.test(lines[i])) { items.push(<li key={keyOffset + i}>{renderInline(lines[i].replace(/^\d+\. /, ''))}</li>); i++; }
+      result.push(<ol key={`ol-${key}`} className="list-decimal pl-5 my-1 space-y-0.5">{items}</ol>); continue;
+    }
+    if (/^---+$/.test(line.trim())) { result.push(<hr key={key} className="border-rule my-2" />); i++; continue; }
+    if (line.trim() === '') { result.push(<div key={key} className="h-2" />); i++; continue; }
+    result.push(<p key={key} className="leading-[1.65]">{renderInline(line)}</p>);
+    i++;
+  }
+  return result;
+}
+
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|_[^_]+_)/);
+  return parts.map((part, idx) => {
+    if (/^\*\*(.+)\*\*$/.test(part) || /^__(.+)__$/.test(part))
+      return <strong key={idx}>{part.slice(2, -2)}</strong>;
+    if (/^\*(.+)\*$/.test(part) || /^_(.+)_$/.test(part))
+      return <em key={idx}>{part.slice(1, -1)}</em>;
+    if (/^`(.+)`$/.test(part))
+      return <code key={idx} className="font-mono text-[13px] bg-surface-2 border border-rule px-1 rounded">{part.slice(1, -1)}</code>;
+    return <Fragment key={idx}>{part}</Fragment>;
+  });
 }

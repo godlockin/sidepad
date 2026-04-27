@@ -107,6 +107,8 @@
   "chatInput": {
     "addressedTo": "addressed to",
     "placeholder": "Send a message… use @ to address a voice",
+    "noProvider": "Add a voice in Settings to start chatting",
+    "noAgent": "Pick an agent from the header to start chatting",
     "send": "Send",
     "stop": "Stop",
     "composing": "composing reply…",
@@ -172,7 +174,30 @@
       "anthropic": "Anthropic",
       "ollama": "Ollama (local)",
       "openaiCompat": "OpenAI-compatible"
-    }
+    },
+    "modelCustom": "Custom…",
+    "modelCustomBack": "← back to list",
+    "modelCustomPlaceholder": "e.g. gpt-4.5-turbo",
+    "modelPickOrType": "Pick or type a model ID",
+    "modelTestOk": "✓ Model available",
+    "modelTestFail": "✗ Model not found or inaccessible",
+    "modelTesting": "Testing…",
+    "modelRequired": "Please select or enter a model before saving",
+    "apiKeyEditHint": "Leave blank to keep existing key",
+    "apiKeyEditPlaceholder": "Leave blank to keep existing",
+    "modelPlaceholderNoKey": "Enter API key first",
+    "modelSearch": "Search models…",
+    "modelNoMatch": "No models match",
+    "modelCount": "models",
+    "capFree": "Free",
+    "capTools": "Tools",
+    "capVision": "Vision",
+    "capReasoning": "Reasoning",
+    "capWeb": "Web",
+    "capFast": "Fast",
+    "capClear": "Clear filters",
+    "debugShow": "show req/resp",
+    "debugHide": "hide"
   },
   "personaForm": {
     "namePlaceholder": "e.g. Product Manager",
@@ -302,7 +327,13 @@
       "add": "+ introduce a voice",
       "empty": "No voices yet. Introduce one to begin.",
       "active": "● active",
-      "changeIcon": "Click to change icon"
+      "changeIcon": "Click to change icon",
+      "edit": "Edit",
+      "delete": "Delete",
+      "editing": "Editing",
+      "confirmDelete": "Delete?",
+      "confirmYes": "Yes, delete",
+      "confirmNo": "Cancel"
     },
     "skills": {
       "title": "Skills",

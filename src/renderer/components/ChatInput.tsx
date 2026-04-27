@@ -5,6 +5,7 @@ import { PersonaPicker } from './PersonaPicker';
 import { useSessionStore } from '../stores/session-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 import { trpc } from '../lib/trpc-client';
+import type { AttachmentRow, ParseProgress } from '../../main/ipc/routers/attachment-router';
 
 interface ChatInputProps {
   onSend: (text: string, mentions: string[], attachmentIds: string[]) => void;
@@ -13,6 +14,7 @@ interface ChatInputProps {
   disabled?: boolean;
   providers?: Array<{ id: string; configId: string }>;
   onMentionSelect?: (providerId: string) => void;
+  placeholder?: string;
 }
 
 interface AttachmentChip {
@@ -76,6 +78,7 @@ export function ChatInput({
   disabled = false,
   providers = [],
   onMentionSelect,
+  placeholder,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
@@ -86,8 +89,11 @@ export function ChatInput({
   } | null>(null);
   const [attachments, setAttachments] = useState<AttachmentChip[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [urlInputVisible, setUrlInputVisible] = useState(false);
+  const [urlInputValue, setUrlInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
   const activeSession = useSessionStore((s) => s.activeSession);
   const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
   const personas = usePersonaStore((s) => s.personas);
@@ -114,14 +120,21 @@ export function ChatInput({
     setShowPicker(false);
   }, [input, providers.length]);
 
+  // Auto-focus URL input when it becomes visible
+  useEffect(() => {
+    if (urlInputVisible) {
+      urlInputRef.current?.focus();
+    }
+  }, [urlInputVisible]);
+
   // Subscribe to parse-status updates for the active session
   useEffect(() => {
     const sessionId = activeSession?.id;
     if (!sessionId) return;
-    const sub = (trpc as any).attachment.onParsed.subscribe(
+    const sub = trpc.attachment.onParsed.subscribe(
       { sessionId },
       {
-        onData: (row: any) => {
+        onData: (row: AttachmentRow) => {
           setAttachments((prev) =>
             prev.map((a) =>
               a.id === row.id
@@ -154,10 +167,10 @@ export function ChatInput({
     const ids = parsingIds ? parsingIds.split(',') : [];
     if (ids.length === 0) return;
     const subs = ids.map((attachmentId) =>
-      (trpc as any).attachment.onProgress.subscribe(
+      trpc.attachment.onProgress.subscribe(
         { attachmentId },
         {
-          onData: (p: { status: string; progress?: number }) => {
+          onData: (p: ParseProgress) => {
             setAttachments((prev) =>
               prev.map((a) =>
                 a.id === attachmentId ? { ...a, progress: p } : a,
@@ -186,7 +199,7 @@ export function ChatInput({
       for (const file of list) {
         try {
           const dataBase64 = await fileToBase64(file);
-          const res = await (trpc as any).attachment.upload.mutate({
+          const res = await trpc.attachment.upload.mutate({
             sessionId,
             filename: file.name,
             mime: file.type || undefined,
@@ -198,11 +211,21 @@ export function ChatInput({
               id: res.id,
               filename: file.name,
               sizeBytes: file.size,
-              status: 'parsing',
+              status: 'parsing' as const,
             },
           ]);
         } catch (err) {
           console.error('attachment upload failed', err);
+          setAttachments((prev) => [
+            ...prev,
+            {
+              id: `upload-err-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              filename: file.name,
+              sizeBytes: file.size,
+              status: 'error' as const,
+              error: err instanceof Error ? err.message : String(err),
+            },
+          ]);
         }
       }
     },
@@ -211,26 +234,42 @@ export function ChatInput({
 
   const handleAttachClick = () => fileInputRef.current?.click();
 
-  const handleAttachUrl = async () => {
+  const handleAttachUrlToggle = () => {
+    if (!activeSession?.id) return;
+    setUrlInputVisible((v) => !v);
+    setUrlInputValue('');
+  };
+
+  const submitUrl = async (url: string) => {
     const sessionId = activeSession?.id;
-    if (!sessionId) return;
-    const url = window.prompt('URL:');
-    if (!url) return;
+    if (!sessionId || !url.trim()) return;
+    setUrlInputVisible(false);
+    setUrlInputValue('');
     try {
-      const res = await (trpc as any).attachment.fetchUrl.mutate({ sessionId, url });
+      const res = await trpc.attachment.fetchUrl.mutate({ sessionId, url: url.trim() });
       setAttachments((prev) => [
         ...prev,
-        { id: res.id, filename: url, sizeBytes: 0, status: 'parsing' },
+        { id: res.id, filename: url.trim(), sizeBytes: 0, status: 'parsing' as const },
       ]);
     } catch (err) {
       console.error('attachment fetchUrl failed', err);
+      setAttachments((prev) => [
+        ...prev,
+        {
+          id: `url-err-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          filename: url.trim(),
+          sizeBytes: 0,
+          status: 'error' as const,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      ]);
     }
   };
 
   const removeAttachment = async (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
     try {
-      await (trpc as any).attachment.delete.mutate({ id });
+      await trpc.attachment.delete.mutate({ id });
     } catch {
       /* ignore */
     }
@@ -298,19 +337,23 @@ export function ChatInput({
         {attachments.length > 0 && (
           <div className="px-3 pt-2.5 flex flex-wrap items-center gap-1.5">
             {attachments.map((a) => {
+              const isError = a.status === 'error';
               const statusLabel =
                 a.status === 'ready'
                   ? `${t('chat.attachment.ready')}${a.tokenEstimate != null ? ` · ~${a.tokenEstimate} tok` : ''}`
-                  : a.status === 'error'
+                  : isError
                     ? t('chat.attachment.error')
                     : formatProgress(a.progress, t as any, t('chat.attachment.parsing'));
+              const chipClass = isError
+                ? 'inline-flex items-center text-[12px] rounded-full bg-danger/10 text-danger border border-danger/30 px-2.5 py-0.5'
+                : 'inline-flex items-center text-[12px] rounded-full bg-accent-muted text-accent px-2.5 py-0.5';
               return (
                 <span
                   key={a.id}
-                  className="inline-flex items-center text-[12px] rounded-full bg-accent-muted text-accent px-2.5 py-0.5"
+                  className={chipClass}
                   title={a.error ?? a.filename}
                 >
-                  <span className="mr-1">📄</span>
+                  <span className="mr-1">{isError ? '⚠️' : '📄'}</span>
                   <span className="font-medium">{a.filename}</span>
                   <span className="opacity-70 ml-1">
                     {a.sizeBytes > 0 ? ` · ${fmtBytes(a.sizeBytes)}` : ''} · {statusLabel}
@@ -378,6 +421,42 @@ export function ChatInput({
           />
         )}
 
+        {urlInputVisible && (
+          <div className="px-3 pt-2 flex items-center gap-2">
+            <input
+              ref={urlInputRef}
+              type="url"
+              value={urlInputValue}
+              onChange={(e) => setUrlInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void submitUrl(urlInputValue);
+                } else if (e.key === 'Escape') {
+                  setUrlInputVisible(false);
+                  setUrlInputValue('');
+                }
+              }}
+              placeholder={t('chat.attachUrl')}
+              className="flex-1 bg-transparent border border-rule rounded-[6px] px-2 py-1 text-[13px] text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent"
+            />
+            <button
+              type="button"
+              onClick={() => void submitUrl(urlInputValue)}
+              className="h-7 px-2.5 text-[12px] font-medium text-white bg-accent hover:bg-accent-hover rounded-[6px] transition-colors"
+            >
+              {t('chatInput.send')}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setUrlInputVisible(false); setUrlInputValue(''); }}
+              className="h-7 px-2 text-[12px] text-ink-faint hover:text-ink rounded-[6px] transition-colors"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <div className="px-3 pt-2 pb-2 flex items-end gap-2 relative">
           <button
             type="button"
@@ -391,7 +470,7 @@ export function ChatInput({
           </button>
           <button
             type="button"
-            onClick={handleAttachUrl}
+            onClick={handleAttachUrlToggle}
             disabled={!activeSession?.id}
             title={t('chat.attachUrl')}
             aria-label={t('chat.attachUrl')}
@@ -415,7 +494,7 @@ export function ChatInput({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t('chatInput.placeholder')}
+              placeholder={placeholder ?? t('chatInput.placeholder')}
               rows={1}
               disabled={disabled || streaming}
               className="w-full bg-transparent border-0 p-0 resize-none text-[14px] leading-[1.55] text-ink placeholder:text-ink-faint focus:outline-none disabled:opacity-50"

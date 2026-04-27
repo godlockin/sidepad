@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { trpc } from '../lib/trpc-client';
-import type { Session, Message } from '../../main/store/types';
-import { useChatStore } from './chat-store';
+import type { Session } from '../../shared/types';
+import { getQueryClient } from '../lib/query-client';
+import { messagesKey } from '../hooks/useMessages';
+import { useSettingsStore } from './settings-store';
 
 interface SessionState {
   sessions: Session[];
   activeSessionId: string | null;
   activeSession: Session | null;
-  messages: Message[];
   loading: boolean;
 
   loadSessions: () => Promise<void>;
@@ -19,7 +20,6 @@ interface SessionState {
   forkSession: (parentMessageId: string, title?: string) => Promise<Session>;
   setParticipantPersona: (agentId: string, personaId: string) => Promise<void>;
   refreshActiveSession: () => Promise<void>;
-  setMessages: (msgs: Message[]) => void;
   set: (partial: Partial<SessionState>) => void;
 }
 
@@ -27,7 +27,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   sessions: [],
   activeSessionId: null,
   activeSession: null,
-  messages: [],
   loading: false,
 
   loadSessions: async () => {
@@ -41,24 +40,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   selectSession: async (id: string) => {
-    const [session, messages] = await Promise.all([
-      trpc.session.get.query({ id }),
-      trpc.session.messages.query({ sessionId: id }),
-    ]);
-    set({ activeSessionId: id, activeSession: session, messages });
-    useChatStore.getState().setMessages(messages);
+    const session = await trpc.session.get.query({ id });
+    set({ activeSessionId: id, activeSession: session });
+    // Invalidate so useMessages re-fetches for the new session
+    void getQueryClient().invalidateQueries({ queryKey: messagesKey(id) });
   },
 
   createSession: async (title?: string) => {
-    const session = await trpc.session.create.mutate({ title });
+    const firstProvider = useSettingsStore.getState().providers[0];
+    const session = await trpc.session.create.mutate({
+      title,
+      defaultAgentId: firstProvider?.id,
+    });
     const { sessions } = get();
     set({
       sessions: [session, ...sessions],
       activeSessionId: session.id,
       activeSession: session,
-      messages: [],
     });
-    useChatStore.getState().setMessages([]);
+    // Clear messages cache for new session (nothing there yet)
+    getQueryClient().setQueryData(messagesKey(session.id), []);
     return session;
   },
 
@@ -98,9 +99,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       sessions: [forked, ...sessions],
       activeSessionId: forked.id,
       activeSession: forked,
-      messages: [],
     });
-    useChatStore.getState().setMessages([]);
+    getQueryClient().setQueryData(messagesKey(forked.id), []);
     return forked;
   },
 
@@ -125,8 +125,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // ignore
     }
   },
-
-  setMessages: (msgs: Message[]) => set({ messages: msgs }),
 
   set: (partial) => set(partial),
 }));

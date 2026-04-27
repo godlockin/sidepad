@@ -16,4 +16,6 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   { id: 'moonshot', label: 'Moonshot', type: 'openai-compat', baseURL: 'https://api.moonshot.cn/v1' },
   { id: 'siliconflow', label: 'SiliconFlow', type: 'openai-compat', baseURL: 'https://api.siliconflow.cn/v1' },
   { id: 'together', label: 'Together', type: 'openai-compat', baseURL: 'https://api.together.xyz/v1' },
+  { id: 'openrouter', label: 'OpenRouter', type: 'openai-compat', baseURL: 'https://openrouter.ai/api/v1' },
+  { id: 'nvidia-nim', label: 'NVIDIA NIM', type: 'openai-compat', baseURL: 'https://integrate.api.nvidia.com/v1' },
 ];

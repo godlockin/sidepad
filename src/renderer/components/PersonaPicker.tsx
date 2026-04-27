@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import * as Popover from '@radix-ui/react-popover';
 import { useTranslation } from 'react-i18next';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 
@@ -24,12 +25,12 @@ export function PersonaPicker({
     const idx = personas.findIndex((p) => p.id === currentPersonaId);
     return idx >= 0 ? idx : 0;
   });
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (personas.length === 0) loadPersonas();
   }, [personas.length, loadPersonas]);
 
+  // Keyboard navigation
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
@@ -42,41 +43,25 @@ export function PersonaPicker({
         e.preventDefault();
         const p = personas[selectedIndex];
         if (p) onSelect(p.id);
-      } else if (e.key === 'Escape') {
-        onClose();
       }
+      // Escape is handled by Radix Popover automatically
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [personas, selectedIndex, onSelect, onClose]);
+  }, [personas, selectedIndex, onSelect]);
 
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) onClose();
-    };
-    const t = setTimeout(() => document.addEventListener('mousedown', onClick), 0);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener('mousedown', onClick);
-    };
-  }, [onClose]);
+  const listboxId = 'persona-picker-listbox';
+  const activeOptionId = personas[selectedIndex]
+    ? `persona-option-${personas[selectedIndex].id}`
+    : undefined;
 
-  const positionStyle: React.CSSProperties = anchor
-    ? { position: 'fixed', top: anchor.top, left: anchor.left, zIndex: 50 }
-    : {};
-
-  const className = anchor
-    ? 'min-w-[240px] bg-surface border border-rule rounded-[8px] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up'
-    : 'absolute bottom-full left-0 mb-2 min-w-[240px] bg-surface border border-rule rounded-[8px] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up z-40';
-
-  return (
+  const content = (
     <div
-      ref={containerRef}
       role="listbox"
+      id={listboxId}
       aria-label={t('personaPicker.title')}
-      style={positionStyle}
-      className={className}
+      aria-activedescendant={activeOptionId}
+      className="min-w-[240px] bg-surface border border-rule rounded-[8px] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] anim-fade-up"
     >
       <div className="px-3 pt-2 pb-1.5 flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">
@@ -96,10 +81,12 @@ export function PersonaPicker({
           const active = i === selectedIndex;
           const current = p.id === currentPersonaId;
           return (
-            <li key={p.id}>
+            <li key={p.id} role="presentation">
               <button
+                id={`persona-option-${p.id}`}
                 role="option"
                 aria-selected={active}
+                aria-current={current ? 'true' : undefined}
                 onClick={() => onSelect(p.id)}
                 onMouseEnter={() => setSelectedIndex(i)}
                 className={`w-full text-left px-3 py-1.5 flex items-center gap-2 cursor-pointer transition-colors duration-[var(--dur-fast)] ${
@@ -118,7 +105,7 @@ export function PersonaPicker({
                     {t('personaPicker.default')}
                   </span>
                 )}
-                {current && <span className="text-accent text-[12px]">✓</span>}
+                {current && <span className="text-accent text-[12px]" aria-label={t('personaPicker.selected')}>✓</span>}
               </button>
             </li>
           );
@@ -137,5 +124,56 @@ export function PersonaPicker({
         </>
       )}
     </div>
+  );
+
+  // When anchor is provided, use Radix Popover with a virtual anchor element
+  // so Radix handles: Escape close, outside-click close, focus trap, portal
+  if (anchor) {
+    return (
+      <Popover.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+        {/* Virtual anchor: a zero-size fixed element at the computed position */}
+        <Popover.Anchor
+          style={{
+            position: 'fixed',
+            top: anchor.top,
+            left: anchor.left,
+            width: 0,
+            height: 0,
+            pointerEvents: 'none',
+          }}
+        />
+        <Popover.Portal>
+          <Popover.Content
+            side="bottom"
+            align="start"
+            sideOffset={0}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            className="z-50"
+          >
+            {content}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    );
+  }
+
+  // Fallback: inline absolute positioning (same as before, no anchor)
+  return (
+    <Popover.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Popover.Anchor asChild>
+        <span style={{ position: 'absolute', bottom: '100%', left: 0 }} />
+      </Popover.Anchor>
+      <Popover.Portal>
+        <Popover.Content
+          side="top"
+          align="start"
+          sideOffset={8}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="z-40"
+        >
+          {content}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

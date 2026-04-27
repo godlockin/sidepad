@@ -86,7 +86,7 @@ export const providerRouter = t.router({
         const models = await provider!.listModels();
         return {
           ok: true as const,
-          models: models.map((m) => ({ id: m.id, label: m.name })),
+          models: models.map((m) => ({ id: m.id, label: m.name, caps: m.caps ?? {} })),
         };
       } catch (err) {
         return {
@@ -94,6 +94,92 @@ export const providerRouter = t.router({
           error: err instanceof Error ? err.message : String(err),
         };
       }
+    }),
+
+  testModel: t.procedure
+    .input(
+      z.object({
+        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat']),
+        baseURL: z.string().optional(),
+        apiKey: z.string().optional(),
+        model: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      try {
+        let provider: LLMProvider;
+        switch (input.type) {
+          case 'openai':
+            provider = new OpenAIProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL || undefined);
+            break;
+          case 'anthropic':
+            provider = new AnthropicProvider('__probe__', '__probe__', input.apiKey ?? '');
+            break;
+          case 'ollama':
+            provider = new OllamaProvider('__probe__', '__probe__', input.baseURL || undefined);
+            break;
+          case 'openai-compat':
+            if (!input.baseURL) return { ok: false as const, error: 'baseURL required' };
+            provider = new OpenAICompatProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL);
+            break;
+        }
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 8000);
+        const reqPayload = {
+          model: input.model,
+          messages: [{ role: 'user' as const, content: 'hi' }],
+          maxTokens: 1,
+          tools: [] as never[],
+        };
+        try {
+          const stream = provider!.chat(reqPayload, ctrl.signal);
+          let firstChunk: unknown = null;
+          for await (const chunk of stream) { firstChunk = chunk; break; }
+          return {
+            ok: true as const,
+            request: reqPayload,
+            response: firstChunk,
+          };
+        } finally {
+          clearTimeout(timer);
+        }
+      } catch (err) {
+        return {
+          ok: false as const,
+          error: err instanceof Error ? err.message : String(err),
+          request: { model: input.model, messages: [{ role: 'user', content: 'hi' }], maxTokens: 1 },
+        };
+      }
+    }),
+
+  getConfig: t.procedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => {
+      const db = (globalThis as any).sidepad?.db;
+      if (!db) throw new Error('Database not available');
+      const row = db.prepare('SELECT id, type, base_url, params_json FROM provider_configs WHERE id = ?').get(input.id) as
+        | { id: string; type: string; base_url: string | null; params_json: string | null }
+        | undefined;
+      if (!row) return null;
+      const params = row.params_json ? (JSON.parse(row.params_json) as { defaultModel?: string }) : {};
+      return {
+        id: row.id,
+        type: row.type as 'openai' | 'anthropic' | 'ollama' | 'openai-compat',
+        baseURL: row.base_url ?? undefined,
+        defaultModel: params.defaultModel,
+      };
+    }),
+
+  remove: t.procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ input }) => {
+      const db = (globalThis as any).sidepad?.db;
+      const secrets = (globalThis as any).sidepad?.secrets;
+      if (!db) throw new Error('Database not available');
+      db.prepare('DELETE FROM provider_configs WHERE id = ?').run(input.id);
+      if (secrets) { try { secrets.delete(input.id); } catch { /* ok */ } }
+      try { loadProviders(db, secrets, registry); } catch { /* ok */ }
+      return { ok: true };
     }),
 
   configure: t.procedure
