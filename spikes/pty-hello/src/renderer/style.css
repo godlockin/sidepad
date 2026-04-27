@@ -64,17 +64,111 @@ body {
   border-radius: 2px;
 }
 
-#term {
+#term-host {
   flex: 1;
   min-height: 0;
-  padding: 6px;
+  position: relative;
   overflow: hidden;
 }
 
-/* xterm fills container */
+#term {
+  position: absolute;
+  inset: 0;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
 #term .xterm,
 #term .xterm-viewport,
 #term .xterm-screen {
   height: 100% !important;
   width: 100% !important;
+}
+
+#overlay-root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.permission-card {
+  pointer-events: auto;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 380px;
+  background: #1a1f26;
+  border: 1px solid #3a4a5c;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #e2e6eb;
+}
+
+.permission-card .pc-title {
+  font-weight: 600;
+  color: #f0c674;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.permission-card .pc-kind {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: #79c2a3;
+  background: #0b0d10;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 400;
+}
+
+.permission-card .pc-body {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: #0b0d10;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow: auto;
+}
+
+.permission-card .pc-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.permission-card button {
+  border: 1px solid #2a323b;
+  background: #1f262d;
+  color: #e2e6eb;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.permission-card button.allow {
+  border-color: #2a6c4a;
+  color: #b3f5cf;
+}
+
+.permission-card button.allow:hover {
+  background: #1f3a2c;
+}
+
+.permission-card button.deny {
+  border-color: #6c2a2a;
+  color: #f5b3b3;
+}
+
+.permission-card button.deny:hover {
+  background: #3a1f1f;
 }
