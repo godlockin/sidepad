@@ -12,6 +12,7 @@ import { skillsRouter } from './routers/skills-router.js';
 import { attachmentRouter } from './routers/attachment-router.js';
 import { settingsRouter } from './routers/settings-router.js';
 import { knowledgeRouter } from './routers/knowledge-router.js';
+import { projectRouter } from './routers/project-router.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -32,6 +33,7 @@ export const appRouter = t.router({
   attachment: attachmentRouter,
   settings: settingsRouter,
   knowledge: knowledgeRouter,
+  project: projectRouter,
 });
 
 export type AppRouter = typeof appRouter;
