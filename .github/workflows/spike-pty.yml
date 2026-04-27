@@ -1,0 +1,74 @@
+name: spike-pty
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'feature/cockpit-spike-*'
+      - 'miao'
+
+jobs:
+  build-smoke:
+    name: ${{ matrix.os }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+          - os: macos-13
+            arch: x64
+          - os: windows-latest
+            arch: x64
+          - os: ubuntu-latest
+            arch: x64
+    defaults:
+      run:
+        working-directory: spikes/pty-hello
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install xvfb (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+        working-directory: .
+
+      - name: npm ci (runs electron-rebuild via postinstall)
+        run: npm ci
+
+      - name: electron-vite build
+        run: npm run build
+
+      - name: Smoke test (Linux, xvfb)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum node scripts/smoke.mjs
+        env:
+          SMOKE_LOG: ${{ github.workspace }}/spikes/pty-hello/smoke.log
+
+      - name: Smoke test (macOS)
+        if: runner.os == 'macOS'
+        run: node scripts/smoke.mjs
+        env:
+          SMOKE_LOG: ${{ github.workspace }}/spikes/pty-hello/smoke.log
+
+      - name: Smoke test (Windows, allowed to fail per survey)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        run: node scripts/smoke.mjs
+        env:
+          SMOKE_LOG: ${{ github.workspace }}\spikes\pty-hello\smoke.log
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spike-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            spikes/pty-hello/smoke.log
+            spikes/pty-hello/out
+          if-no-files-found: warn
