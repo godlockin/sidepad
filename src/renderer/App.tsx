@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { SettingsPage } from './pages/SettingsPage';
 import { ChatPage } from './pages/ChatPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { ProjectsPage } from './pages/ProjectsPage';
 import { useSettingsStore } from './stores/settings-store';
 import { applyTheme } from './lib/theme';
 import { SUPPORTED_LANGS, type Lang } from './i18n/config';
 
-type Page = 'chat' | 'settings' | 'onboarding';
+type Page = 'chat' | 'settings' | 'onboarding' | 'projects';
 
 export function App() {
   const { t, i18n } = useTranslation();
@@ -52,7 +53,7 @@ export function App() {
 
         {page !== 'onboarding' && (
           <nav className="flex items-center gap-1">
-            {([['chat', t('nav.chat')], ['settings', t('nav.settings')]] as const).map(([key, label]) => {
+            {([['chat', t('nav.chat')], ['projects', t('nav.projects')], ['settings', t('nav.settings')]] as const).map(([key, label]) => {
               const active = page === key;
               return (
                 <button
@@ -102,6 +103,7 @@ export function App() {
       <main className="flex-1 overflow-hidden">
         {page === 'onboarding' && <OnboardingPage onDone={handleOnboardingDone} onSkip={() => setPage('settings')} />}
         {page === 'chat' && <ChatPage />}
+        {page === 'projects' && <ProjectsPage />}
         {page === 'settings' && <SettingsPage />}
       </main>
     </div>

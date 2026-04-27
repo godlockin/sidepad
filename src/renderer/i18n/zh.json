@@ -11,6 +11,7 @@
   "nav": {
     "chat": "对话",
     "settings": "设置",
+    "projects": "项目",
     "toggleTheme": "切换主题",
     "language": "语言"
   },
