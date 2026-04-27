@@ -57,3 +57,36 @@ export interface ChatRequest {
   modelId: string;
   messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
 }
+
+export type MountRole = 'refs' | 'inputs' | 'workspace' | 'outputs' | 'scratch';
+
+export interface Project {
+  id: string;
+  name: string;
+  rootDir: string | null;
+  cwdResolution: 'workspace' | 'inputs' | 'manual' | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MountPoint {
+  id: string;
+  projectId: string;
+  role: MountRole;
+  path: string;
+  label: string | null;
+  readOnly: boolean;
+  createdAt: number;
+}
+
+export interface Task {
+  id: string;
+  projectId: string;
+  sessionId: string | null;
+  title: string | null;
+  status: 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
+  outputDir: string | null;
+  scratchDir: string | null;
+  startedAt: number | null;
+  finishedAt: number | null;
+}
