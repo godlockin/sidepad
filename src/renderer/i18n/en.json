@@ -14,6 +14,29 @@
     "toggleTheme": "Toggle theme",
     "language": "Language"
   },
+  "projects": {
+    "title": "Projects",
+    "newProject": "New project",
+    "namePlaceholder": "Project name",
+    "addMount": "+ Add mount",
+    "rolePicker": "Role",
+    "pickFolder": "Pick folder",
+    "noFolder": "(no folder selected)",
+    "create": "Create project",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDelete": "Delete this project? Mount points will be removed; the folders themselves are NOT deleted.",
+    "empty": "No projects yet — click \"New project\" to start.",
+    "mountsHeading": "Mounts",
+    "noMounts": "No mounts yet.",
+    "roles": {
+      "refs": "Reference",
+      "inputs": "Inputs",
+      "workspace": "Workspace",
+      "outputs": "Outputs",
+      "scratch": "Scratch"
+    }
+  },
   "onboarding": {
     "welcomeTitle": "Welcome to sidepad",
     "welcomeBody": "A side-by-side workspace for talking with multiple LLMs at once. Group chats, personas, and a sharp keyboard-first surface.",

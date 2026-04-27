@@ -14,6 +14,29 @@
     "toggleTheme": "切换主题",
     "language": "语言"
   },
+  "projects": {
+    "title": "项目",
+    "newProject": "新建项目",
+    "namePlaceholder": "项目名称",
+    "addMount": "+ 添加挂载点",
+    "rolePicker": "角色",
+    "pickFolder": "选择文件夹",
+    "noFolder": "（未选择文件夹）",
+    "create": "创建项目",
+    "cancel": "取消",
+    "delete": "删除",
+    "confirmDelete": "确认删除该项目？挂载点会被移除，但磁盘上的文件夹不会被删除。",
+    "empty": "尚未创建任何项目 —— 点击「新建项目」开始。",
+    "mountsHeading": "挂载点",
+    "noMounts": "暂无挂载点。",
+    "roles": {
+      "refs": "参考资料",
+      "inputs": "输入",
+      "workspace": "工作区",
+      "outputs": "输出",
+      "scratch": "草稿"
+    }
+  },
   "onboarding": {
     "welcomeTitle": "欢迎使用 sidepad",
     "welcomeBody": "并排与多个 LLM 同时对话的工作台。群聊、人格设定、键盘优先的简洁界面。",
