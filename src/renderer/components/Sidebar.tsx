@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../stores/session-store';
+import { useProjectStore } from '../stores/project-store';
 import { Avatar } from './Avatar';
 import { IconEditor } from './IconEditor';
 
@@ -8,6 +9,7 @@ export function Sidebar() {
   const { t } = useTranslation();
   const { sessions, activeSessionId, createSession, deleteSession, selectSession, renameSession, setSessionIcon } =
     useSessionStore();
+  const projects = useProjectStore((s) => s.projects);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [iconEdit, setIconEdit] = useState<{ id: string; anchor: { top: number; left: number } } | null>(null);
@@ -97,6 +99,12 @@ export function Sidebar() {
                         <span className="text-ink-faint mr-1" title="forked">↳ </span>
                       )}
                       {s.title || <span className="text-ink-faint">{t('sidebar.untitled')}</span>}
+                      {(s as any).projectId && (() => {
+                        const proj = projects.find((p) => p.id === (s as any).projectId);
+                        return proj ? (
+                          <span className="ml-1 text-[11px] text-ink-faint">· {proj.name}</span>
+                        ) : null;
+                      })()}
                     </span>
                   )}
                 </span>
