@@ -7,10 +7,15 @@
 // ESM bundle statically imports ipcMain/ipcRenderer/contextBridge from 'electron'.
 // In each Electron context only a subset of those exists, so ESM strict checks
 // crash module load. CJS named imports are lazy and only the touched fields fail.
+import { contextBridge, ipcRenderer } from 'electron';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { exposeElectronTRPC } = require('electron-trpc/main') as typeof import('electron-trpc/main');
 
 process.once('loaded', () => {
   exposeElectronTRPC();
+});
+
+contextBridge.exposeInMainWorld('cockpit', {
+  pickFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:openFolder'),
 });

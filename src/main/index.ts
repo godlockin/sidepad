@@ -1,4 +1,4 @@
-import { app, BrowserWindow, safeStorage } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -69,6 +69,14 @@ if (!gotLock) {
       },
     });
     createIPCHandler({ router: appRouter, windows: [win] });
+
+    ipcMain.handle('dialog:openFolder', async (): Promise<string | null> => {
+      const r = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+      });
+      if (r.canceled || r.filePaths.length === 0) return null;
+      return r.filePaths[0];
+    });
 
     if (process.env.ELECTRON_RENDERER_URL) {
       win.loadURL(process.env.ELECTRON_RENDERER_URL);
