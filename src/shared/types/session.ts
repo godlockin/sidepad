@@ -5,6 +5,24 @@ export interface Participant {
   personaId: string;
 }
 
+/**
+ * Collaboration mode for a session.
+ * - 'auto': mode is inferred from @-mentions and trigger phrases
+ * - 'relay' | 'parallel' | 'roundtable' | 'lead-and-comment': explicit override
+ * Persisted in sessions.collab_mode (migration 025). The legacy group_mode
+ * column has a CHECK constraint limited to ('parallel','relay') and is no
+ * longer written.
+ */
+export type GroupMode = 'auto' | 'parallel' | 'relay' | 'roundtable' | 'lead-and-comment';
+
+export const GROUP_MODES: readonly GroupMode[] = ['auto', 'parallel', 'relay', 'roundtable', 'lead-and-comment'];
+
+export function parseGroupMode(raw: unknown): GroupMode {
+  return typeof raw === 'string' && (GROUP_MODES as readonly string[]).includes(raw)
+    ? (raw as GroupMode)
+    : 'auto';
+}
+
 export interface Session {
   id: string;
   title: string | null;
@@ -12,7 +30,7 @@ export interface Session {
   updatedAt: number;
   systemPrompt: string | null;
   visibilityMode: 'independent' | 'full';
-  groupMode: 'parallel' | 'relay';
+  groupMode: GroupMode;
   defaultAgentId: string | null;
   participants: Participant[];
   folderId: string | null;

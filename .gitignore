@@ -11,3 +11,7 @@ code_repo/
 coverage/
 playwright-report/
 test-results/
+.playwright-mcp/
+.serena/
+dist-pkg/
+resources/brand/icon.iconset/

@@ -55,6 +55,7 @@ export class OpenAIProvider implements LLMProvider {
           max_tokens: req.maxTokens,
           stream: true,
           ...(tools ? { tools } : {}),
+          ...openaiReasoningParams(req),
         },
         { signal },
       );
@@ -139,8 +140,26 @@ export class OpenAIProvider implements LLMProvider {
     return {
       vision: /(gpt-4o|gpt-4-turbo|gpt-4-vision|o1|o3|o4)/i.test(model),
       tools: true,
+      reasoning: /(^|[:._-])o[134]([:._-]|$)|gpt-5/i.test(model),
     };
   }
+}
+
+/**
+ * Translate a requested ReasoningEffort into OpenAI's `reasoning_effort`
+ * parameter. Only reasoning-capable model families accept it (o-series,
+ * gpt-5) — injecting it into a chat model would 400, so other models are
+ * left untouched. 'minimal' maps to 'minimal' on gpt-5 (which supports it)
+ * and to 'low' on the o-series (which does not).
+ */
+export function openaiReasoningParams(req: ChatRequest): Record<string, unknown> {
+  const effort = req.reasoningEffort;
+  if (!effort) return {};
+  const isGpt5 = /gpt-5/i.test(req.model);
+  const isReasoning = isGpt5 || /(^|[:._-])o[134]([:._-]|$)/i.test(req.model);
+  if (!isReasoning) return {};
+  const mapped = effort === 'minimal' && !isGpt5 ? 'low' : effort;
+  return { reasoning_effort: mapped };
 }
 
 /**

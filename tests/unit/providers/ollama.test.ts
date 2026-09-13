@@ -1,8 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { OllamaProvider } from '../../../src/main/providers/ollama';
-import ollama from 'ollama';
+import { Ollama } from 'ollama';
 
-vi.mock('ollama', () => ({ default: { configure: vi.fn(), list: vi.fn(), chat: vi.fn() } }));
+vi.mock('ollama', () => ({
+  default: { configure: vi.fn(), list: vi.fn(async () => ({ models: [] })), chat: vi.fn() },
+  // Constructable mock: the provider does `new Ollama({ host })` for custom baseURLs.
+  Ollama: vi.fn(function (this: Record<string, unknown>) {
+    this.list = vi.fn(async () => ({ models: [] }));
+    this.chat = vi.fn();
+  }),
+}));
 
 describe('OllamaProvider', () => {
   it('creates with id and configId', () => {
@@ -13,6 +20,6 @@ describe('OllamaProvider', () => {
 
   it('configures baseURL', () => {
     new OllamaProvider('ollama', 'cfg-oll', 'http://localhost:11435');
-    expect((vi.mocked(ollama) as any).configure).toHaveBeenCalledWith({ host: 'http://localhost:11435' });
+    expect(vi.mocked(Ollama)).toHaveBeenCalledWith({ host: 'http://localhost:11435' });
   });
 });

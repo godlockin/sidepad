@@ -22,6 +22,9 @@ function setupSchema(database: Database.Database): void {
       system_prompt TEXT,
       visibility_mode TEXT NOT NULL DEFAULT 'independent' CHECK(visibility_mode IN ('independent','full')),
       group_mode TEXT NOT NULL DEFAULT 'parallel' CHECK(group_mode IN ('parallel','relay')),
+      collab_mode TEXT,
+      icon_kind TEXT,
+      icon_value TEXT,
       default_agent_id TEXT,
       participants TEXT NOT NULL DEFAULT '[]',
       folder_id TEXT,
@@ -45,6 +48,7 @@ function setupSchema(database: Database.Database): void {
       error TEXT,
       parent_message_id TEXT,
       meta_json TEXT,
+      reasoning TEXT,
       created_at INTEGER NOT NULL,
       finished_at INTEGER
     );
@@ -86,7 +90,10 @@ describe('Edit-Fork end-to-end', () => {
     // 1. Create original session
     const original = store.createSession({ title: 'Original', participants: ['agent-a', 'agent-b'] });
     expect(original.title).toBe('Original');
-    expect(original.participants).toEqual(['agent-a', 'agent-b']);
+    expect(original.participants).toEqual([
+      { agentId: 'agent-a', personaId: '_default' },
+      { agentId: 'agent-b', personaId: '_default' },
+    ]);
 
     // 2. Add messages: user -> assistant -> user -> assistant
     const turn1 = 'turn-1';

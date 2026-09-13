@@ -82,6 +82,12 @@ export class OllamaProvider implements LLMProvider {
       stream: true,
       options: { temperature: req.temperature, num_predict: req.maxTokens },
     };
+    // 'minimal' effort skips the thinking phase on thinking-capable models
+    // (qwen3, deepseek-r1, qwq…). Non-thinking models reject the `think`
+    // parameter, so it is only sent when the model id looks like a thinker.
+    if (req.reasoningEffort === 'minimal' && inferCaps(req.model).reasoning) {
+      baseArgs.think = false;
+    }
 
     let response: any;
     try {
@@ -209,6 +215,7 @@ export class OllamaProvider implements LLMProvider {
     return {
       vision: /(llava|llama.*vision|qwen.*vl|moondream|bakllava|llama3\.2-vision)/i.test(model),
       tools: true,
+      reasoning: inferCaps(model).reasoning === true,
     };
   }
 }

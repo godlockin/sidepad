@@ -4,8 +4,11 @@ import { z } from 'zod';
 import { SessionStore } from '../../store/session-store.js';
 import { createSessionToolsStore } from '../../store/session-tools-store.js';
 import { PersonaStore, DEFAULT_PERSONA_ID } from '../../store/persona-store.js';
+import { parseAgentId, composeAgentId } from '../../orchestrator/agent-id.js';
 
 const t = initTRPC.create({ isServer: true });
+
+const groupModeEnum = z.enum(['auto', 'parallel', 'relay', 'roundtable', 'lead-and-comment']);
 
 function getStore(): SessionStore {
   const db = (globalThis as any).sidepad?.db as Database.Database | undefined;
@@ -38,6 +41,7 @@ export const sessionRouter = t.router({
         title: z.string().optional(),
         defaultAgentId: z.string().optional(),
         visibilityMode: z.enum(['independent', 'full']).optional(),
+        groupMode: groupModeEnum.optional(),
         participants: z.array(z.string()).optional(),
       }),
     )
@@ -46,6 +50,7 @@ export const sessionRouter = t.router({
       const session = store.createSession({
         title: input.title,
         participants: input.participants,
+        groupMode: input.groupMode,
       });
       if (input.defaultAgentId) {
         store.setDefaultAgent(session.id, input.defaultAgentId);
@@ -118,6 +123,16 @@ export const sessionRouter = t.router({
       return store.getSession(input.sessionId)!;
     }),
 
+  setGroupMode: t.procedure
+    .input(z.object({ sessionId: z.string(), mode: groupModeEnum }))
+    .mutation(({ input }) => {
+      const store = getStore();
+      const session = store.getSession(input.sessionId);
+      if (!session) throw new Error(`Session "${input.sessionId}" not found`);
+      store.setGroupMode(input.sessionId, input.mode);
+      return store.getSession(input.sessionId)!;
+    }),
+
   setIcon: t.procedure
     .input(
       z.object({
@@ -156,7 +171,34 @@ export const sessionRouter = t.router({
       if (!session) throw new Error(`Session "${input.sessionId}" not found`);
       // Make sure the agent is a participant first (idempotent)
       store.ensureParticipant(input.sessionId, input.agentId);
-      const next = store.setParticipantPersona(input.sessionId, input.agentId, input.personaId);
+
+      // Assigning a non-default persona rekeys a plain provider participant
+      // into a composite agent instance id ("provider::persona") so several
+      // instances of the same provider — each with its own expert persona —
+      // can coexist and be @-mentioned separately. Reverting to the default
+      // persona strips the composite form unless another plain participant
+      // already occupies that id.
+      const { providerId } = parseAgentId(input.agentId);
+      let targetAgentId = input.agentId;
+      if (providerId && input.personaId !== DEFAULT_PERSONA_ID) {
+        const composite = composeAgentId(providerId, input.personaId);
+        const taken = session.participants.some(
+          (p) => p.agentId === composite && p.agentId !== input.agentId,
+        );
+        if (!taken) targetAgentId = composite;
+      } else if (providerId && input.personaId === DEFAULT_PERSONA_ID && input.agentId !== providerId) {
+        const plainTaken = session.participants.some(
+          (p) => p.agentId === providerId && p.agentId !== input.agentId,
+        );
+        if (!plainTaken) targetAgentId = providerId;
+      }
+
+      if (targetAgentId !== input.agentId) {
+        store.rekeyParticipant(input.sessionId, input.agentId, targetAgentId, input.personaId);
+      } else {
+        store.setParticipantPersona(input.sessionId, input.agentId, input.personaId);
+      }
+      const next = store.getSession(input.sessionId)!.participants;
       return { participants: next };
     }),
 

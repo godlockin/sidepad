@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { trpc } from '../lib/trpc-client';
-import type { Session } from '../../shared/types';
+import type { Session, GroupMode } from '../../shared/types';
 import { getQueryClient } from '../lib/query-client';
 import { messagesKey } from '../hooks/useMessages';
 import { useSettingsStore } from './settings-store';
@@ -19,6 +19,7 @@ interface SessionState {
   setSessionIcon: (id: string, kind: 'emoji' | 'image' | null, value: string | null) => Promise<void>;
   forkSession: (parentMessageId: string, title?: string) => Promise<Session>;
   setParticipantPersona: (agentId: string, personaId: string) => Promise<void>;
+  setGroupMode: (id: string, mode: GroupMode) => Promise<void>;
   refreshActiveSession: () => Promise<void>;
   set: (partial: Partial<SessionState>) => void;
 }
@@ -113,6 +114,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       personaId,
     });
     await get().refreshActiveSession();
+  },
+
+  setGroupMode: async (id: string, mode: GroupMode) => {
+    const updated = await trpc.session.setGroupMode.mutate({ sessionId: id, mode });
+    const { sessions, activeSession } = get();
+    set({
+      sessions: sessions.map((s) => (s.id === id ? updated : s)),
+      activeSession: activeSession?.id === id ? updated : activeSession,
+    });
   },
 
   refreshActiveSession: async () => {

@@ -99,8 +99,8 @@ export function Sidebar() {
                         <span className="text-ink-faint mr-1" title="forked">↳ </span>
                       )}
                       {s.title || <span className="text-ink-faint">{t('sidebar.untitled')}</span>}
-                      {(s as any).projectId && (() => {
-                        const proj = projects.find((p) => p.id === (s as any).projectId);
+                      {s.projectId && (() => {
+                        const proj = projects.find((p) => p.id === s.projectId);
                         return proj ? (
                           <span className="ml-1 text-[11px] text-ink-faint">· {proj.name}</span>
                         ) : null;

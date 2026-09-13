@@ -1,8 +1,15 @@
-import { scanLead, scanComment } from './trigger-lexicon';
-import type { Participant } from '../store/types';
+import { scanLead, scanRoundtable } from './trigger-lexicon';
+import type { GroupMode, Participant } from '../store/types';
+
+export type OrchestratorMode =
+  | 'single'
+  | 'parallel'
+  | 'relay'
+  | 'roundtable'
+  | 'lead-and-comment';
 
 export interface ModeResult {
-  mode: 'single' | 'parallel' | 'relay' | 'lead-and-comment' | 'error';
+  mode: OrchestratorMode | 'error';
   agentIds: string[];
   leadAgentId?: string;
   commenterAgentIds?: string[];
@@ -10,14 +17,14 @@ export interface ModeResult {
 }
 
 export interface ClassifierResult {
-  mode: 'lead-and-comment' | 'parallel' | 'relay';
+  mode: 'lead-and-comment' | 'parallel' | 'relay' | 'roundtable';
   leadAgentId?: string;
   commenterAgentIds?: string[];
   confidence: number;
 }
 
 export function resolveMode(
-  session: { defaultAgentId: string | null; groupMode: 'parallel' | 'relay'; participants: Participant[] | string[] },
+  session: { defaultAgentId: string | null; groupMode: GroupMode; participants: Participant[] | string[] },
   text: string,
   mentions: string[],
   classifierResult?: ClassifierResult,
@@ -49,15 +56,28 @@ export function resolveMode(
     return { mode: 'single', agentIds: mentions };
   }
 
-  // 2+ mentions
+  // 2+ mentions. Trigger phrases are most specific; an explicit session
+  // collaboration mode (set from the chat header) overrides the heuristic
+  // default. 'auto' keeps the directed-sequential-relay default.
   if (scanLead(text)) {
     return { mode: 'lead-and-comment', agentIds: mentions, leadAgentId: mentions[0], commenterAgentIds: mentions.slice(1) };
   }
-  // Directed sequential relay is now the default for 2+ mentions without
-  // a lead trigger. The orchestrator's runRelayInternal segments the text
-  // by @<id> boundaries, so each agent sees its own targeted segment plus
-  // prior agents' inline replies. session.groupMode is intentionally
-  // ignored here — 'parallel' is only reached via classifier override or
-  // 0/1-mention paths.
+  if (scanRoundtable(text)) {
+    return { mode: 'roundtable', agentIds: mentions };
+  }
+  switch (session.groupMode) {
+    case 'roundtable':
+      return { mode: 'roundtable', agentIds: mentions };
+    case 'lead-and-comment':
+      return { mode: 'lead-and-comment', agentIds: mentions, leadAgentId: mentions[0], commenterAgentIds: mentions.slice(1) };
+    case 'parallel':
+      return { mode: 'parallel', agentIds: mentions };
+    case 'relay':
+      return { mode: 'relay', agentIds: mentions };
+  }
+  // Directed sequential relay is the default for 2+ mentions without a
+  // trigger. The orchestrator's runRelayInternal segments the text by
+  // @<id> boundaries, so each agent sees its own targeted segment plus
+  // prior agents' inline replies.
   return { mode: 'relay', agentIds: mentions };
 }

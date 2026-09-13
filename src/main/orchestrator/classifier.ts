@@ -10,7 +10,7 @@ export interface ClassifierConfig {
 }
 
 const SYSTEM_PROMPT = `You are a group chat orchestration classifier. Given a user message and a list of @-mentioned agents, output ONLY a JSON object with:
-- "mode": one of "lead-and-comment", "parallel", "relay"
+- "mode": one of "lead-and-comment", "parallel", "relay", "roundtable"
 - "leadAgentId": the lead agent (only for lead-and-comment)
 - "commenterAgentIds": commenter agents (only for lead-and-comment)
 - "confidence": a number between 0 and 1`;

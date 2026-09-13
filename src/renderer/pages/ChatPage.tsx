@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { GroupMode } from '../../shared/types';
+import { GROUP_MODES as GROUP_MODE_OPTIONS } from '../../shared/types';
+import { AUTO_AGENT_ID } from '../../main/orchestrator/effort-planner';
 import { useSessionStore } from '../stores/session-store';
 import { useChatStore } from '../stores/chat-store';
 import { useMessages, messagesKey } from '../hooks/useMessages';
@@ -17,6 +20,7 @@ import { PersonaPicker } from '../components/PersonaPicker';
 import { Avatar } from '../components/Avatar';
 import { IconEditor } from '../components/IconEditor';
 import { trpc } from '../lib/trpc-client';
+import { splitAgentId } from '../lib/agent-id';
 
 export function ChatPage() {
   const { t } = useTranslation();
@@ -57,6 +61,7 @@ export function ChatPage() {
   const [titleDraft, setTitleDraft] = useState('');
   const setSessionIcon = useSessionStore((s) => s.setSessionIcon);
   const renameSession = useSessionStore((s) => s.renameSession);
+  const setGroupMode = useSessionStore((s) => s.setGroupMode);
 
   useEffect(() => {
     loadSessions();
@@ -132,6 +137,17 @@ export function ChatPage() {
     if (!activeSessionId) return;
     await trpc.session.setVisibilityMode.mutate({ sessionId: activeSessionId, mode });
     useSessionStore.getState().selectSession(activeSessionId);
+  };
+
+  const handleGroupModeChange = async (mode: GroupMode) => {
+    if (!activeSessionId) return;
+    await setGroupMode(activeSessionId, mode);
+  };
+
+  const handleDefaultAgentChange = async (agentId: string) => {
+    if (!activeSessionId || !agentId) return;
+    await trpc.session.setDefaultAgent.mutate({ sessionId: activeSessionId, agentId });
+    await useSessionStore.getState().selectSession(activeSessionId);
   };
 
   const handleExport = async () => {
@@ -270,6 +286,37 @@ export function ChatPage() {
           {activeSession && (
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
+                {t('chat.defaultVoice')}
+              </span>
+              <select
+                value={activeSession.defaultAgentId ?? ''}
+                onChange={(e) => void handleDefaultAgentChange(e.target.value)}
+                title={t('chat.defaultVoiceHint')}
+                className="bg-surface border border-rule rounded-[6px] text-[12px] text-ink px-2 py-1 cursor-pointer focus:outline-none focus:border-accent"
+              >
+                <option value={AUTO_AGENT_ID}>{t('chat.autoVoice')}</option>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    @{p.id}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
+                {t('chat.groupMode')}
+              </span>
+              <select
+                value={activeSession.groupMode}
+                onChange={(e) => void handleGroupModeChange(e.target.value as GroupMode)}
+                title={t('chat.groupModeHint')}
+                className="bg-surface border border-rule rounded-[6px] text-[12px] text-ink px-2 py-1 cursor-pointer focus:outline-none focus:border-accent"
+              >
+                {GROUP_MODE_OPTIONS.map((m) => (
+                  <option key={m} value={m}>
+                    {t(`chat.group.${m}`)}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] uppercase tracking-[0.06em] text-ink-faint">
                 {t('chat.visibility')}
               </span>
               <select
@@ -303,6 +350,7 @@ export function ChatPage() {
               const persona = personas.find((pp) => pp.id === p.personaId);
               const personaLabel =
                 p.personaId !== DEFAULT_PERSONA_ID && persona ? ` · ${persona.name}` : '';
+              const { providerId } = splitAgentId(p.agentId);
               return (
                 <button
                   key={p.agentId}
@@ -317,7 +365,7 @@ export function ChatPage() {
                   className="inline-flex items-center text-[12px] rounded-full bg-surface-2 border border-rule px-2.5 py-0.5 text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors"
                   title={t('chat.changePersona')}
                 >
-                  <span className="font-medium">@{p.agentId}</span>
+                  <span className="font-medium">@{providerId}</span>
                   {personaLabel && (
                     <span className="text-ink-muted ml-1">{personaLabel}</span>
                   )}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    background: linear-gradient(135deg, #101120 0%, #191A2E 55%, #1E1F3A 100%);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 70% 80% at 50% 45%, black 30%, transparent 100%);
+  }
+  .glow {
+    position: absolute; width: 900px; height: 900px; left: 50%; top: 42%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(91,91,214,0.28) 0%, transparent 62%);
+  }
+  .wrap { position: relative; display: flex; align-items: center; gap: 56px; }
+  .logo { width: 208px; height: 208px; flex-shrink: 0;
+    filter: drop-shadow(0 24px 60px rgba(91,91,214,0.45)); }
+  h1 { font-size: 88px; font-weight: 700; letter-spacing: -0.035em; margin: 0; line-height: 1; }
+  h1 .dot { color: #8B8BEA; }
+  .tagline { margin: 18px 0 0; font-size: 27px; font-weight: 500; color: rgba(255,255,255,0.78); letter-spacing: -0.01em; }
+  .chips { display: flex; gap: 12px; margin-top: 30px; }
+  .chip {
+    font-size: 17.5px; font-weight: 600; letter-spacing: 0.01em;
+    color: #C9C9F4; background: rgba(91,91,214,0.16);
+    border: 1px solid rgba(139,139,234,0.38);
+    padding: 9px 18px; border-radius: 999px; white-space: nowrap;
+  }
+  .footer {
+    position: absolute; bottom: 42px; left: 0; right: 0; text-align: center;
+    font-size: 18px; color: rgba(255,255,255,0.42); letter-spacing: 0.06em; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="glow"></div>
+  <div class="wrap">
+    <svg class="logo" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="tile2" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#6B6BE0"/>
+          <stop offset="1" stop-color="#4343C0"/>
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="112" fill="url(#tile2)"/>
+      <rect x="118" y="112" width="228" height="132" rx="40" fill="#FFFFFF" opacity="0.26"/>
+      <rect x="176" y="168" width="228" height="132" rx="40" fill="#FFFFFF" opacity="0.48"/>
+      <path d="M150 268 C150 243 170 223 195 223 L317 223 C342 223 362 243 362 268 L362 340 C362 365 342 385 317 385 L232 385 L196 419 L196 385 L195 385 C170 385 150 365 150 340 Z" fill="#FFFFFF"/>
+      <circle cx="215" cy="304" r="16" fill="#5B5BD6"/>
+      <circle cx="256" cy="304" r="16" fill="#5B5BD6"/>
+      <circle cx="297" cy="304" r="16" fill="#5B5BD6"/>
+    </svg>
+    <div>
+      <h1>sidepad<span class="dot">.</span></h1>
+      <p class="tagline">One question. Every brain. One conversation.</p>
+      <div class="chips">
+        <span class="chip">Parallel</span>
+        <span class="chip">Relay</span>
+        <span class="chip">Roundtable</span>
+        <span class="chip">Lead &amp; Comment</span>
+      </div>
+    </div>
+  </div>
+  <div class="footer">LOCAL-FIRST &nbsp;·&nbsp; MULTI-AGENT &nbsp;·&nbsp; MCP TOOLS &nbsp;·&nbsp; OPENAI / ANTHROPIC / OLLAMA / COMPATIBLE</div>
+</body>
+</html>

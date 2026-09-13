@@ -1,5 +1,6 @@
 // Re-export from shared layer — single source of truth
-export type { Participant, Session, IconKind, Message, MessageMeta } from '../../shared/types/session';
+export type { Participant, Session, IconKind, Message, MessageMeta, GroupMode } from '../../shared/types/session';
+export { GROUP_MODES, parseGroupMode } from '../../shared/types/session';
 
 // StoreChatRequest re-exported as ChatRequest for backward compat with session-store
 export type { StoreChatRequest as ChatRequest } from '../../shared/types/session';

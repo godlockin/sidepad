@@ -16,7 +16,7 @@ function makeMockSession(overrides: Partial<Session> = {}): Session {
     updatedAt: 1000,
     systemPrompt: null,
     visibilityMode: 'independent',
-    groupMode: 'parallel',
+    groupMode: 'auto',
     defaultAgentId: 'agent-a',
     participants: [
       { agentId: 'agent-a', personaId: 'p-a' },
@@ -294,7 +294,7 @@ describe('ChatOrchestrator', () => {
     const bMsgs = seenB[0].messages.filter((m: any) => m.role === 'user');
     expect(bMsgs).toHaveLength(1);
     expect(bMsgs[0].content).toBe(
-      '@agent-a first question\n\n@agent-a: reply-from-a\n\n@agent-b second question',
+      '@agent-a first question\n\nagent-a: reply-from-a\n\n@agent-b second question',
     );
     expect(seenB[0].messages.filter((m: any) => m.role === 'assistant')).toHaveLength(0);
   });

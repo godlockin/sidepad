@@ -2,6 +2,7 @@ import OpenAI, { AzureOpenAI } from 'openai';
 import { OpenAIProvider, toOpenAIMessages } from './openai';
 import type { ChatRequest, ChatChunk, ToolCall, ProviderCapabilities } from './types';
 import { normalizeError } from './errors';
+import { inferCaps } from './caps-heuristics';
 
 /**
  * OpenAI-compatible provider.
@@ -123,6 +124,7 @@ export class OpenAICompatProvider extends OpenAIProvider {
     return {
       vision: /(gpt-4o|qwen.*vl|qwen2.*vl|qwen3.*vl|deepseek.*vl|glm.*v|yi.*vl)/i.test(model),
       tools: true,
+      reasoning: inferCaps(model).reasoning === true,
     };
   }
 }

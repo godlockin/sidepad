@@ -23,8 +23,11 @@ describe('ProjectStore', () => {
     expect(p.createdAt).toBe(p.updatedAt);
   });
 
-  it('lists projects in created_at ASC', () => {
+  it('lists projects in created_at ASC', async () => {
     const a = store.createProject({ name: 'a' });
+    // created_at has millisecond resolution — ensure distinct timestamps
+    // so the ASC ordering is deterministic.
+    await new Promise(r => setTimeout(r, 5));
     const b = store.createProject({ name: 'b' });
     expect(store.listProjects().map(p => p.id)).toEqual([a.id, b.id]);
   });

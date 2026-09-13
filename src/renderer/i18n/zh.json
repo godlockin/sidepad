@@ -89,7 +89,19 @@
         "downloading": "下载 {{lang}}（{{pct}}%）",
         "recognizing": "识别中（{{pct}}%）"
       }
-    }
+    },
+    "groupMode": "协作方式",
+    "groupModeHint": "被@的声音如何协作：自动（跟随@与触发词）、串行接力、并行、圆桌讨论、领导小组",
+    "group": {
+      "auto": "自动（跟随@）",
+      "relay": "串行接力",
+      "parallel": "并行",
+      "roundtable": "圆桌讨论",
+      "lead-and-comment": "领导小组"
+    },
+    "defaultVoice": "默认声音",
+    "defaultVoiceHint": "无@提及时的应答者：自动 = 框架按任务复杂度动态路由模型",
+    "autoVoice": "自动（智能路由）"
   },
   "sidebar": {
     "sessions": "会话列表",
@@ -116,7 +128,8 @@
     "charSuffix": "字符"
   },
   "mentionPicker": {
-    "title": "指定一个声音"
+    "title": "指定一个声音",
+    "instances": "会话专家实例"
   },
   "personaPicker": {
     "title": "选择一个人格",

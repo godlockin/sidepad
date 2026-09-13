@@ -16,6 +16,9 @@ function setupSchema(database: Database.Database): void {
       system_prompt TEXT,
       visibility_mode TEXT NOT NULL DEFAULT 'independent' CHECK(visibility_mode IN ('independent','full')),
       group_mode TEXT NOT NULL DEFAULT 'parallel' CHECK(group_mode IN ('parallel','relay')),
+      collab_mode TEXT,
+      icon_kind TEXT,
+      icon_value TEXT,
       default_agent_id TEXT,
       participants TEXT NOT NULL DEFAULT '[]',
       folder_id TEXT,
@@ -39,6 +42,7 @@ function setupSchema(database: Database.Database): void {
       error TEXT,
       parent_message_id TEXT,
       meta_json TEXT,
+      reasoning TEXT,
       created_at INTEGER NOT NULL,
       finished_at INTEGER
     );
@@ -80,15 +84,23 @@ describe('createSession', () => {
     expect(s.id).toBeDefined();
     expect(s.title).toBe('Test session');
     expect(s.visibilityMode).toBe('independent');
-    expect(s.groupMode).toBe('parallel');
+    expect(s.groupMode).toBe('auto');
     expect(s.createdAt).toBeGreaterThan(0);
     expect(s.updatedAt).toBeGreaterThan(0);
     expect(s.participants).toEqual([]);
   });
 
+  it('creates a session with an explicit group mode', () => {
+    const s = store.createSession({ title: 'RT', groupMode: 'roundtable' });
+    expect(s.groupMode).toBe('roundtable');
+  });
+
   it('creates a session with custom participants', () => {
     const s = store.createSession({ title: 'Multi', participants: ['agent-a', 'agent-b'] });
-    expect(s.participants).toEqual(['agent-a', 'agent-b']);
+    expect(s.participants).toEqual([
+      { agentId: 'agent-a', personaId: '_default' },
+      { agentId: 'agent-b', personaId: '_default' },
+    ]);
   });
 });
 
@@ -318,5 +330,83 @@ describe('forkSession', () => {
     const forkedMessages = store.listMessages(forked.id);
     expect(forkedMessages.length).toBe(1); // only msg1 copied
     expect(forkedMessages[0].content).toBe('Hello');
+  });
+});
+
+// ---- Collaboration mode + agent instances ----
+
+describe('setGroupMode', () => {
+  it('persists the collaboration mode', () => {
+    const s = store.createSession({ title: 'RT' });
+    store.setGroupMode(s.id, 'roundtable');
+    expect(store.getSession(s.id)!.groupMode).toBe('roundtable');
+    store.setGroupMode(s.id, 'parallel');
+    expect(store.getSession(s.id)!.groupMode).toBe('parallel');
+    store.setGroupMode(s.id, 'auto');
+    expect(store.getSession(s.id)!.groupMode).toBe('auto');
+  });
+
+  it('reads NULL collab_mode as auto (legacy rows)', () => {
+    const s = store.createSession({ title: 'Legacy' });
+    db.prepare('UPDATE sessions SET collab_mode = NULL WHERE id = ?').run(s.id);
+    expect(store.getSession(s.id)!.groupMode).toBe('auto');
+  });
+
+  it('ignores unknown collab_mode values', () => {
+    const s = store.createSession({ title: 'Weird' });
+    db.prepare('UPDATE sessions SET collab_mode = ? WHERE id = ?').run('bogus', s.id);
+    expect(store.getSession(s.id)!.groupMode).toBe('auto');
+  });
+});
+
+describe('ensureParticipant with persona', () => {
+  it('adds a participant with an explicit persona id', () => {
+    const s = store.createSession({ title: 'S' });
+    store.ensureParticipant(s.id, 'prov::p-1', 'p-1');
+    const session = store.getSession(s.id)!;
+    expect(session.participants).toEqual([
+      { agentId: 'prov::p-1', personaId: 'p-1' },
+    ]);
+  });
+
+  it('is idempotent per agentId', () => {
+    const s = store.createSession({ title: 'S' });
+    store.ensureParticipant(s.id, 'prov', 'p-1');
+    store.ensureParticipant(s.id, 'prov', 'p-1');
+    expect(store.getSession(s.id)!.participants).toHaveLength(1);
+  });
+
+  it('allows multiple instances of the same provider', () => {
+    const s = store.createSession({ title: 'S' });
+    store.ensureParticipant(s.id, 'prov');
+    store.ensureParticipant(s.id, 'prov::p-1', 'p-1');
+    store.ensureParticipant(s.id, 'prov::p-2', 'p-2');
+    const ids = store.getSession(s.id)!.participants.map((p) => p.agentId);
+    expect(ids).toEqual(['prov', 'prov::p-1', 'prov::p-2']);
+  });
+});
+
+describe('rekeyParticipant', () => {
+  it('replaces agentId and personaId of one participant', () => {
+    const s = store.createSession({ title: 'S', participants: ['prov'] });
+    store.rekeyParticipant(s.id, 'prov', 'prov::p-1', 'p-1');
+    expect(store.getSession(s.id)!.participants).toEqual([
+      { agentId: 'prov::p-1', personaId: 'p-1' },
+    ]);
+  });
+
+  it('leaves other participants untouched', () => {
+    const s = store.createSession({ title: 'S', participants: ['a', 'b'] });
+    store.rekeyParticipant(s.id, 'a', 'a::pa', 'pa');
+    const ids = store.getSession(s.id)!.participants.map((p) => p.agentId);
+    expect(ids).toEqual(['a::pa', 'b']);
+  });
+
+  it('no-ops for unknown agentId', () => {
+    const s = store.createSession({ title: 'S', participants: ['a'] });
+    store.rekeyParticipant(s.id, 'zzz', 'zzz::p', 'p');
+    expect(store.getSession(s.id)!.participants).toEqual([
+      { agentId: 'a', personaId: '_default' },
+    ]);
   });
 });

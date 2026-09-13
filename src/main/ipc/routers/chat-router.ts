@@ -7,9 +7,11 @@ import { SessionStore } from '../../store/session-store.js';
 import { PersonaStore } from '../../store/persona-store.js';
 import { createSessionToolsStore } from '../../store/session-tools-store.js';
 import { ChatOrchestrator, type SessionToolResolver } from '../../orchestrator/index.js';
+import { parseAgentId, composeAgentId } from '../../orchestrator/agent-id.js';
 import { getSessionSkillAddenda } from '../../skills/composer.js';
 import type { OrchestratorEvent } from '../../orchestrator/types.js';
 import { registry } from '../../providers/index.js';
+import { flattenMcpResult } from '../../mcp/flatten.js';
 import type { ToolDefinition } from '../../providers/types.js';
 
 const t = initTRPC.create({ isServer: true });
@@ -27,22 +29,25 @@ function getOrchestrator(): ChatOrchestrator {
   const personaStore = new PersonaStore(db);
   const classifier = null;
 
-  // Look up the configured model for an agent. Order of precedence:
+  // Look up the configured model for an agent instance. agentId may be a
+  // composite instance id ("provider::persona") — the model always comes
+  // from the provider part. Order of precedence:
   //   1. provider_configs.params_json.defaultModel (explicit user override)
   //   2. first entry in provider_configs.model_list_json
   //   3. type-specific fallback
   function resolveModel(agentId: string): string {
+    const { providerId } = parseAgentId(agentId);
     try {
       const row = db
         .prepare('SELECT type, params_json, model_list_json FROM provider_configs WHERE id = ?')
-        .get(agentId) as { type?: string; params_json?: string; model_list_json?: string } | undefined;
+        .get(providerId) as { type?: string; params_json?: string; model_list_json?: string } | undefined;
       if (row) {
         if (row.params_json) {
           try {
             const p = JSON.parse(row.params_json);
             if (p?.defaultModel) {
               // Warm context window cache for this agent/model
-              void resolveContextWindow(agentId, p.defaultModel as string);
+              void resolveContextWindow(providerId, p.defaultModel as string);
               return p.defaultModel as string;
             }
           } catch { /* ignore */ }
@@ -52,7 +57,7 @@ function getOrchestrator(): ChatOrchestrator {
             const list = JSON.parse(row.model_list_json);
             if (Array.isArray(list) && list.length > 0) {
               const m = typeof list[0] === 'string' ? list[0] : (list[0]?.id ?? list[0]?.name);
-              void resolveContextWindow(agentId, m as string);
+              void resolveContextWindow(providerId, m as string);
               return m as string;
             }
           } catch { /* ignore */ }
@@ -68,15 +73,15 @@ function getOrchestrator(): ChatOrchestrator {
   // Cache: agentId → Map<modelId, contextWindow>
   const modelContextWindowCache = new Map<string, Map<string, number>>();
 
-  async function resolveContextWindow(agentId: string, model: string): Promise<number> {
-    let modelMap = modelContextWindowCache.get(agentId);
+  async function resolveContextWindow(providerId: string, model: string): Promise<number> {
+    let modelMap = modelContextWindowCache.get(providerId);
     if (!modelMap) {
       modelMap = new Map();
-      modelContextWindowCache.set(agentId, modelMap);
+      modelContextWindowCache.set(providerId, modelMap);
     }
     if (modelMap.has(model)) return modelMap.get(model)!;
     try {
-      const provider = registry.has(agentId) ? registry.get(agentId) : (registry.list()[0] ?? null);
+      const provider = registry.has(providerId) ? registry.get(providerId) : null;
       if (provider) {
         const models = await provider.listModels();
         for (const m of models) modelMap.set(m.id, m.contextWindow);
@@ -90,15 +95,21 @@ function getOrchestrator(): ChatOrchestrator {
     store,
     registry,
     classifier,
+    // Resolve an agent instance id to its provider. Unknown agents yield a
+    // per-agent PROVIDER_NOT_CONFIGURED error instead of silently answering
+    // through the first configured provider.
     (agentId: string) => {
-      if (registry.has(agentId)) {
-        return registry.get(agentId);
-      }
-      const providers = registry.list();
-      return providers.length > 0 ? providers[0] : null;
+      const { providerId } = parseAgentId(agentId);
+      return registry.has(providerId) ? registry.get(providerId) : null;
     },
     resolveModel,
     (sessionId: string, agentId: string) => {
+      // Composite instance ids embed their persona — self-describing.
+      const { personaId: embedded } = parseAgentId(agentId);
+      if (embedded) {
+        const persona = personaStore.get(embedded);
+        return persona?.prompt ?? null;
+      }
       const session = store.getSession(sessionId);
       if (!session) return null;
       const part = session.participants.find((p) => p.agentId === agentId);
@@ -116,12 +127,36 @@ function getOrchestrator(): ChatOrchestrator {
     buildSessionToolResolver(db),
     (agentId: string, model: string) => {
       // Fire-and-forget async lookup; return cached value synchronously or fallback
-      const cached = modelContextWindowCache.get(agentId)?.get(model);
+      const { providerId } = parseAgentId(agentId);
+      const cached = modelContextWindowCache.get(providerId)?.get(model);
       if (cached !== undefined) return cached;
       // Trigger cache population asynchronously (next call will hit cache)
-      void resolveContextWindow(agentId, model);
+      void resolveContextWindow(providerId, model);
       return 8000;
     },
+    // Display label for transcripts (relay inline replies, roundtable,
+    // cross-agent history). Composite ids surface their persona name.
+    (agentId: string) => {
+      const { providerId, personaId } = parseAgentId(agentId);
+      if (personaId) {
+        try {
+          const persona = personaStore.get(personaId);
+          if (persona?.name) return persona.name;
+        } catch { /* ignore */ }
+      }
+      return providerId || agentId;
+    },
+  );
+
+  // Prewarm the context-window cache for every configured provider so the
+  // first real turn doesn't silently budget against the 8k fallback.
+  void Promise.all(
+    registry.list().map(async (p) => {
+      try {
+        const model = resolveModel(p.id);
+        await resolveContextWindow(p.id, model);
+      } catch { /* ignore */ }
+    }),
   );
 
   return orchestrator;
@@ -179,10 +214,12 @@ function buildSessionToolResolver(db: any): SessionToolResolver | null {
           content?: unknown;
           isError?: boolean;
         };
-        return { result: r, isError: !!r?.isError };
+        // Flatten the MCP envelope: the model sees plain text, not
+        // {"content":[{"type":"text",...}]} wrappers.
+        return { result: flattenMcpResult(r), isError: !!r?.isError };
       } catch (err) {
         return {
-          result: { error: err instanceof Error ? err.message : String(err) },
+          result: `Tool error: ${err instanceof Error ? err.message : String(err)}`,
           isError: true,
         };
       }
@@ -214,7 +251,15 @@ function ensureMentionedParticipants(sessionId: string, mentions: string[]): voi
   if (!db) return;
   const store = new SessionStore(db);
   for (const agentId of mentions) {
-    store.ensureParticipant(sessionId, agentId);
+    const { providerId, personaId } = parseAgentId(agentId);
+    if (!providerId) continue;
+    if (personaId) {
+      // Composite instance id: the participant row carries both parts so the
+      // same provider can appear multiple times with different personas.
+      store.ensureParticipant(sessionId, composeAgentId(providerId, personaId), personaId);
+    } else {
+      store.ensureParticipant(sessionId, agentId);
+    }
   }
 }
 

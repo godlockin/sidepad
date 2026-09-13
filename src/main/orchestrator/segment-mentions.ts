@@ -2,9 +2,10 @@
  * Segment a user message by `@<agent-id>` boundaries for directed sequential relay.
  *
  * The id rule mirrors the upstream extractor used in the renderer
- * (`@(\S+)` followed by trailing-punct trim). Here we accept ids matching
- * /[A-Za-z0-9_-]+/ as the canonical form (alphanumeric + dash + underscore),
- * which is what the orchestrator/mode-resolver already deals in.
+ * (`@(\S+)` followed by trailing-punct trim). Ids match
+ * /[A-Za-z0-9_:-]+/ — alphanumeric + dash + underscore + colon, where a
+ * colon pair separates a composite agent instance id
+ * ("provider::persona", see orchestrator/agent-id.ts).
  */
 
 export interface MentionSegment {
@@ -19,7 +20,7 @@ export interface SegmentationResult {
   parts: MentionSegment[];
 }
 
-const MENTION_RE = /@([A-Za-z0-9_-]+)/g;
+const MENTION_RE = /@([A-Za-z0-9_:-]+)/g;
 
 /**
  * Walk `text`, find each `@<id>` boundary, and slice the text from each

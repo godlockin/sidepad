@@ -1,6 +1,7 @@
 // src/main/store/session-store.ts
 import type Database from 'better-sqlite3';
-import type { Session, Message, MessageMeta, ChatRequest, Participant } from './types.js';
+import type { Session, Message, MessageMeta, ChatRequest, Participant, GroupMode } from './types.js';
+import { parseGroupMode } from './types.js';
 
 const DEFAULT_PERSONA_ID = '_default';
 
@@ -45,7 +46,10 @@ function rowToSession(row: Record<string, unknown>): Session {
     updatedAt: row.updated_at as number,
     systemPrompt: (row.system_prompt as string | null) ?? null,
     visibilityMode: (row.visibility_mode as 'independent' | 'full') ?? 'independent',
-    groupMode: (row.group_mode as 'parallel' | 'relay') ?? 'parallel',
+    // collab_mode (migration 025) is the authoritative collaboration mode;
+    // NULL (legacy rows) means 'auto'. The legacy group_mode column is no
+    // longer read or written (CHECK-constrained to 'parallel'/'relay').
+    groupMode: parseGroupMode(row.collab_mode),
     defaultAgentId: (row.default_agent_id as string | null) ?? null,
     participants: parseParticipants(row.participants as string | null),
     folderId: (row.folder_id as string | null) ?? null,
@@ -84,6 +88,7 @@ export interface CreateSessionInput {
   participants?: ReadonlyArray<string | Participant>;
   folderId?: string;
   projectId?: string;
+  groupMode?: GroupMode;
 }
 
 export class SessionStore {
@@ -97,10 +102,10 @@ export class SessionStore {
     const participants = JSON.stringify(normalizeParticipants(input.participants));
     this.db
       .prepare(
-        `INSERT INTO sessions(id, title, created_at, updated_at, system_prompt, participants, folder_id, project_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO sessions(id, title, created_at, updated_at, system_prompt, participants, folder_id, project_id, collab_mode)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(id, input.title ?? null, t, t, input.systemPrompt ?? null, participants, input.folderId ?? null, input.projectId ?? null);
+      .run(id, input.title ?? null, t, t, input.systemPrompt ?? null, participants, input.folderId ?? null, input.projectId ?? null, input.groupMode ?? 'auto');
     return this.getSession(id)!;
   }
 
@@ -122,18 +127,26 @@ export class SessionStore {
     this.db.prepare('UPDATE sessions SET visibility_mode = ?, updated_at = ? WHERE id = ?').run(mode, now(), sessionId);
   }
 
+  setGroupMode(sessionId: string, mode: GroupMode): void {
+    this.db.prepare('UPDATE sessions SET collab_mode = ?, updated_at = ? WHERE id = ?').run(mode, now(), sessionId);
+  }
+
   setIcon(sessionId: string, kind: 'emoji' | 'image' | null, value: string | null): void {
     this.db
       .prepare('UPDATE sessions SET icon_kind = ?, icon_value = ?, updated_at = ? WHERE id = ?')
       .run(kind, value, now(), sessionId);
   }
 
-  /** Idempotently add an agent to the session's participant list with the default persona. */
-  ensureParticipant(sessionId: string, agentId: string): Participant[] {
+  /**
+   * Idempotently add an agent to the session's participant list. The
+   * persona defaults to `_default` unless explicitly given (used for
+   * composite agent instance ids like "provider::persona").
+   */
+  ensureParticipant(sessionId: string, agentId: string, personaId?: string): Participant[] {
     const session = this.getSession(sessionId);
     if (!session) return [];
     if (session.participants.some((p) => p.agentId === agentId)) return session.participants;
-    const next = [...session.participants, { agentId, personaId: DEFAULT_PERSONA_ID }];
+    const next = [...session.participants, { agentId, personaId: personaId ?? DEFAULT_PERSONA_ID }];
     this.db
       .prepare('UPDATE sessions SET participants = ?, updated_at = ? WHERE id = ?')
       .run(JSON.stringify(next), now(), sessionId);
@@ -146,6 +159,24 @@ export class SessionStore {
     if (!session) return [];
     const next = session.participants.map((p) =>
       p.agentId === agentId ? { ...p, personaId } : p,
+    );
+    this.db
+      .prepare('UPDATE sessions SET participants = ?, updated_at = ? WHERE id = ?')
+      .run(JSON.stringify(next), now(), sessionId);
+    return next;
+  }
+
+  /**
+   * Replace a participant's agentId and personaId in one step. Used when
+   * assigning a persona rekeys a plain provider participant into a composite
+   * agent instance id ("provider::persona") so multiple instances of the
+   * same provider stay separately addressable.
+   */
+  rekeyParticipant(sessionId: string, oldAgentId: string, newAgentId: string, personaId: string): Participant[] {
+    const session = this.getSession(sessionId);
+    if (!session) return [];
+    const next = session.participants.map((p) =>
+      p.agentId === oldAgentId ? { agentId: newAgentId, personaId } : p,
     );
     this.db
       .prepare('UPDATE sessions SET participants = ?, updated_at = ? WHERE id = ?')
@@ -303,9 +334,9 @@ export class SessionStore {
     this.db
       .prepare(
         `INSERT INTO sessions(id, title, created_at, updated_at, system_prompt, visibility_mode, group_mode,
-         default_agent_id, participants, folder_id, project_id, pinned, archived, parent_message_id,
+         collab_mode, default_agent_id, participants, folder_id, project_id, pinned, archived, parent_message_id,
          icon_kind, icon_value)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         newId,
@@ -314,6 +345,9 @@ export class SessionStore {
         t,
         sourceSession.systemPrompt,
         sourceSession.visibilityMode,
+        // group_mode is CHECK-constrained to ('parallel','relay'); new rows
+        // take the schema default. The real mode travels in collab_mode.
+        'parallel',
         sourceSession.groupMode,
         sourceSession.defaultAgentId,
         participants,

@@ -120,8 +120,10 @@ describe('sessionRouter', () => {
   it('has expected procedures', () => {
     const procs = Object.keys((sessionRouter as any)._def.procedures);
     expect(procs.sort()).toEqual([
-      'create', 'delete', 'fork', 'get', 'list', 'messages',
-      'rename', 'search', 'setDefaultAgent', 'setVisibilityMode',
+      'attachSkill', 'attachTool', 'create', 'delete', 'detachSkill', 'detachTool',
+      'editMessage', 'exportMarkdown', 'fork', 'get', 'list', 'listAttachedSkills',
+      'listAttachedTools', 'messages', 'rename', 'search', 'setDefaultAgent',
+      'setGroupMode', 'setIcon', 'setParticipantPersona', 'setVisibilityMode',
     ]);
   });
 
@@ -152,7 +154,9 @@ describe('providerRouter', () => {
 
   it('has expected procedures', () => {
     const procs = Object.keys((providerRouter as any)._def.procedures);
-    expect(procs.sort()).toEqual(['configure', 'health', 'list', 'listModels']);
+    expect(procs.sort()).toEqual([
+      'configure', 'getConfig', 'health', 'list', 'listModels', 'remove', 'setIcon', 'testModel',
+    ]);
   });
 
   it('list is a query, configure is a mutation', () => {

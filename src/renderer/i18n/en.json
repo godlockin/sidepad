@@ -89,7 +89,19 @@
         "downloading": "Downloading {{lang}} ({{pct}}%)",
         "recognizing": "Recognizing ({{pct}}%)"
       }
-    }
+    },
+    "groupMode": "collaboration",
+    "groupModeHint": "How mentioned voices collaborate: auto (follow @ and trigger phrases), relay (sequential hand-off), parallel (simultaneous), roundtable (discussion rounds), lead-and-comment",
+    "group": {
+      "auto": "Auto (@-driven)",
+      "relay": "Relay",
+      "parallel": "Parallel",
+      "roundtable": "Roundtable",
+      "lead-and-comment": "Lead & comment"
+    },
+    "defaultVoice": "voice",
+    "defaultVoiceHint": "Which voice answers when no @-mention: Auto lets the framework route by task complexity",
+    "autoVoice": "Auto (smart routing)"
   },
   "sidebar": {
     "sessions": "Sessions",
@@ -116,7 +128,8 @@
     "charSuffix": "ch"
   },
   "mentionPicker": {
-    "title": "Address a voice"
+    "title": "Address a voice",
+    "instances": "Session experts"
   },
   "personaPicker": {
     "title": "Choose a persona",

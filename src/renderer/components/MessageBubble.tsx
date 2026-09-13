@@ -8,6 +8,7 @@ import { useSessionStore } from '../stores/session-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 import { useChatStore, type ToolCallView } from '../stores/chat-store';
 import { useSettingsStore } from '../stores/settings-store';
+import { splitAgentId } from '../lib/agent-id';
 import { Avatar } from './Avatar';
 
 interface MessageBubbleProps {
@@ -214,12 +215,15 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
     return <span className="text-[12px] font-medium text-ink-muted">{t('messageBubble.agent')}</span>;
   }
 
-  const personaId =
-    activeSession?.participants?.find((p) => p.agentId === agentId)?.personaId ??
-    DEFAULT_PERSONA_ID;
+  // Composite instance ids ("provider::persona") display as the provider
+  // chip plus the expert persona name; persona state falls back to the id's
+  // embedded persona for messages sent before the participant was rekeyed.
+  const { providerId, personaId: embeddedPersonaId } = splitAgentId(agentId);
+  const participant = activeSession?.participants?.find((p) => p.agentId === agentId);
+  const personaId = participant?.personaId ?? embeddedPersonaId ?? DEFAULT_PERSONA_ID;
   const persona = personas.find((p) => p.id === personaId);
   const showPersona = personaId !== DEFAULT_PERSONA_ID && persona;
-  const provider = providers.find((p) => p.id === agentId);
+  const provider = providers.find((p) => p.id === providerId);
 
   return (
     <>
@@ -241,7 +245,7 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
           fallback="empty"
         />
         <span className="font-mono text-[11px] bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px] text-ink">
-          {agentId}
+          {providerId}
         </span>
         {showPersona && (
           <span className="text-ink-muted">· {persona!.name}</span>

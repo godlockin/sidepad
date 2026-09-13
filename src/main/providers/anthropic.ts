@@ -50,17 +50,22 @@ export class AnthropicProvider implements LLMProvider {
             input_schema: (t.inputSchema ?? { type: 'object', properties: {} }) as any,
           }))
         : undefined;
-    const thinkingEnabled = supportsExtendedThinking(req.model);
+    const thinking = anthropicThinkingParams(req);
+    // Anthropic requires max_tokens to exceed the thinking budget.
+    const maxTokens = thinking
+      ? Math.max(req.maxTokens ?? 4096, thinking.budget_tokens + 1024)
+      : (req.maxTokens ?? 4096);
     try {
       const stream: any = await this.client.messages.stream(
         {
           model: req.model,
           messages: messages as any,
           system: req.systemPrompt,
-          temperature: req.temperature,
-          max_tokens: req.maxTokens ?? 4096,
+          // Anthropic rejects temperature ≠ 1 when thinking is enabled.
+          ...(thinking ? {} : { temperature: req.temperature }),
+          max_tokens: maxTokens,
           ...(tools ? { tools } : {}),
-          ...(thinkingEnabled ? { thinking: { type: 'enabled', budget_tokens: 4096 } } : {}),
+          ...(thinking ? { thinking } : {}),
         } as any,
         { signal },
       );
@@ -160,6 +165,21 @@ export function supportsExtendedThinking(model: string): boolean {
   if (m.startsWith('claude-opus-4')) return true;
   if (m.startsWith('claude-sonnet-4-5')) return true;
   return false;
+}
+
+/** Budget (tokens) per requested effort tier. */
+const ANTHROPIC_THINKING_BUDGET = { low: 2048, medium: 4096, high: 16384 } as const;
+
+/**
+ * Translate a requested ReasoningEffort into Anthropic's thinking parameter.
+ * 'minimal' disables thinking entirely (cost save); 'medium'/unset keeps the
+ * historical 4096 budget; 'high' raises it to 16384.
+ */
+export function anthropicThinkingParams(req: ChatRequest): { type: 'enabled'; budget_tokens: number } | null {
+  if (!supportsExtendedThinking(req.model)) return null;
+  if (req.reasoningEffort === 'minimal') return null;
+  const budget = req.reasoningEffort ? ANTHROPIC_THINKING_BUDGET[req.reasoningEffort] : 4096;
+  return { type: 'enabled', budget_tokens: budget };
 }
 
 /**

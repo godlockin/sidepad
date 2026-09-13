@@ -45,6 +45,15 @@ export type ChatMessage =
   | { role: 'assistant'; content: string; name?: string; toolCalls?: ToolCall[] }
   | { role: 'tool'; content: string; toolCallId: string; name?: string };
 
+/**
+ * Reasoning/thinking effort tier a caller may request for one model call.
+ * 'minimal' asks the model to skip or shrink its thinking phase; 'high'
+ * asks for the deepest reasoning budget. Providers translate this into
+ * their native parameter (OpenAI `reasoning_effort`, Anthropic
+ * `thinking.budget_tokens`, Ollama `think`).
+ */
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
+
 export interface ChatRequest {
   model: string;
   messages: ChatMessage[];
@@ -52,6 +61,8 @@ export interface ChatRequest {
   temperature?: number;
   maxTokens?: number;
   tools?: ToolDefinition[];
+  /** Optional effort tier for the model's reasoning/thinking phase. */
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface ChatChunk {

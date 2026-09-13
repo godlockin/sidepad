@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MentionPicker } from './MentionPicker';
+import { MentionPicker, type MentionItem } from './MentionPicker';
 import { PersonaPicker } from './PersonaPicker';
 import { useSessionStore } from '../stores/session-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 import { trpc } from '../lib/trpc-client';
+import { splitAgentId } from '../lib/agent-id';
 import type { AttachmentRow, ParseProgress } from '../../main/ipc/routers/attachment-router';
 
 interface ChatInputProps {
@@ -103,6 +104,37 @@ export function ChatInput({
     if (personas.length === 0) loadPersonas();
   }, [personas.length, loadPersonas]);
 
+  // Mention options: expert instances already in the session (including
+  // multiple personas of the same provider) first, then plain providers.
+  const activeParticipants = activeSession?.participants ?? [];
+  const mentionItems: MentionItem[] = React.useMemo(() => {
+    const items: MentionItem[] = [];
+    const seen = new Set<string>();
+    const instanceGroup = t('mentionPicker.instances');
+    for (const p of activeParticipants) {
+      const { providerId, personaId } = splitAgentId(p.agentId);
+      if (!personaId) continue;
+      const persona = personas.find((x) => x.id === personaId);
+      items.push({
+        id: p.agentId,
+        label: p.agentId,
+        hint: persona?.name ?? providerId,
+        group: instanceGroup,
+      });
+      seen.add(p.agentId);
+    }
+    for (const pr of providers) {
+      if (seen.has(pr.id)) continue;
+      const part = activeParticipants.find((p) => p.agentId === pr.id);
+      const persona =
+        part && part.personaId !== DEFAULT_PERSONA_ID
+          ? personas.find((x) => x.id === part.personaId)
+          : undefined;
+      items.push({ id: pr.id, label: pr.id, hint: persona?.name ?? pr.configId });
+    }
+    return items;
+  }, [activeParticipants, providers, personas, t]);
+
   useEffect(() => {
     const el = textareaRef.current;
     if (el) {
@@ -110,15 +142,16 @@ export function ChatInput({
       el.style.height = Math.min(el.scrollHeight, 168) + 'px';
     }
     const lastAt = input.lastIndexOf('@');
-    if (lastAt >= 0 && providers.length > 0) {
+    if (lastAt >= 0 && mentionItems.length > 0) {
       const afterAt = input.slice(lastAt + 1);
-      if (afterAt === '' || /^[a-zA-Z0-9_-]+$/.test(afterAt)) {
+      // Composite instance ids contain "::" — keep the picker open while typing them.
+      if (afterAt === '' || /^[a-zA-Z0-9_:-]+$/.test(afterAt)) {
         setShowPicker(true);
         return;
       }
     }
     setShowPicker(false);
-  }, [input, providers.length]);
+  }, [input, mentionItems.length]);
 
   // Auto-focus URL input when it becomes visible
   useEffect(() => {
@@ -378,9 +411,10 @@ export function ChatInput({
               {t('chatInput.addressedTo')}
             </span>
             {mentions.map((m) => {
-              const personaId =
-                activeSession?.participants?.find((p) => p.agentId === m)?.personaId ??
-                DEFAULT_PERSONA_ID;
+              // Composite ids display as @provider · Persona.
+              const { providerId, personaId: embedded } = splitAgentId(m);
+              const participant = activeSession?.participants?.find((p) => p.agentId === m);
+              const personaId = participant?.personaId ?? embedded ?? DEFAULT_PERSONA_ID;
               const persona = personas.find((p) => p.id === personaId);
               const personaLabel =
                 personaId !== DEFAULT_PERSONA_ID && persona ? ` · ${persona.name}` : '';
@@ -398,7 +432,7 @@ export function ChatInput({
                   className="inline-flex items-center text-[12px] rounded-full bg-accent-muted text-accent px-2.5 py-0.5 hover:bg-accent hover:text-white cursor-pointer transition-colors"
                   title={t('chat.changePersona')}
                 >
-                  <span className="font-medium">@{m}</span>
+                  <span className="font-medium">@{providerId}</span>
                   {personaLabel && <span className="opacity-80 ml-1">{personaLabel}</span>}
                 </button>
               );
@@ -502,7 +536,7 @@ export function ChatInput({
             />
             {showPicker && (
               <MentionPicker
-                providers={providers}
+                items={mentionItems}
                 onSelect={handlePickerSelect}
                 onClose={() => setShowPicker(false)}
               />
