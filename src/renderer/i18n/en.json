@@ -36,7 +36,11 @@
       "workspace": "Workspace",
       "outputs": "Outputs",
       "scratch": "Scratch"
-    }
+    },
+    "emptyHint": "No projects yet",
+    "emptyTitle": "Organize work into projects",
+    "emptyBody": "A project groups folders (references, inputs, workspace, outputs) that AI tasks can read from and write to.",
+    "emptyCta": "New project"
   },
   "onboarding": {
     "welcomeTitle": "Welcome to sidepad",
@@ -45,7 +49,9 @@
     "skip": "Skip for now",
     "addFirstVoiceTitle": "Add your first voice",
     "addFirstVoiceBody": "Connect a provider so sidepad has someone to talk to. You can add more later in Settings.",
-    "ollamaDetected": "Detected Ollama at localhost:11434 — prefilled."
+    "ollamaDetected": "Detected Ollama at localhost:11434 — prefilled.",
+    "configuredVoices": "{{count}} configured voice(s) couldn't load — their API key is missing or unreadable.",
+    "openVoiceSettings": "Open voice settings"
   },
   "chat": {
     "newConversation": "New conversation",
@@ -91,7 +97,7 @@
       }
     },
     "groupMode": "collaboration",
-    "groupModeHint": "How mentioned voices collaborate: auto (follow @ and trigger phrases), relay (sequential hand-off), parallel (simultaneous), roundtable (discussion rounds), lead-and-comment",
+    "groupModeHint": "How @-mentioned voices collaborate: auto lets @-mentions and phrases like \"lead\" or \"roundtable\" decide; the others force a fixed mode.",
     "group": {
       "auto": "Auto (@-driven)",
       "relay": "Relay",
@@ -100,8 +106,12 @@
       "lead-and-comment": "Lead & comment"
     },
     "defaultVoice": "voice",
-    "defaultVoiceHint": "Which voice answers when no @-mention: Auto lets the framework route by task complexity",
-    "autoVoice": "Auto (smart routing)"
+    "defaultVoiceHint": "Who answers when nothing is @-mentioned. Auto = the framework picks the voice and thinking effort by task complexity.",
+    "autoVoice": "Auto (smart routing)",
+    "retry": "Retry",
+    "errorNetwork": "Couldn't reach the model service. Check your network or voice settings.",
+    "errorGeneric": "The model call failed.",
+    "errorDetails": "Details"
   },
   "sidebar": {
     "sessions": "Sessions",
@@ -120,7 +130,7 @@
     "addressedTo": "addressed to",
     "placeholder": "Send a message… use @ to address a voice",
     "noProvider": "Add a voice in Settings to start chatting",
-    "noAgent": "Pick an agent from the header to start chatting",
+    "noAgent": "Pick a voice from the header to start chatting",
     "send": "Send",
     "stop": "Stop",
     "composing": "composing reply…",
@@ -143,7 +153,7 @@
     "copied": "✓ Copied",
     "copy": "Copy",
     "editFork": "Edit / fork",
-    "agent": "agent",
+    "agent": "Voice",
     "thinking": "Show thinking"
   },
   "editFork": {
@@ -388,7 +398,7 @@
       "title": "About",
       "name": "sidepad",
       "tagline": "— a desktop workspace for talking with multiple LLMs at once. Version",
-      "subtitle": "Local storage · zero telemetry · open source."
+      "subtitle": "Local storage · zero telemetry. Your conversations stay on this machine — no accounts, no cloud sync."
     },
     "tools": {
       "title": "Tools",

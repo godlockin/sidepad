@@ -530,7 +530,7 @@ export function ChatInput({
               onKeyDown={handleKeyDown}
               placeholder={placeholder ?? t('chatInput.placeholder')}
               rows={1}
-              disabled={disabled || streaming}
+              disabled={disabled}
               className="w-full bg-transparent border-0 p-0 resize-none text-[14px] leading-[1.55] text-ink placeholder:text-ink-faint focus:outline-none disabled:opacity-50"
               style={{ minHeight: '1.55em' }}
             />

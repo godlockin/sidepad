@@ -1,5 +1,6 @@
 import type { SessionStore } from '../store/session-store';
 import type { ProviderRegistry } from '../providers';
+import { normalizeError } from '../providers/errors';
 import type { ClassifierAgent } from './classifier';
 import { resolveMode, type ClassifierResult } from './mode-resolver';
 import { buildContext } from './context-builder';
@@ -371,7 +372,12 @@ export class ChatOrchestrator {
 
       try {
         for await (const ev of provider.chat(req, signal)) {
-          if (signal.aborted) return;
+          if (signal.aborted) {
+            // Aborted mid-stream: close the persisted message so it does not
+            // stay 'streaming' forever.
+            this.store.markAborted(msgId);
+            return;
+          }
           if (ev.delta) {
             roundContent += ev.delta;
             this.store.appendDelta(msgId, ev.delta);
@@ -394,16 +400,16 @@ export class ChatOrchestrator {
           }
         }
       } catch (err) {
-        const m = err instanceof Error ? err.message : String(err);
-        this.store.markError(msgId, 'UNKNOWN', m);
+        const normalized = normalizeError(err);
+        this.store.markError(msgId, normalized.code, normalized.message);
         yield {
           type: 'message:error',
           turnId,
           msgId,
           agentId,
-          code: 'UNKNOWN',
-          message: m,
-          retriable: false,
+          code: normalized.code,
+          message: normalized.message,
+          retriable: normalized.retriable,
         };
         return;
       }
@@ -442,7 +448,10 @@ export class ChatOrchestrator {
       const followUpToolMsgs: ChatMessage[] = [];
 
       for (const tc of roundToolCalls) {
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          this.store.markAborted(msgId);
+          return;
+        }
         const serverId = serverByName.get(tc.name) ?? '';
         yield {
           type: 'tool_call:start',

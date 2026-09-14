@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../stores/project-store';
 import type { MountRole } from '@main/store/types';
@@ -25,6 +25,15 @@ export function ProjectWizard({ onClose, onCreated }: Props) {
   const [pickerRole, setPickerRole] = useState<MountRole>('inputs');
   const [busy, setBusy] = useState(false);
 
+  // Escape closes the dialog (unless a submit is in flight).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [busy, onClose]);
+
   const pickAndAdd = async () => {
     if (!window.cockpit) return;
     const path = await window.cockpit.pickFolder();
@@ -50,17 +59,24 @@ export function ProjectWizard({ onClose, onCreated }: Props) {
   return (
     <div
       role="dialog"
+      aria-modal="true"
       aria-label="project-wizard"
+      onClick={() => {
+        if (!busy) onClose();
+      }}
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
     >
-      <div className="bg-surface border border-border rounded-lg p-6 w-[480px] space-y-4">
+      <div
+        className="bg-surface border border-rule rounded-[10px] p-6 w-[480px] space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-lg font-semibold">{t('projects.newProject')}</h2>
         <input
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t('projects.namePlaceholder')}
-          className="w-full border border-border rounded-md px-3 py-2 text-[13px]"
+          className="w-full border border-rule rounded-[8px] px-3 py-2 text-[13px]"
         />
         <div className="space-y-2">
           {pending.map((m, i) => (
@@ -68,10 +84,10 @@ export function ProjectWizard({ onClose, onCreated }: Props) {
               <span className="px-2 py-0.5 rounded bg-surface-2">
                 {t(`projects.roles.${m.role}`)}
               </span>
-              <span className="text-ink-2 truncate flex-1">{m.path}</span>
+              <span className="text-ink-muted truncate flex-1">{m.path}</span>
               <button
                 onClick={() => setPending(pending.filter((_, j) => j !== i))}
-                className="text-ink-3 hover:text-danger"
+                className="text-ink-faint hover:text-danger"
                 aria-label={`remove-pending-${i}`}
               >
                 ×
@@ -83,7 +99,7 @@ export function ProjectWizard({ onClose, onCreated }: Props) {
           <select
             value={pickerRole}
             onChange={(e) => setPickerRole(e.target.value as MountRole)}
-            className="border border-border rounded px-2 py-1 text-[13px]"
+            className="border border-rule rounded-[6px] px-2 py-1 text-[13px]"
             aria-label={t('projects.rolePicker')}
           >
             {ROLES.map((r) => (
@@ -94,7 +110,7 @@ export function ProjectWizard({ onClose, onCreated }: Props) {
           </select>
           <button
             onClick={pickAndAdd}
-            className="px-3 py-1 border border-border rounded text-[13px]"
+            className="px-3 py-1 border border-rule rounded-[6px] text-[13px]"
           >
             {t('projects.pickFolder')}
           </button>
@@ -102,7 +118,7 @@ export function ProjectWizard({ onClose, onCreated }: Props) {
         <div className="flex justify-end gap-2 pt-2">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 border border-border rounded text-[13px]"
+            className="px-3 py-1.5 border border-rule rounded-[6px] text-[13px]"
           >
             {t('projects.cancel')}
           </button>

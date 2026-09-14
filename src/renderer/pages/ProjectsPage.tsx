@@ -21,7 +21,7 @@ export function ProjectsPage() {
 
   return (
     <div className="flex h-full">
-      <aside className="w-64 border-r border-border bg-surface-2 p-3 overflow-y-auto">
+      <aside className="w-64 border-r border-rule bg-surface-2 p-3 overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[13px] font-medium">{t('projects.title')}</h2>
           <button
@@ -32,7 +32,7 @@ export function ProjectsPage() {
           </button>
         </div>
         {projects.length === 0 ? (
-          <p className="text-[12px] text-ink-3">{t('projects.empty')}</p>
+          <p className="text-[12px] text-ink-faint">{t('projects.emptyHint')}</p>
         ) : (
           <ul className="space-y-1">
             {projects.map((p) => (
@@ -41,7 +41,7 @@ export function ProjectsPage() {
                   onClick={() => void selectProject(p.id)}
                   className={`w-full text-left px-2 py-1 rounded text-[13px] ${
                     p.id === activeProjectId
-                      ? 'bg-accent-soft text-accent'
+                      ? 'bg-accent-muted text-accent'
                       : 'hover:bg-surface'
                   }`}
                 >
@@ -61,7 +61,7 @@ export function ProjectsPage() {
                 onClick={() => {
                   if (confirm(t('projects.confirmDelete'))) void deleteProject(active.id);
                 }}
-                className="text-[12px] text-ink-2 hover:text-danger"
+                className="text-[12px] text-ink-muted hover:text-danger"
               >
                 {t('projects.delete')}
               </button>
@@ -72,7 +72,19 @@ export function ProjectsPage() {
             </section>
           </div>
         ) : (
-          <p className="text-ink-3 text-[13px]">{t('projects.empty')}</p>
+          <div className="h-full flex flex-col items-center justify-center text-center gap-3 max-w-sm mx-auto">
+            <div className="w-14 h-14 rounded-[14px] bg-accent-muted flex items-center justify-center text-2xl">
+              🗂️
+            </div>
+            <h2 className="text-[15px] font-semibold text-ink">{t('projects.emptyTitle')}</h2>
+            <p className="text-[13px] leading-[1.6] text-ink-muted">{t('projects.emptyBody')}</p>
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="mt-1 h-8 px-4 text-[13px] font-medium text-white bg-accent hover:bg-accent-hover rounded-[8px] transition-colors"
+            >
+              {t('projects.emptyCta')}
+            </button>
+          </div>
         )}
       </main>
       {wizardOpen && (

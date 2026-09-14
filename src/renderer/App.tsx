@@ -12,7 +12,7 @@ type Page = 'chat' | 'settings' | 'onboarding' | 'projects';
 
 export function App() {
   const { t, i18n } = useTranslation();
-  const { theme, setTheme, providers, loaded, init } = useSettingsStore();
+  const { theme, setTheme, providers, configuredTotal, loaded, init } = useSettingsStore();
   const [page, setPage] = useState<Page>('chat');
   const [transitioned, setTransitioned] = useState(false);
 
@@ -37,6 +37,9 @@ export function App() {
   const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
 
   const handleOnboardingDone = () => setPage('chat');
+
+  // Configured rows that failed to load into the registry (e.g. missing API key).
+  const unloadedVoices = Math.max(0, configuredTotal - providers.length);
 
   return (
     <div className="h-screen flex flex-col bg-paper text-ink">
@@ -101,7 +104,14 @@ export function App() {
 
       {/* Content */}
       <main className="flex-1 overflow-hidden">
-        {page === 'onboarding' && <OnboardingPage onDone={handleOnboardingDone} onSkip={() => setPage('settings')} />}
+        {page === 'onboarding' && (
+          <OnboardingPage
+            onDone={handleOnboardingDone}
+            onSkip={() => setPage('settings')}
+            unloadedVoices={unloadedVoices}
+            onOpenSettings={() => setPage('settings')}
+          />
+        )}
         {page === 'chat' && <ChatPage />}
         {page === 'projects' && <ProjectsPage />}
         {page === 'settings' && <SettingsPage />}

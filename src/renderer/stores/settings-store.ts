@@ -23,6 +23,8 @@ function saveTheme(theme: Theme) {
 interface SettingsState {
   theme: Theme;
   providers: Array<{ id: string; configId: string; iconKind: 'emoji' | 'image' | null; iconValue: string | null }>;
+  /** Total rows in provider_configs (DB truth), incl. ones the registry skipped. */
+  configuredTotal: number;
   loaded: boolean;
 
   init: () => Promise<void>;
@@ -37,6 +39,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   theme: loadTheme(),
   providers: [],
+  configuredTotal: 0,
   loaded: false,
 
   init: async () => {
@@ -77,6 +80,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set({ providers });
     } catch {
       set({ providers: [] });
+    }
+    // DB truth: count all configured rows, even those the registry skipped
+    // (e.g. API key missing/unreadable). Best-effort only.
+    try {
+      const configured = await trpc.provider.listConfigured.query();
+      set({ configuredTotal: configured.length });
+    } catch {
+      // Query failed — keep the previous count rather than hiding the notice.
     }
   },
 

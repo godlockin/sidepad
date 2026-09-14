@@ -17,6 +17,9 @@ describe('truncate', () => {
     ];
     const result = truncateContext(messages, 20, 100);
     expect(result.messages.length).toBeLessThanOrEqual(messages.length);
+    // no duplication: each original content appears at most once
+    const contents = result.messages.map((m) => m.content);
+    expect(new Set(contents).size).toBe(contents.length);
   });
   it('retains system + current turn', () => {
     const messages = [
@@ -26,5 +29,24 @@ describe('truncate', () => {
     const result = truncateContext(messages, 1, 100);
     expect(result.messages.some(m => m.role === 'system')).toBe(true);
     expect(result.messages.some(m => m.content === 'current turn')).toBe(true);
+  });
+  it('never duplicates the pinned last user turns when over budget', () => {
+    const big = 'x'.repeat(400); // ~100 tokens each
+    const messages = [
+      { role: 'system' as const, content: 'sys' },
+      { role: 'user' as const, content: `u1 ${big}` },
+      { role: 'assistant' as const, content: `a1 ${big}` },
+      { role: 'user' as const, content: `u2 ${big}` },
+      { role: 'assistant' as const, content: `a2 ${big}` },
+      { role: 'user' as const, content: 'current question' },
+    ];
+    const result = truncateContext(messages, 120, 200);
+    const contents = result.messages.map((m) => m.content);
+    expect(new Set(contents).size).toBe(contents.length);
+    // the current question survives
+    expect(contents).toContain('current question');
+    // chronological order preserved
+    const order = contents.map((c) => messages.findIndex((m) => m.content === c));
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 });

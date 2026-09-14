@@ -9,6 +9,10 @@ import { Button, Heading } from '../components/ui';
 interface OnboardingPageProps {
   onDone: () => void;
   onSkip: () => void;
+  /** Configured providers that failed to load into the registry (e.g. missing API key). */
+  unloadedVoices?: number;
+  /** Jump to the settings page, where the affected voices can be fixed. */
+  onOpenSettings?: () => void;
 }
 
 interface DetectedOllama {
@@ -20,13 +24,31 @@ interface DetectedOllama {
  * First-launch wizard. Shown when no providers are configured.
  * Step 1: Welcome → Get started
  * Step 2: Add first voice via ProviderForm → land in chat
+ *
+ * If previously configured voices exist but failed to load (registry empty,
+ * e.g. API key missing/unreadable after a restart), a warning notice is shown
+ * at the top of the wizard with a shortcut to the voice settings.
  */
-export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
+export function OnboardingPage({ onDone, onSkip, unloadedVoices = 0, onOpenSettings }: OnboardingPageProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
   const [detected, setDetected] = useState<DetectedOllama | null>(null);
   const addProvider = useSettingsStore((s) => s.addProvider);
   const createSession = useSessionStore((s) => s.createSession);
+
+  const showUnloadedNotice = unloadedVoices > 0;
+  const unloadedNotice = showUnloadedNotice ? (
+    <div className="border border-danger/30 bg-danger/5 rounded-[8px] p-3 text-[13px] text-ink">
+      <p className="leading-[1.5]">{t('onboarding.configuredVoices', { count: unloadedVoices })}</p>
+      {onOpenSettings && (
+        <div className="mt-2">
+          <Button variant="ghost" onClick={onOpenSettings}>
+            {t('onboarding.openVoiceSettings')}
+          </Button>
+        </div>
+      )}
+    </div>
+  ) : null;
 
   useEffect(() => {
     if (step !== 2) return;
@@ -87,6 +109,7 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
             <Heading level={1} className="mb-3">
               {t('onboarding.welcomeTitle')}
             </Heading>
+            {showUnloadedNotice && <div className="mb-4 text-left">{unloadedNotice}</div>}
             <p className="text-[15px] text-ink-muted leading-[1.55] max-w-[420px] mx-auto mb-8">
               {t('onboarding.welcomeBody')}
             </p>
@@ -109,6 +132,7 @@ export function OnboardingPage({ onDone, onSkip }: OnboardingPageProps) {
             <p className="text-[13px] text-ink-muted mb-2">
               {t('onboarding.addFirstVoiceBody')}
             </p>
+            {showUnloadedNotice && <div className="mb-3">{unloadedNotice}</div>}
             <div className="border border-rule rounded-[10px] bg-surface p-5">
               {detected && (
                 <div className="mb-3 px-3 py-2 rounded-[6px] bg-accent-muted text-[12px] text-accent border border-rule">

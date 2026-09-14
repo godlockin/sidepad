@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { GroupMode } from '../../shared/types';
+import type { GroupMode, Message } from '../../shared/types';
 import { GROUP_MODES as GROUP_MODE_OPTIONS } from '../../shared/types';
 import { AUTO_AGENT_ID } from '../../main/orchestrator/effort-planner';
 import { useSessionStore } from '../stores/session-store';
@@ -21,6 +21,7 @@ import { Avatar } from '../components/Avatar';
 import { IconEditor } from '../components/IconEditor';
 import { trpc } from '../lib/trpc-client';
 import { splitAgentId } from '../lib/agent-id';
+import { extractMentions } from '../lib/mentions';
 
 export function ChatPage() {
   const { t } = useTranslation();
@@ -131,6 +132,33 @@ export function ChatPage() {
       return;
     }
     await sendMessage(activeSessionId, text, mentions, attachmentIds);
+  };
+
+  /**
+   * Re-run a failed assistant message: locate its prompt (the user message of
+   * the same turn, else the nearest earlier user message) and resend it.
+   * No-op while a stream is already in flight.
+   */
+  const handleRetry = async (message: Message) => {
+    if (streaming || !activeSessionId) return;
+    const idx = messages.findIndex((m) => m.id === message.id);
+    if (idx < 0) return;
+    let userMsg: Message | undefined;
+    if (message.turnId) {
+      userMsg = messages.find(
+        (m, i) => i < idx && m.role === 'user' && m.turnId === message.turnId,
+      );
+    }
+    if (!userMsg) {
+      for (let i = idx - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') {
+          userMsg = messages[i];
+          break;
+        }
+      }
+    }
+    if (!userMsg) return;
+    await handleSend(userMsg.content, extractMentions(userMsg.content), []);
   };
 
   const handleVisibilityChange = async (mode: 'independent' | 'full') => {
@@ -516,6 +544,7 @@ export function ChatPage() {
                 index={i}
                 onEditInPlace={handleEditInPlace}
                 onFork={handleFork}
+                onRetry={handleRetry}
               />
             ))}
           </div>

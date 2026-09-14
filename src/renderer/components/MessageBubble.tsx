@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Message } from '../../shared/types';
 import { EditForkModal } from './EditForkModal';
 import { PersonaPicker } from './PersonaPicker';
+import { Button } from './ui';
 import { useSessionStore } from '../stores/session-store';
 import { usePersonaStore, DEFAULT_PERSONA_ID } from '../stores/persona-store';
 import { useChatStore, type ToolCallView } from '../stores/chat-store';
@@ -16,9 +17,11 @@ interface MessageBubbleProps {
   index?: number;
   onEditInPlace?: (msgId: string, newContent: string) => void;
   onFork?: (msgId: string, content: string, title?: string) => void;
+  /** Invoked when the user asks to retry a failed assistant message. */
+  onRetry?: (message: Message) => void;
 }
 
-export function MessageBubble({ message, index = 0, onEditInPlace, onFork }: MessageBubbleProps) {
+export function MessageBubble({ message, index = 0, onEditInPlace, onFork, onRetry }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -52,6 +55,7 @@ export function MessageBubble({ message, index = 0, onEditInPlace, onFork }: Mes
             copied={copied}
             onCopy={handleCopy}
             onEditFork={() => setShowModal(true)}
+            onRetry={onRetry}
           />
         )}
       </motion.article>
@@ -92,6 +96,7 @@ function AgentEntry({
   copied,
   onCopy,
   onEditFork,
+  onRetry,
 }: {
   message: Message;
   meta: { agentId?: string };
@@ -100,6 +105,7 @@ function AgentEntry({
   copied: boolean;
   onCopy: () => void;
   onEditFork: () => void;
+  onRetry?: (message: Message) => void;
 }) {
   const { t } = useTranslation();
   const toolCalls = useChatStore((s) => s.toolCalls.get(message.id) ?? []);
@@ -157,9 +163,7 @@ function AgentEntry({
 
       {/* Error detail */}
       {isError && message.error && (
-        <p className="mt-2 font-mono text-[11px] text-danger/80 bg-danger/5 border-l-2 border-danger/40 pl-3 py-1 rounded-r">
-          {message.error}
-        </p>
+        <ErrorPanel message={message} onRetry={onRetry} />
       )}
 
       {/* Actions */}
@@ -198,6 +202,46 @@ function AgentEntry({
             </button>
           )}
         </footer>
+      )}
+    </div>
+  );
+}
+
+/** Stored errors mentioning any of these are surfaced as network problems. */
+const NETWORK_ERROR_HINTS = ['NETWORK_ERROR', 'fetch failed', 'ECONNREFUSED', 'ENOTFOUND'];
+
+function looksLikeNetworkError(storedError: string): boolean {
+  const lower = storedError.toLowerCase();
+  return NETWORK_ERROR_HINTS.some((hint) => lower.includes(hint.toLowerCase()));
+}
+
+/**
+ * Friendly error presentation for failed assistant messages: a translated
+ * headline, the raw stored error ("${code}: ${message}") behind a collapsible
+ * disclosure, and an optional retry action.
+ */
+function ErrorPanel({ message, onRetry }: { message: Message; onRetry?: (message: Message) => void }) {
+  const { t } = useTranslation();
+  const network = looksLikeNetworkError(message.error ?? '');
+  return (
+    <div className="mt-2 bg-danger/5 border-l-2 border-danger/40 pl-3 py-2 rounded-r">
+      <p className="text-[13px] font-medium text-danger">
+        {network ? t('chat.errorNetwork') : t('chat.errorGeneric')}
+      </p>
+      <details className="mt-1">
+        <summary className="text-[11px] text-danger/70 cursor-pointer select-none">
+          {t('chat.errorDetails')}
+        </summary>
+        <p className="mt-1 font-mono text-[11px] text-danger/80 whitespace-pre-wrap break-all">
+          {message.error}
+        </p>
+      </details>
+      {onRetry && (
+        <div className="mt-2">
+          <Button variant="danger" size="sm" onClick={() => onRetry(message)}>
+            {t('chat.retry')}
+          </Button>
+        </div>
       )}
     </div>
   );

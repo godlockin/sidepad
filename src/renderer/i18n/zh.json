@@ -36,7 +36,11 @@
       "workspace": "工作区",
       "outputs": "输出",
       "scratch": "草稿"
-    }
+    },
+    "emptyHint": "尚无项目",
+    "emptyTitle": "把工作组织成项目",
+    "emptyBody": "项目将文件夹（参考资料、输入、工作区、产出）组织在一起，供 AI 任务读写。",
+    "emptyCta": "新建项目"
   },
   "onboarding": {
     "welcomeTitle": "欢迎使用 sidepad",
@@ -45,7 +49,9 @@
     "skip": "暂时跳过",
     "addFirstVoiceTitle": "添加第一个声音",
     "addFirstVoiceBody": "连接一个 Provider，让 sidepad 有可以对话的对象。之后还可以在「设置」中继续添加。",
-    "ollamaDetected": "检测到本机 Ollama，已自动填入。"
+    "ollamaDetected": "检测到本机 Ollama，已自动填入。",
+    "configuredVoices": "检测到 {{count}} 个已配置的声音未能加载 —— API Key 缺失或不可读。",
+    "openVoiceSettings": "打开声音设置"
   },
   "chat": {
     "newConversation": "新对话",
@@ -91,7 +97,7 @@
       }
     },
     "groupMode": "协作方式",
-    "groupModeHint": "被@的声音如何协作：自动（跟随@与触发词）、串行接力、并行、圆桌讨论、领导小组",
+    "groupModeHint": "被@的声音如何协作：自动 = 由 @ 提及和「主导」「圆桌」等说法决定方式；其余选项固定协作方式。",
     "group": {
       "auto": "自动（跟随@）",
       "relay": "串行接力",
@@ -100,8 +106,12 @@
       "lead-and-comment": "领导小组"
     },
     "defaultVoice": "默认声音",
-    "defaultVoiceHint": "无@提及时的应答者：自动 = 框架按任务复杂度动态路由模型",
-    "autoVoice": "自动（智能路由）"
+    "defaultVoiceHint": "没有 @ 提及时由谁回答。自动 = 框架按任务复杂度选择声音和思考投入。",
+    "autoVoice": "自动（智能路由）",
+    "retry": "重试",
+    "errorNetwork": "无法连接模型服务，请检查网络或声音设置。",
+    "errorGeneric": "模型调用失败。",
+    "errorDetails": "详情"
   },
   "sidebar": {
     "sessions": "会话列表",
@@ -120,7 +130,7 @@
     "addressedTo": "发送给",
     "placeholder": "发送消息…  用 @ 指定声音",
     "noProvider": "请先在设置中添加一个声音",
-    "noAgent": "请在顶栏选择一个智能体后开始对话",
+    "noAgent": "请在顶栏选择一个声音后开始对话",
     "send": "发送",
     "stop": "停止",
     "composing": "正在生成回复…",
@@ -138,12 +148,12 @@
     "editLibrary": "管理人格库…"
   },
   "messageBubble": {
-    "writing": "写作中…",
+    "writing": "正在回复…",
     "error": "错误",
     "copied": "✓ 已复制",
     "copy": "复制",
     "editFork": "编辑 / 分支",
-    "agent": "智能体",
+    "agent": "声音",
     "thinking": "查看思考过程"
   },
   "editFork": {
@@ -180,7 +190,7 @@
     "modelProbing": "探测中…",
     "modelProbeFailed": "无法获取模型列表，请手动输入",
     "modelPick": "选择模型",
-    "save": "save voice",
+    "save": "保存声音",
     "cancel": "取消",
     "types": {
       "openai": "OpenAI",
@@ -219,15 +229,15 @@
     "promptHint": "决定该人格的语气、风格与约束。",
     "promptPlaceholder": "你是一名资深产品经理。请始终回答…",
     "saving": "保存中…",
-    "saveChanges": "save persona",
-    "savePersona": "save persona",
+    "saveChanges": "保存修改",
+    "savePersona": "保存人格",
     "cancel": "取消"
   },
   "personasTab": {
     "title": "人格",
     "body": "人格即一段系统 Prompt——一种立场、一种性格。为对话中的某个声音附加人格，可以改变它的回复风格；同一个模型可以扮演多种角色。",
     "library": "人格库",
-    "newPersona": "+ new persona",
+    "newPersona": "+ 新建人格",
     "empty": "暂无人格。",
     "confirmDelete": "确认删除人格 \"{{name}}\"？",
     "default": "默认",
@@ -304,7 +314,7 @@
   },
   "settings": {
     "tabs": {
-      "voices": "Voices",
+      "voices": "声音",
       "personas": "人格",
       "mcp": "MCP",
       "skills": "技能",
@@ -388,7 +398,7 @@
       "title": "关于",
       "name": "sidepad",
       "tagline": "—— 一个并排与多个 LLM 对话的桌面工作台。版本",
-      "subtitle": "本地存储 · 零遥测 · 开源。"
+      "subtitle": "本地存储 · 零遥测。对话只留在这台机器上 —— 无账号、无云同步。"
     },
     "tools": {
       "title": "工具",

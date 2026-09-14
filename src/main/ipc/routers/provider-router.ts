@@ -28,6 +28,25 @@ export const providerRouter = t.router({
     }));
   }),
 
+  // DB truth: all configured providers, including rows the in-memory registry
+  // skipped (e.g. missing/unreadable API key). Lets the renderer explain why
+  // configured voices vanished after a restart.
+  listConfigured: t.procedure.query(() => {
+    const db = (globalThis as any).sidepad?.db;
+    if (!db) return [] as Array<{ id: string; name: string; enabled: number }>;
+    try {
+      return db
+        .prepare('SELECT id, name, enabled FROM provider_configs ORDER BY created_at')
+        .all() as Array<{ id: string; name: string; enabled: number }>;
+    } catch {
+      // provider_configs has no created_at column in the current schema;
+      // rowid reflects insertion (creation) order.
+      return db
+        .prepare('SELECT id, name, enabled FROM provider_configs ORDER BY rowid')
+        .all() as Array<{ id: string; name: string; enabled: number }>;
+    }
+  }),
+
   setIcon: t.procedure
     .input(
       z.object({

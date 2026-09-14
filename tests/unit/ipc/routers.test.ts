@@ -155,7 +155,7 @@ describe('providerRouter', () => {
   it('has expected procedures', () => {
     const procs = Object.keys((providerRouter as any)._def.procedures);
     expect(procs.sort()).toEqual([
-      'configure', 'getConfig', 'health', 'list', 'listModels', 'remove', 'setIcon', 'testModel',
+      'configure', 'getConfig', 'health', 'list', 'listConfigured', 'listModels', 'remove', 'setIcon', 'testModel',
     ]);
   });
 
