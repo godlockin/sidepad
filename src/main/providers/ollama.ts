@@ -10,16 +10,19 @@ import type {
 } from './types';
 import { normalizeError } from './errors';
 import { inferCaps } from './caps-heuristics';
+import { mergeOverrides, type ProviderParams } from './overrides';
 
 export class OllamaProvider implements LLMProvider {
   public readonly id: string;
   public readonly configId: string;
   private readonly client: Ollama;
+  private readonly parsedParams: ProviderParams;
 
-  constructor(id: string, configId: string, baseURL?: string) {
+  constructor(id: string, configId: string, baseURL?: string, parsedParams: ProviderParams = {}) {
     this.id = id;
     this.configId = configId;
     this.client = baseURL ? new Ollama({ host: baseURL }) : (ollamaDefault as unknown as Ollama);
+    this.parsedParams = parsedParams;
   }
 
   async listModels(): Promise<Model[]> {
@@ -37,6 +40,7 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async *chat(req: ChatRequest, signal: AbortSignal): AsyncIterable<ChatChunk> {
+    const { body: bodyOverrides } = mergeOverrides(req, this.parsedParams);
     const messages = (req.messages as ChatMessage[]).map((m) => {
       if (m.role === 'tool') {
         // Ollama expects tool replies as role:'tool' with content (no id concept).
@@ -81,6 +85,7 @@ export class OllamaProvider implements LLMProvider {
       messages,
       stream: true,
       options: { temperature: req.temperature, num_predict: req.maxTokens },
+      ...bodyOverrides,
     };
     // 'minimal' effort skips the thinking phase on thinking-capable models
     // (qwen3, deepseek-r1, qwq…). Non-thinking models reject the `think`
