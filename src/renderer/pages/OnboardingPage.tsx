@@ -79,6 +79,9 @@ export function OnboardingPage({ onDone, onSkip, unloadedVoices = 0, onOpenSetti
     apiKey: string;
     baseURL?: string;
     defaultModel?: string;
+    extraHeaders?: Record<string, string>;
+    extraBody?: Record<string, unknown>;
+    modelOverrides?: Record<string, Record<string, unknown>>;
   }) => {
     await addProvider(config as any);
     await createSession();

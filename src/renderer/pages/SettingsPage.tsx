@@ -67,6 +67,9 @@ export function SettingsPage() {
     apiKey: string;
     baseURL?: string;
     defaultModel?: string;
+    extraHeaders?: Record<string, string>;
+    extraBody?: Record<string, unknown>;
+    modelOverrides?: Record<string, Record<string, unknown>>;
   }) => {
     await addProvider(config as any);
     setShowForm(false);

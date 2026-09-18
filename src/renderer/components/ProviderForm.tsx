@@ -25,6 +25,7 @@ interface ProviderFormProps {
     defaultModel?: string;
     extraHeaders?: Record<string, string>;
     extraBody?: Record<string, unknown>;
+    modelOverrides?: Record<string, Record<string, unknown>>;
   }) => void;
   onCancel: () => void;
   initialType?: ProviderType;
