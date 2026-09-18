@@ -49,7 +49,7 @@ export function mergeOverrides(
   };
   // Pull per-model extraBody out so it flattens into body at the right
   // precedence level (not as a nested key inside body.extraBody).
-  const { extraBody: moExtraBody, extraHeaders: _moExtraHeaders, ...moRest } = mo;
+  const { extraBody: moExtraBody, ...moRest } = mo;
   const body: Record<string, unknown> = {
     ...(params.extraBody ?? {}),
     ...(moExtraBody ?? {}),
