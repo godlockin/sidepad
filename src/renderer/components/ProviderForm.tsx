@@ -38,7 +38,7 @@ interface ProviderFormProps {
 }
 
 function needsBaseURL(type: ProviderType): boolean {
-  return type === 'openai-compat' || type === 'ollama' || type === 'anthropic-messages';
+  return type === 'openai-compat' || type === 'ollama' || type === 'anthropic-messages' || type === 'gemini';
 }
 function needsAPIKey(type: ProviderType): boolean {
   return type !== 'ollama' && type !== 'anthropic-messages';
@@ -587,6 +587,8 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
                   ? t('providerForm.baseURLPlaceholderOllama')
                   : type === 'anthropic-messages'
                   ? 'https://api.example.com'
+                  : type === 'gemini'
+                  ? 'https://us-central1-aiplatform.googleapis.com'
                   : t('providerForm.baseURLPlaceholder')
               }
               spellCheck={false}
@@ -595,6 +597,11 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
               <p className="text-[12px] text-ink-muted mt-1">
                 Any Anthropic Messages compatible endpoint (Minimax, self-hosted proxies).
                 Vendors needing custom auth (AWS SigV4, GCP) require a custom subclass.
+              </p>
+            )}
+            {type === 'gemini' && (
+              <p className="text-[12px] text-ink-muted mt-1">
+                Google AI Studio by default. Set baseURL for Vertex AI endpoints.
               </p>
             )}
           </Field>
