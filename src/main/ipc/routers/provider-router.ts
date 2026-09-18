@@ -7,6 +7,7 @@ import { AnthropicProvider } from '../../providers/anthropic.js';
 import { OllamaProvider } from '../../providers/ollama.js';
 import { OpenAICompatProvider } from '../../providers/openai-compat.js';
 import { AnthropicMessagesProvider } from '../../providers/anthropic-messages.js';
+import { GeminiProvider } from '../../providers/gemini.js';
 import type { LLMProvider } from '../../providers/types.js';
 
 const t = initTRPC.create({ isServer: true });
@@ -68,7 +69,7 @@ export const providerRouter = t.router({
   listModels: t.procedure
     .input(
       z.object({
-        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages']),
+        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages', 'gemini']),
         baseURL: z.string().optional(),
         apiKey: z.string().optional(),
       }),
@@ -113,6 +114,9 @@ export const providerRouter = t.router({
               input.baseURL,
             );
             break;
+          case 'gemini':
+            provider = new GeminiProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL || undefined);
+            break;
         }
         const models = await provider!.listModels();
         return {
@@ -130,7 +134,7 @@ export const providerRouter = t.router({
   testModel: t.procedure
     .input(
       z.object({
-        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages']),
+        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages', 'gemini']),
         baseURL: z.string().optional(),
         apiKey: z.string().optional(),
         model: z.string(),
@@ -156,6 +160,9 @@ export const providerRouter = t.router({
           case 'anthropic-messages':
             if (!input.baseURL) return { ok: false as const, error: 'baseURL required for anthropic-messages' };
             provider = new AnthropicMessagesProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL);
+            break;
+          case 'gemini':
+            provider = new GeminiProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL || undefined);
             break;
         }
         const ctrl = new AbortController();
@@ -199,7 +206,7 @@ export const providerRouter = t.router({
       const params = row.params_json ? (JSON.parse(row.params_json) as { defaultModel?: string }) : {};
       return {
         id: row.id,
-        type: row.type as 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages',
+        type: row.type as 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages' | 'gemini',
         baseURL: row.base_url ?? undefined,
         defaultModel: params.defaultModel,
       };
@@ -221,7 +228,7 @@ export const providerRouter = t.router({
     .input(
       z.object({
         id: z.string(),
-        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages']),
+        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages', 'gemini']),
         apiKey: z.string().optional(),
         baseURL: z.string().optional(),
         defaultModel: z.string().optional(),

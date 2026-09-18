@@ -4,7 +4,7 @@ import { Field, Input, Select, Button } from './ui';
 import { trpc } from '../lib/trpc-client';
 import { PROVIDER_PRESETS } from '../lib/provider-presets';
 
-type ProviderType = 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages';
+type ProviderType = 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages' | 'gemini';
 
 interface ModelCaps {
   free?: boolean;
@@ -541,6 +541,7 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
             <option value="ollama">{t('providerForm.types.ollama')}</option>
             <option value="openai-compat">{t('providerForm.types.openaiCompat')}</option>
             <option value="anthropic-messages">Anthropic Messages (custom URL)</option>
+            <option value="gemini">Google Gemini</option>
           </Select>
         </Field>
 
