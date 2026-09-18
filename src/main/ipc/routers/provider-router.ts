@@ -209,6 +209,9 @@ export const providerRouter = t.router({
         apiKey: z.string().optional(),
         baseURL: z.string().optional(),
         defaultModel: z.string().optional(),
+        extraHeaders: z.record(z.string(), z.string()).optional(),
+        extraBody: z.record(z.string(), z.unknown()).optional(),
+        modelOverrides: z.record(z.string(), z.record(z.unknown())).optional(),
       }),
     )
     .mutation(({ input }) => {
@@ -216,9 +219,12 @@ export const providerRouter = t.router({
       const secrets = (globalThis as any).sidepad?.secrets;
       if (!db) throw new Error('Database not available');
 
-      const paramsJson = input.defaultModel
-        ? JSON.stringify({ defaultModel: input.defaultModel })
-        : null;
+      const paramsObj: Record<string, unknown> = {};
+      if (input.defaultModel !== undefined) paramsObj.defaultModel = input.defaultModel;
+      if (input.extraHeaders !== undefined) paramsObj.extraHeaders = input.extraHeaders;
+      if (input.extraBody !== undefined) paramsObj.extraBody = input.extraBody;
+      if (input.modelOverrides !== undefined) paramsObj.modelOverrides = input.modelOverrides;
+      const paramsJson = Object.keys(paramsObj).length > 0 ? JSON.stringify(paramsObj) : null;
 
       // Upsert into provider_configs
       db.prepare(
