@@ -49,10 +49,10 @@ export abstract class AnthropicBaseProvider implements LLMProvider {
           messages: messages as any,
           system: req.systemPrompt,
           ...(thinking ? {} : { temperature: req.temperature }),
+          ...bodyOverrides,
           max_tokens: maxTokens,
           ...(tools ? { tools } : {}),
           ...(thinking ? { thinking } : {}),
-          ...bodyOverrides,
         } as any,
         { signal, defaultHeaders: headers } as any,
       );
