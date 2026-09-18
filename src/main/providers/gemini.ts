@@ -88,6 +88,7 @@ export class GeminiProvider implements LLMProvider {
           ...(req.systemPrompt ? { systemInstruction: req.systemPrompt } : {}),
           ...generationConfig,
           ...(req.tools?.length ? { tools: toGeminiTools(req.tools) as ToolListUnion } : {}),
+          ...(headers ? { httpOptions: { headers } } : {}),
         },
       });
 
@@ -97,6 +98,7 @@ export class GeminiProvider implements LLMProvider {
       const parts = toGeminiParts(lastUserMsg);
       const stream = await chat.sendMessageStream({
         message: parts,
+        config: { abortSignal: signal },
       });
 
       let finishReason: ChatChunk['finishReason'] | undefined;

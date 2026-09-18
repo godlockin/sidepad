@@ -1,4 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+interface CapturedChat {
+  config?: Record<string, unknown>;
+}
+interface CapturedSend {
+  message?: unknown;
+  config?: Record<string, unknown>;
+}
+
+let capturedChat: CapturedChat | null = null;
+let capturedSend: CapturedSend | null = null;
 
 vi.mock('@google/genai', () => {
   const MockGoogleGenAI = function (this: { models: unknown; chats: unknown }, opts: unknown) {
@@ -12,17 +23,28 @@ vi.mock('@google/genai', () => {
       }),
     };
     this.chats = {
-      create: () => ({
-        sendMessageStream: async () => ({
-          async *[Symbol.asyncIterator]() {
-            yield { candidates: [{ content: { parts: [{ text: 'hi' }] } }] };
-            yield { candidates: [{ finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 2 } };
+      create: (params: CapturedChat) => {
+        capturedChat = params;
+        return {
+          sendMessageStream: async (sendParams: CapturedSend) => {
+            capturedSend = sendParams;
+            return {
+              async *[Symbol.asyncIterator]() {
+                yield { candidates: [{ content: { parts: [{ text: 'hi' }] } }] };
+                yield { candidates: [{ finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 2 } };
+              },
+            };
           },
-        }),
-      }),
+        };
+      },
     };
   };
   return { GoogleGenAI: MockGoogleGenAI };
+});
+
+beforeEach(() => {
+  capturedChat = null;
+  capturedSend = null;
 });
 
 import { GeminiProvider } from '../../../src/main/providers/gemini';
@@ -83,5 +105,32 @@ describe('GeminiProvider', () => {
     const p = new GeminiProvider('id', 'cfg', 'key', undefined, {});
     const caps = p.capabilities('gemini-2.0-flash');
     expect(caps.reasoning).toBe(false);
+  });
+
+  it('chat forwards extraHeaders via httpOptions to chats.create config', async () => {
+    const p = new GeminiProvider('id', 'cfg', 'key', undefined, {
+      extraHeaders: { 'X-Custom-Header': 'custom-value' },
+    });
+    const req: ChatRequest = {
+      model: 'gemini-2.5-flash',
+      messages: [{ role: 'user', content: 'hi' }],
+    };
+    for await (const _ of p.chat(req, new AbortController().signal)) { /* consume */ }
+    expect(capturedChat).not.toBeNull();
+    const config = (capturedChat as CapturedChat).config as Record<string, unknown> | undefined;
+    expect(config?.httpOptions).toEqual({ headers: { 'X-Custom-Header': 'custom-value' } });
+  });
+
+  it('chat forwards abortSignal to sendMessageStream config', async () => {
+    const p = new GeminiProvider('id', 'cfg', 'key', undefined, {});
+    const req: ChatRequest = {
+      model: 'gemini-2.5-flash',
+      messages: [{ role: 'user', content: 'hi' }],
+    };
+    const controller = new AbortController();
+    for await (const _ of p.chat(req, controller.signal)) { /* consume */ }
+    expect(capturedSend).not.toBeNull();
+    const sendConfig = (capturedSend as CapturedSend).config as Record<string, unknown> | undefined;
+    expect(sendConfig?.abortSignal).toBe(controller.signal);
   });
 });
