@@ -119,7 +119,11 @@ export class AnthropicBedrockProvider extends AnthropicBaseProvider {
 }
 ```
 
-Then register in `factory.ts` and the `ProviderType` union in `ProviderForm.tsx`.
+Then register in three places:
+
+1. **`src/main/providers/factory.ts`** — add a `case` in the factory switch to construct the provider
+2. **`src/main/ipc/routers/provider-router.ts`** — add the type to the `z.enum(...)` in `listModels`/`testModel`/`configure`, and add a `case` in each switch
+3. **`src/renderer/components/ProviderForm.tsx`** — add the type to the `ProviderType` union and `<option>` list if exposing it in the UI dropdown
 
 ## Requirements
 
