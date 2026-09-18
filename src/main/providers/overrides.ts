@@ -35,7 +35,7 @@ export function parseProviderParams(json: string | null | undefined): ProviderPa
 /**
  * Merge precedence (low → high):
  *   extraHeaders/extraBody (provider-level)
- *   → modelOverrides[req.model]
+ *   → modelOverrides[req.model] (per-model extras flatten into body)
  *   → ChatRequest runtime fields (temperature, maxTokens)
  */
 export function mergeOverrides(
@@ -47,9 +47,13 @@ export function mergeOverrides(
     ...(params.extraHeaders ?? {}),
     ...(mo.extraHeaders ?? {}),
   };
+  // Pull per-model extraBody out so it flattens into body at the right
+  // precedence level (not as a nested key inside body.extraBody).
+  const { extraBody: moExtraBody, extraHeaders: _moExtraHeaders, ...moRest } = mo;
   const body: Record<string, unknown> = {
     ...(params.extraBody ?? {}),
-    ...stripUndefined(mo),
+    ...(moExtraBody ?? {}),
+    ...stripUndefined(moRest),
     ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
     ...(req.maxTokens !== undefined ? { max_tokens: req.maxTokens } : {}),
   };
