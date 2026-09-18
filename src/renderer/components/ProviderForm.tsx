@@ -540,6 +540,7 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
             <option value="anthropic">Anthropic</option>
             <option value="ollama">{t('providerForm.types.ollama')}</option>
             <option value="openai-compat">{t('providerForm.types.openaiCompat')}</option>
+            <option value="anthropic-messages">Anthropic Messages (custom URL)</option>
           </Select>
         </Field>
 
@@ -572,14 +573,29 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
         )}
 
         {showBaseURL && (
-          <Field label={t('providerForm.baseURL')} className="md:col-span-2">
+          <Field
+            label={`${t('providerForm.baseURL')}${type === 'openai-compat' || type === 'anthropic-messages' ? ' *' : ''}`}
+            className="md:col-span-2"
+          >
             <Input
               type="text"
               value={baseURL}
               onChange={(e) => setBaseURL(e.target.value)}
-              placeholder={type === 'ollama' ? t('providerForm.baseURLPlaceholderOllama') : t('providerForm.baseURLPlaceholder')}
+              placeholder={
+                type === 'ollama'
+                  ? t('providerForm.baseURLPlaceholderOllama')
+                  : type === 'anthropic-messages'
+                  ? 'https://api.example.com'
+                  : t('providerForm.baseURLPlaceholder')
+              }
               spellCheck={false}
             />
+            {type === 'anthropic-messages' && (
+              <p className="text-[12px] text-ink-muted mt-1">
+                Any Anthropic Messages compatible endpoint (Minimax, self-hosted proxies).
+                Vendors needing custom auth (AWS SigV4, GCP) require a custom subclass.
+              </p>
+            )}
           </Field>
         )}
 
