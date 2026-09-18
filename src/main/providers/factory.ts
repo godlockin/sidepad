@@ -7,6 +7,7 @@ import { AnthropicProvider } from './anthropic';
 import { OllamaProvider } from './ollama';
 import { OpenAICompatProvider } from './openai-compat';
 import { AnthropicMessagesProvider } from './anthropic-messages';
+import { GeminiProvider } from './gemini';
 
 export function loadProviders(
   db: Database.Database,
@@ -45,6 +46,9 @@ export function loadProviders(
       case 'anthropic-messages':
         if (!row.base_url) continue;
         provider = new AnthropicMessagesProvider(row.id, row.id, apiKey!, row.base_url, parsed);
+        break;
+      case 'gemini':
+        provider = new GeminiProvider(row.id, row.id, apiKey!, row.base_url || undefined, parsed);
         break;
     }
     if (provider) reg.register(provider);
