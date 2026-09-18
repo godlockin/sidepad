@@ -56,7 +56,7 @@ export function mergeOverrides(
   return { headers, body };
 }
 
-function stripUndefined<T extends Record<string, unknown>>(o: T): Partial<T> {
+function stripUndefined<T extends object>(o: T): Partial<T> {
   const out: Partial<T> = {};
   for (const [k, v] of Object.entries(o)) {
     if (v !== undefined) (out as unknown as Record<string, unknown>)[k] = v;

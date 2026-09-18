@@ -10,16 +10,19 @@ import type {
 } from './types';
 import { normalizeError } from './errors';
 import { inferCaps } from './caps-heuristics';
+import { mergeOverrides, type ProviderParams } from './overrides';
 
 export class OpenAIProvider implements LLMProvider {
   public readonly id: string;
   public readonly configId: string;
   protected client: OpenAI;
+  private parsedParams: ProviderParams;
 
-  constructor(id: string, configId: string, apiKey: string, baseURL?: string) {
+  constructor(id: string, configId: string, apiKey: string, baseURL?: string, parsedParams: ProviderParams = {}) {
     this.id = id;
     this.configId = configId;
     this.client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
+    this.parsedParams = parsedParams;
   }
 
   async listModels(): Promise<Model[]> {
@@ -46,18 +49,23 @@ export class OpenAIProvider implements LLMProvider {
           }))
         : undefined;
 
+    const { headers, body: bodyOverrides } = mergeOverrides(req, this.parsedParams);
+    const reasoning = openaiReasoningParams(req);
+
     try {
       const stream = await this.client.chat.completions.create(
         {
           model: req.model,
           messages: messages as any,
-          temperature: req.temperature,
-          max_tokens: req.maxTokens,
+          ...bodyOverrides,
           stream: true,
           ...(tools ? { tools } : {}),
-          ...openaiReasoningParams(req),
+          ...reasoning,
         },
-        { signal },
+        {
+          signal,
+          defaultHeaders: headers,
+        } as any,
       );
 
       // Buffer for streamed tool_call argument fragments, keyed by tool_call index
