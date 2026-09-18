@@ -3,6 +3,7 @@ import { OpenAIProvider, toOpenAIMessages } from './openai';
 import type { ChatRequest, ChatChunk, ToolCall, ProviderCapabilities } from './types';
 import { normalizeError } from './errors';
 import { inferCaps } from './caps-heuristics';
+import { mergeOverrides, type ProviderParams } from './overrides';
 
 /**
  * OpenAI-compatible provider.
@@ -17,8 +18,8 @@ import { inferCaps } from './caps-heuristics';
 export class OpenAICompatProvider extends OpenAIProvider {
   private azureClient: AzureOpenAI | null = null;
 
-  constructor(id: string, configId: string, apiKey: string, baseURL: string) {
-    super(id, configId, apiKey, baseURL);
+  constructor(id: string, configId: string, apiKey: string, baseURL: string, parsedParams: ProviderParams = {}) {
+    super(id, configId, apiKey, baseURL, parsedParams);
     if (/\.openai\.azure\.com/i.test(baseURL)) {
       // strip trailing slash and any /openai suffix
       const endpoint = baseURL.replace(/\/$/, '').replace(/\/openai$/i, '');
@@ -45,16 +46,16 @@ export class OpenAICompatProvider extends OpenAIProvider {
           }))
         : undefined;
     try {
+      const { headers, body: bodyOverrides } = mergeOverrides(req, this.parsedParams as ProviderParams);
       const stream = await this.azureClient.chat.completions.create(
         {
           model: req.model, // = deployment name on Azure
           messages: messages as any,
-          temperature: req.temperature,
-          max_tokens: req.maxTokens,
+          ...bodyOverrides,
           stream: true,
           ...(tools ? { tools } : {}),
         },
-        { signal },
+        { signal, defaultHeaders: headers } as any,
       );
       const toolBuf = new Map<number, { id: string; name: string; argText: string }>();
       for await (const chunk of stream as any) {
