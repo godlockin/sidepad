@@ -77,6 +77,50 @@ Three layers make this real:
   no accounts, no cloud sync
 - **Cross-platform** — macOS (arm64 + x64), Windows, Linux
 
+## Providers
+
+sidepad supports LLM providers through a layered architecture:
+
+### Built-in providers
+
+| Type | Protocol | Notes |
+|------|----------|-------|
+| `openai` | OpenAI Chat Completions | Direct connection |
+| `anthropic` | Anthropic Messages | Direct connection |
+| `ollama` | Ollama | Local server |
+| `openai-compat` | OpenAI Chat Completions | Custom baseURL |
+| `anthropic-messages` | Anthropic Messages | Custom baseURL — works with Minimax, self-hosted proxies |
+| `gemini` | Gemini generateContent | Direct connection (Google AI Studio or Vertex) |
+
+### Per-model overrides
+
+For each provider, you can set per-model overrides via the **Advanced** section:
+
+- **Extra Headers**: send custom HTTP headers with every request
+- **Extra Body**: merge custom fields into the request body (JSON)
+
+Both can be scoped per-model via `modelOverrides` (advanced users edit the JSON directly in the database).
+
+### Adding a new vendor
+
+To add a vendor (e.g. AWS Bedrock Claude), create `src/main/providers/base/`:
+
+```ts
+import { AnthropicBaseProvider } from '../base/anthropic-base';
+
+export class AnthropicBedrockProvider extends AnthropicBaseProvider {
+  constructor(id, configId, parsedParams) {
+    super(id, configId, '', { baseURL: process.env.BEDROCK_ENDPOINT ?? '' }, parsedParams);
+  }
+  // override chat() to add SigV4 signing
+  async *chat(req, signal) {
+    // ... custom logic ...
+  }
+}
+```
+
+Then register in `factory.ts` and the `ProviderType` union in `ProviderForm.tsx`.
+
 ## Requirements
 
 - Node 22 (`nvm use` — pinned in `.nvmrc`)
