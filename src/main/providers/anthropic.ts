@@ -16,7 +16,7 @@ export class AnthropicProvider implements LLMProvider {
   public readonly id: string;
   public readonly configId: string;
   private client: Anthropic;
-  private parsedParams: ProviderParams;
+  protected parsedParams: ProviderParams;
 
   constructor(id: string, configId: string, apiKey: string, parsedParams: ProviderParams = {}) {
     this.id = id;

@@ -16,7 +16,7 @@ export class OpenAIProvider implements LLMProvider {
   public readonly id: string;
   public readonly configId: string;
   protected client: OpenAI;
-  private parsedParams: ProviderParams;
+  protected parsedParams: ProviderParams;
 
   constructor(id: string, configId: string, apiKey: string, baseURL?: string, parsedParams: ProviderParams = {}) {
     this.id = id;
