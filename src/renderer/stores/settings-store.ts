@@ -29,7 +29,16 @@ interface SettingsState {
 
   init: () => Promise<void>;
   setTheme: (theme: Theme) => void;
-  addProvider: (config: { id: string; type: string; apiKey: string; baseURL?: string; defaultModel?: string }) => Promise<void>;
+  addProvider: (config: {
+    id: string;
+    type: string;
+    apiKey: string;
+    baseURL?: string;
+    defaultModel?: string;
+    extraHeaders?: Record<string, string>;
+    extraBody?: Record<string, unknown>;
+    modelOverrides?: Record<string, Record<string, unknown>>;
+  }) => Promise<void>;
   deleteProvider: (id: string) => Promise<void>;
   setProviderIcon: (configId: string, kind: 'emoji' | 'image' | null, value: string | null) => Promise<void>;
   refreshProviders: () => Promise<void>;
@@ -60,6 +69,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       apiKey: config.apiKey || undefined,
       baseURL: config.baseURL,
       defaultModel: config.defaultModel,
+      extraHeaders: config.extraHeaders,
+      extraBody: config.extraBody,
+      modelOverrides: config.modelOverrides,
     });
     await get().refreshProviders();
   },
