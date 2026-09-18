@@ -220,7 +220,15 @@
     "capFast": "Fast",
     "capClear": "Clear filters",
     "debugShow": "show req/resp",
-    "debugHide": "hide"
+    "debugHide": "hide",
+    "advanced": "Advanced",
+    "extraHeaders": "Extra Headers",
+    "headerKeyPlaceholder": "Header name",
+    "headerValuePlaceholder": "Value",
+    "addHeader": "Add header",
+    "deleteHeader": "Delete header",
+    "extraBody": "Extra Body (JSON)",
+    "invalidJson": "Invalid JSON"
   },
   "personaForm": {
     "namePlaceholder": "e.g. Product Manager",

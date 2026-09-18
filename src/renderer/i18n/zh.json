@@ -220,7 +220,15 @@
     "capFast": "快速",
     "capClear": "清除筛选",
     "debugShow": "查看请求/响应",
-    "debugHide": "收起"
+    "debugHide": "收起",
+    "advanced": "高级选项",
+    "extraHeaders": "额外请求头",
+    "headerKeyPlaceholder": "请求头名称",
+    "headerValuePlaceholder": "值",
+    "addHeader": "添加请求头",
+    "deleteHeader": "删除请求头",
+    "extraBody": "额外请求体 (JSON)",
+    "invalidJson": "JSON 格式错误"
   },
   "personaForm": {
     "namePlaceholder": "例如：产品经理",

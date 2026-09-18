@@ -23,6 +23,8 @@ interface ProviderFormProps {
     apiKey: string;
     baseURL?: string;
     defaultModel?: string;
+    extraHeaders?: Record<string, string>;
+    extraBody?: Record<string, unknown>;
   }) => void;
   onCancel: () => void;
   initialType?: ProviderType;
@@ -86,6 +88,10 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
   const [modelTestResult, setModelTestResult] = useState<ModelTestResult>({ status: 'idle' });
   const [showDebug, setShowDebug] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [extraHeaders, setExtraHeaders] = useState<Array<{ key: string; value: string }>>([]);
+  const [extraBodyText, setExtraBodyText] = useState('');
+  const [extraBodyError, setExtraBodyError] = useState<string | null>(null);
   const modelTestIdRef = useRef(0);
   const probeIdRef = useRef(0);
 
@@ -238,12 +244,23 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
     const id = isEditing
       ? (initial!.id as string)
       : (name.trim().toLowerCase().replace(/\s+/g, '-') || type);
+    const extraHeadersObj: Record<string, string> = {};
+    for (const h of extraHeaders) {
+      if (h.key.trim()) extraHeadersObj[h.key.trim()] = h.value;
+    }
+    let extraBodyObj: Record<string, unknown> | undefined;
+    if (extraBodyText.trim()) {
+      try { extraBodyObj = JSON.parse(extraBodyText); }
+      catch { /* blur already shows error */ }
+    }
     onSubmit({
       id,
       type,
       apiKey: apiKey.trim(), // empty string = keep existing (caller must handle)
       baseURL: baseURL.trim() || undefined,
       defaultModel: defaultModel.trim() || undefined,
+      extraHeaders: Object.keys(extraHeadersObj).length ? extraHeadersObj : undefined,
+      extraBody: extraBodyObj,
     });
   };
 
@@ -569,6 +586,90 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
         <Field label={t('providerForm.modelLabel')} hint={t('providerForm.modelHint')} className="md:col-span-2">
           {renderModelControl()}
         </Field>
+      </div>
+
+      {/* Advanced section */}
+      <div className="border-t border-rule pt-3">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="flex items-center gap-2 text-[12px] text-ink-muted hover:text-accent transition-colors"
+        >
+          <span className="text-[10px]">{showAdvanced ? '▼' : '▶'}</span>
+          {t('providerForm.advanced')}
+        </button>
+
+        {showAdvanced && (
+          <div className="border border-rule rounded p-3 mt-2 space-y-3 bg-surface-2">
+            {/* Extra Headers */}
+            <div>
+              <label className="text-[12px] text-ink-muted block mb-1">{t('providerForm.extraHeaders')}</label>
+              {extraHeaders.map((h, i) => (
+                <div key={i} className="flex gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={h.key}
+                    placeholder={t('providerForm.headerKeyPlaceholder')}
+                    onChange={(e) =>
+                      setExtraHeaders((arr) =>
+                        arr.map((x, j) => (j === i ? { ...x, key: e.target.value } : x))
+                      )
+                    }
+                    className="flex-1 px-2 py-1 border border-rule rounded text-[13px] bg-surface"
+                  />
+                  <input
+                    type="text"
+                    value={h.value}
+                    placeholder={t('providerForm.headerValuePlaceholder')}
+                    onChange={(e) =>
+                      setExtraHeaders((arr) =>
+                        arr.map((x, j) => (j === i ? { ...x, value: e.target.value } : x))
+                      )
+                    }
+                    className="flex-1 px-2 py-1 border border-rule rounded text-[13px] bg-surface"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setExtraHeaders((arr) => arr.filter((_, j) => j !== i))}
+                    className="text-[16px] text-ink-muted hover:text-danger transition-colors leading-none px-1"
+                    aria-label={t('providerForm.deleteHeader')}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setExtraHeaders((arr) => [...arr, { key: '', value: '' }])}
+                className="mt-2 text-[12px] text-accent hover:underline transition-colors"
+              >
+                + {t('providerForm.addHeader')}
+              </button>
+            </div>
+
+            {/* Extra Body */}
+            <div>
+              <label className="text-[12px] text-ink-muted block mb-1">{t('providerForm.extraBody')}</label>
+              <textarea
+                value={extraBodyText}
+                placeholder='{"key": "value"}'
+                onChange={(e) => setExtraBodyText(e.target.value)}
+                onBlur={() => {
+                  if (!extraBodyText.trim()) { setExtraBodyError(null); return; }
+                  try { JSON.parse(extraBodyText); setExtraBodyError(null); }
+                  catch (err) { setExtraBodyError(err instanceof Error ? err.message : String(err)); }
+                }}
+                rows={4}
+                className="w-full mt-1 px-2 py-1 border border-rule rounded text-[13px] font-mono bg-surface resize-y"
+              />
+              {extraBodyError && (
+                <div className="text-[12px] text-red-500 mt-1">
+                  {t('providerForm.invalidJson')}: {extraBodyError}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2 pt-2">
