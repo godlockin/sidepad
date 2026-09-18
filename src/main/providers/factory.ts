@@ -6,6 +6,7 @@ import { OpenAIProvider } from './openai';
 import { AnthropicProvider } from './anthropic';
 import { OllamaProvider } from './ollama';
 import { OpenAICompatProvider } from './openai-compat';
+import { AnthropicMessagesProvider } from './anthropic-messages';
 
 export function loadProviders(
   db: Database.Database,
@@ -40,6 +41,10 @@ export function loadProviders(
       case 'openai-compat':
         if (!row.base_url) continue;
         provider = new OpenAICompatProvider(row.id, row.id, apiKey!, row.base_url, parsed);
+        break;
+      case 'anthropic-messages':
+        if (!row.base_url) continue;
+        provider = new AnthropicMessagesProvider(row.id, row.id, apiKey!, row.base_url, parsed);
         break;
     }
     if (provider) reg.register(provider);
