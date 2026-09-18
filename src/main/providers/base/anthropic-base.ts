@@ -1,0 +1,215 @@
+import Anthropic from '@anthropic-ai/sdk';
+import type { LLMProvider, ChatRequest, ChatChunk, Model, ChatMessage, ToolCall, ProviderCapabilities } from '../types';
+import { normalizeError } from '../errors';
+import { inferCaps } from '../caps-heuristics';
+import { mergeOverrides, type ProviderParams } from '../overrides';
+
+export abstract class AnthropicBaseProvider implements LLMProvider {
+  public readonly id: string;
+  public readonly configId: string;
+  protected client: Anthropic;
+  protected parsedParams: ProviderParams;
+
+  constructor(id: string, configId: string, apiKey: string, clientOptions: Record<string, unknown>, parsedParams: ProviderParams = {}) {
+    this.id = id;
+    this.configId = configId;
+    this.client = new Anthropic({ apiKey, ...clientOptions });
+    this.parsedParams = parsedParams;
+  }
+
+  abstract listModels(): Promise<Model[]>;
+
+  async *chat(req: ChatRequest, signal: AbortSignal): AsyncIterable<ChatChunk> {
+    const messages = toAnthropicMessages(req.messages as ChatMessage[]);
+    const tools = req.tools?.length
+      ? req.tools.map(t => ({
+          name: t.name,
+          description: t.description,
+          input_schema: (t.inputSchema ?? { type: 'object', properties: {} }) as any,
+        }))
+      : undefined;
+
+    const thinking = anthropicThinkingParams(req);
+    const { headers, body: bodyOverrides } = mergeOverrides(req, this.parsedParams);
+
+    // thinkingBudget → thinking.budget_tokens 翻译
+    if (thinking && (bodyOverrides as any).thinkingBudget !== undefined) {
+      thinking.budget_tokens = (bodyOverrides as any).thinkingBudget;
+      delete (bodyOverrides as any).thinkingBudget;
+    }
+
+    const maxTokens = thinking
+      ? Math.max(req.maxTokens ?? 4096, thinking.budget_tokens + 1024)
+      : (req.maxTokens ?? 4096);
+
+    try {
+      const stream: any = await this.client.messages.stream(
+        {
+          model: req.model,
+          messages: messages as any,
+          system: req.systemPrompt,
+          ...(thinking ? {} : { temperature: req.temperature }),
+          max_tokens: maxTokens,
+          ...(tools ? { tools } : {}),
+          ...(thinking ? { thinking } : {}),
+          ...bodyOverrides,
+        } as any,
+        { signal, defaultHeaders: headers } as any,
+      );
+
+      const toolBuf = new Map<number, { id: string; name: string; argText: string }>();
+      let stopReason: string | null = null;
+
+      for await (const event of stream as AsyncIterable<any>) {
+        const t = event.type;
+        if (t === 'content_block_start') {
+          const cb = event.content_block;
+          if (cb?.type === 'tool_use') {
+            toolBuf.set(event.index, { id: cb.id, name: cb.name, argText: '' });
+          }
+        } else if (t === 'content_block_delta') {
+          if (event.delta?.type === 'text_delta') {
+            yield { delta: event.delta.text };
+          } else if (event.delta?.type === 'thinking_delta') {
+            if (typeof event.delta.thinking === 'string' && event.delta.thinking.length > 0) {
+              yield { reasoningDelta: event.delta.thinking };
+            }
+          } else if (event.delta?.type === 'input_json_delta') {
+            const buf = toolBuf.get(event.index);
+            if (buf) buf.argText += event.delta.partial_json ?? '';
+          }
+        } else if (t === 'message_delta') {
+          if (event.delta?.stop_reason) stopReason = event.delta.stop_reason;
+        }
+      }
+
+      let final: any = null;
+      try { final = await stream.finalMessage(); } catch { /* abort */ }
+      const usage = final?.usage
+        ? { promptTokens: final.usage.input_tokens, completionTokens: final.usage.output_tokens }
+        : undefined;
+      const finalStop = final?.stop_reason ?? stopReason;
+
+      let toolCalls: ToolCall[] | undefined;
+      if (finalStop === 'tool_use' && toolBuf.size > 0) {
+        toolCalls = [];
+        const indices = Array.from(toolBuf.keys()).sort((a, b) => a - b);
+        for (const i of indices) {
+          const b = toolBuf.get(i)!;
+          let parsed: Record<string, unknown> = {};
+          try { parsed = b.argText ? JSON.parse(b.argText) : {}; }
+          catch { parsed = { _raw: b.argText }; }
+          toolCalls.push({ id: b.id, name: b.name, arguments: parsed });
+        }
+      }
+
+      const finishReason: ChatChunk['finishReason'] =
+        finalStop === 'end_turn'
+          ? 'stop'
+          : finalStop === 'max_tokens'
+            ? 'length'
+            : finalStop === 'tool_use'
+              ? 'tool_calls'
+              : 'error';
+      yield { finishReason, usage, ...(toolCalls ? { toolCalls } : {}) };
+    } catch (err) {
+      const n = normalizeError(err);
+      if (n.code === 'ABORTED') return;
+      throw n;
+    }
+  }
+
+  capabilities(model: string): ProviderCapabilities {
+    return {
+      vision: /(claude-3|claude-opus|claude-sonnet|claude-haiku)/i.test(model),
+      reasoning: supportsExtendedThinking(model),
+      tools: true,
+    };
+  }
+}
+
+/**
+ * Whether a Claude model supports extended thinking. Currently:
+ *   - claude-3-7* (Sonnet 3.7)
+ *   - claude-opus-4*
+ *   - claude-sonnet-4-5*
+ */
+export function supportsExtendedThinking(model: string): boolean {
+  const m = model.toLowerCase();
+  if (m.startsWith('claude-3-7')) return true;
+  if (m.startsWith('claude-opus-4')) return true;
+  if (m.startsWith('claude-sonnet-4-5')) return true;
+  return false;
+}
+
+/** Budget (tokens) per requested effort tier. */
+const ANTHROPIC_THINKING_BUDGET = { low: 2048, medium: 4096, high: 16384 } as const;
+
+/**
+ * Translate a requested ReasoningEffort into Anthropic's thinking parameter.
+ * 'minimal' disables thinking entirely (cost save); 'medium'/unset keeps the
+ * historical 4096 budget; 'high' raises it to 16384.
+ */
+export function anthropicThinkingParams(req: ChatRequest): { type: 'enabled'; budget_tokens: number } | null {
+  if (!supportsExtendedThinking(req.model)) return null;
+  if (req.reasoningEffort === 'minimal') return null;
+  const budget = req.reasoningEffort ? ANTHROPIC_THINKING_BUDGET[req.reasoningEffort] : 4096;
+  return { type: 'enabled', budget_tokens: budget };
+}
+
+/**
+ * - system messages are stripped (passed via top-level `system` field).
+ * - assistant.toolCalls become content blocks of type 'tool_use'.
+ * - role:'tool' messages become a USER message containing tool_result blocks
+ *   keyed by tool_use_id (Anthropic represents tool results as user turns).
+ *   Consecutive tool results are coalesced into a single user message.
+ */
+export function toAnthropicMessages(messages: ChatMessage[]): any[] {
+  const out: any[] = [];
+  for (const m of messages) {
+    if (m.role === 'system') continue;
+    if (m.role === 'tool') {
+      const block = {
+        type: 'tool_result',
+        tool_use_id: m.toolCallId,
+        content: m.content,
+      };
+      const last = out[out.length - 1];
+      if (last && last.role === 'user' && Array.isArray(last.content)) {
+        last.content.push(block);
+      } else {
+        out.push({ role: 'user', content: [block] });
+      }
+      continue;
+    }
+    if (m.role === 'assistant') {
+      if (m.toolCalls && m.toolCalls.length) {
+        const blocks: any[] = [];
+        if (m.content) blocks.push({ type: 'text', text: m.content });
+        for (const tc of m.toolCalls) {
+          blocks.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.arguments ?? {} });
+        }
+        out.push({ role: 'assistant', content: blocks });
+      } else {
+        out.push({ role: 'assistant', content: m.content });
+      }
+      continue;
+    }
+    // user
+    const userImgs = (m as any).images as Array<{ mime: string; base64: string }> | undefined;
+    if (userImgs && userImgs.length) {
+      const blocks: any[] = [];
+      for (const img of userImgs) {
+        blocks.push({
+          type: 'image',
+          source: { type: 'base64', media_type: img.mime, data: img.base64 },
+        });
+      }
+      if (m.content) blocks.push({ type: 'text', text: m.content });
+      out.push({ role: 'user', content: blocks });
+    } else {
+      out.push({ role: 'user', content: m.content });
+    }
+  }
+  return out;
+}
