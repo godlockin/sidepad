@@ -8,6 +8,7 @@ import type {
   ToolCall,
   ProviderCapabilities,
 } from './types';
+import type { ProviderParams } from './overrides';
 import { normalizeError } from './errors';
 import { inferCaps } from './caps-heuristics';
 
@@ -15,11 +16,13 @@ export class AnthropicProvider implements LLMProvider {
   public readonly id: string;
   public readonly configId: string;
   private client: Anthropic;
+  private parsedParams: ProviderParams;
 
-  constructor(id: string, configId: string, apiKey: string) {
+  constructor(id: string, configId: string, apiKey: string, parsedParams: ProviderParams = {}) {
     this.id = id;
     this.configId = configId;
     this.client = new Anthropic({ apiKey });
+    this.parsedParams = parsedParams;
   }
 
   async listModels(): Promise<Model[]> {
