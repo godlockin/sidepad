@@ -4,7 +4,7 @@ import { Field, Input, Select, Button } from './ui';
 import { trpc } from '../lib/trpc-client';
 import { PROVIDER_PRESETS } from '../lib/provider-presets';
 
-type ProviderType = 'openai' | 'anthropic' | 'ollama' | 'openai-compat';
+type ProviderType = 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages';
 
 interface ModelCaps {
   free?: boolean;
@@ -38,15 +38,15 @@ interface ProviderFormProps {
 }
 
 function needsBaseURL(type: ProviderType): boolean {
-  return type === 'openai-compat' || type === 'ollama';
+  return type === 'openai-compat' || type === 'ollama' || type === 'anthropic-messages';
 }
 function needsAPIKey(type: ProviderType): boolean {
-  return type !== 'ollama';
+  return type !== 'ollama' && type !== 'anthropic-messages';
 }
 /** Whether we have enough credentials to probe the API */
 function canProbe(type: ProviderType, apiKey: string, baseURL: string): boolean {
   if (type === 'ollama') return true; // no key needed
-  if (type === 'openai-compat') return !!baseURL.trim() && !!apiKey.trim(); // both required
+  if (type === 'openai-compat' || type === 'anthropic-messages') return !!baseURL.trim(); // baseURL required
   return !!apiKey.trim();
 }
 

@@ -16,7 +16,7 @@ type SettingsTab = 'providers' | 'personas' | 'capabilities' | 'tools' | 'knowle
 
 type EditingProvider = {
   id: string;
-  type: 'openai' | 'anthropic' | 'ollama' | 'openai-compat';
+  type: 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages';
   baseURL?: string;
   defaultModel?: string;
 };
