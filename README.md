@@ -1,3 +1,8 @@
+> **License**: PolyForm Noncommercial 1.0.0
+> Copyright (c) 2026 godlockin
+> 个人使用、二创、分发允许,需注明作者;**商业使用需作者书面授权**。
+> 详见 [LICENSE](./LICENSE)。
+
 <div align="center">
 
 <img src=".github/social-preview.png" alt="sidepad — one question, every brain, one conversation" width="720"/>
