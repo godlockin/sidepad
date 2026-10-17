@@ -10,6 +10,7 @@ import { registry } from './providers/index.js';
 import { loadProviders } from './providers/factory.js';
 import { createMCPRegistry } from './mcp/registry.js';
 import { seedBundledMcpServers } from './mcp/bundled.js';
+import { registerPtyIpc, shutdownPtySessions } from './pty/ipc.js';
 import { log } from './logger.js';
 
 // electron-trpc 0.7.1 ships a single ESM bundle that statically imports
@@ -60,7 +61,7 @@ if (!gotLock) {
     loadProviders(db, secrets, registry);
     log.info({ count: registry.list().length }, 'providers loaded');
 
-    const win = new BrowserWindow({
+    let win: BrowserWindow | null = new BrowserWindow({
       width: 1200, height: 800,
       webPreferences: {
         preload: join(__dirname, '../preload/index.mjs'),
@@ -69,6 +70,7 @@ if (!gotLock) {
       },
     });
     createIPCHandler({ router: appRouter, windows: [win] });
+    registerPtyIpc(() => db, () => win);
 
     ipcMain.handle('dialog:openFolder', async (): Promise<string | null> => {
       const r = await dialog.showOpenDialog({
@@ -84,7 +86,27 @@ if (!gotLock) {
       win.loadFile(join(__dirname, '../renderer/index.html'));
     }
 
-    app.on('before-quit', () => { try { db.close(); log.info('db closed'); } catch (e) { log.error(e); } });
+    let quitting = false;
+    app.on('before-quit', (e) => {
+      if (quitting) return;
+      e.preventDefault();
+      quitting = true;
+      void (async () => {
+        try {
+          await shutdownPtySessions();
+        } catch (err) {
+          log.error(err);
+        }
+        try {
+          db.close();
+          log.info('db closed');
+        } catch (err) {
+          log.error(err);
+        }
+        win = null;
+        app.quit();
+      })();
+    });
   });
 
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

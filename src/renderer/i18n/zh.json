@@ -71,12 +71,18 @@
       "toggle": "终端",
       "title": "项目终端",
       "hint": "在关联项目目录中执行受沙盒约束的命令",
+      "liveHint": "在项目工作目录中打开交互式终端",
       "placeholder": "git status",
       "run": "运行",
       "clear": "清空",
       "empty": "在项目工作目录中运行命令。",
       "exit": "退出码 {{code}}",
-      "timedOut": "超时"
+      "timedOut": "超时",
+      "starting": "启动中",
+      "ready": "已连接",
+      "exited": "已退出",
+      "error": "错误",
+      "startFailed": "无法启动项目终端"
     },
     "skills": {
       "title": "技能",

@@ -71,12 +71,18 @@
       "toggle": "Shell",
       "title": "Project shell",
       "hint": "Sandboxed commands in the linked project directory",
+      "liveHint": "Interactive PTY in the project working directory",
       "placeholder": "git status",
       "run": "Run",
       "clear": "Clear",
       "empty": "Run a command in the project working directory.",
       "exit": "exit {{code}}",
-      "timedOut": "timed out"
+      "timedOut": "timed out",
+      "starting": "starting",
+      "ready": "live",
+      "exited": "exited",
+      "error": "error",
+      "startFailed": "Could not start the project shell"
     },
     "skills": {
       "title": "Skills",

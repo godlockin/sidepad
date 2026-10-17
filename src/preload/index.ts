@@ -19,3 +19,27 @@ process.once('loaded', () => {
 contextBridge.exposeInMainWorld('cockpit', {
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:openFolder'),
 });
+
+import type { PtyApi } from '../shared/types/pty';
+
+const ptyApi: PtyApi = {
+  spawn: (opts) => ipcRenderer.invoke('pty:spawn', opts),
+  write: (id, data) => ipcRenderer.send('pty:write', id, data),
+  resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
+  kill: (id) => ipcRenderer.invoke('pty:kill', id),
+  onData: (id, cb) => {
+    const ch = `pty:data:${id}`;
+    const fn = (_e: Electron.IpcRendererEvent, data: string) => cb(data);
+    ipcRenderer.on(ch, fn);
+    return () => ipcRenderer.removeListener(ch, fn);
+  },
+  onExit: (id, cb) => {
+    const ch = `pty:exit:${id}`;
+    const fn = (_e: Electron.IpcRendererEvent, info: { exitCode: number; signal?: number }) =>
+      cb(info);
+    ipcRenderer.on(ch, fn);
+    return () => ipcRenderer.removeListener(ch, fn);
+  },
+};
+
+contextBridge.exposeInMainWorld('pty', ptyApi);

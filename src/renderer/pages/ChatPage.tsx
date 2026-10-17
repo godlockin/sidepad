@@ -624,7 +624,7 @@ export function ChatPage() {
         </div>
 
         {activeSession?.projectId && shellOpen && (
-          <div className="h-[220px] shrink-0">
+          <div className="h-[280px] shrink-0">
             <ProjectShell sessionId={activeSession.id} />
           </div>
         )}
