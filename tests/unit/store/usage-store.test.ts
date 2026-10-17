@@ -199,6 +199,44 @@ describe('checkBudget', () => {
     createUsageStore(db);
     const result = checkBudget(db);
     expect(result.ok).toBe(false);
+    expect(result.scope).toBe('period');
+    expect(result.spentUsd).toBeGreaterThan(0.01);
+  });
+
+  it('blocks when session spend exceeds session cap', async () => {
+    const { checkBudget, createUsageStore } = await import('@main/store/usage-store');
+    const { createAppSettingsStore } = await import('@main/store/app-settings-store');
+    const db = openMem();
+    const now = Math.floor(Date.now() / 1000);
+    db.prepare('INSERT INTO sessions(id, title, created_at, updated_at) VALUES (?,?,?,?)').run(
+      's1',
+      'A',
+      now,
+      now,
+    );
+    db.prepare(
+      `INSERT INTO messages(id, session_id, turn_id, role, model_id, content, prompt_tokens, completion_tokens, meta_json, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    ).run(
+      'm1',
+      's1',
+      't1',
+      'assistant',
+      'gpt-4o',
+      'hi',
+      1_000_000,
+      1_000_000,
+      JSON.stringify({ providerId: 'openai' }),
+      now,
+    );
+    createAppSettingsStore(db).setSetting(
+      'usage_budget',
+      JSON.stringify({ enabled: true, maxUsd: null, periodDays: 30, sessionMaxUsd: 0.01 }),
+    );
+    createUsageStore(db);
+    const result = checkBudget(db, 's1');
+    expect(result.ok).toBe(false);
+    expect(result.scope).toBe('session');
     expect(result.spentUsd).toBeGreaterThan(0.01);
   });
 });

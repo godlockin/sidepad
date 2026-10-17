@@ -10,6 +10,8 @@ import { AnthropicMessagesProvider } from '../../providers/anthropic-messages.js
 import { GeminiProvider } from '../../providers/gemini.js';
 import { AnthropicMinimaxProvider, MINIMAX_ANTHROPIC_BASE_URL } from '../../providers/vendors/anthropic-minimax.js';
 import { GeminiVertexProvider } from '../../providers/vendors/gemini-vertex.js';
+import { AnthropicBedrockProvider } from '../../providers/vendors/anthropic-bedrock.js';
+import { AnthropicVertexProvider } from '../../providers/vendors/anthropic-vertex.js';
 import type { LLMProvider } from '../../providers/types.js';
 import { PROVIDER_KINDS } from '../../../shared/types/provider-kind.js';
 
@@ -135,6 +137,25 @@ export const providerRouter = t.router({
             }
             provider = new GeminiVertexProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL);
             break;
+          case 'anthropic-bedrock':
+            provider = new AnthropicBedrockProvider(
+              '__probe__',
+              '__probe__',
+              input.apiKey ?? '',
+              input.baseURL || 'us-east-1',
+            );
+            break;
+          case 'anthropic-vertex':
+            if (!input.baseURL) {
+              return { ok: false as const, error: 'baseURL required for anthropic-vertex (projectId@region)' };
+            }
+            provider = new AnthropicVertexProvider(
+              '__probe__',
+              '__probe__',
+              input.apiKey ?? '',
+              input.baseURL,
+            );
+            break;
         }
         const models = await provider!.listModels();
         return {
@@ -193,6 +214,25 @@ export const providerRouter = t.router({
           case 'gemini-vertex':
             if (!input.baseURL) return { ok: false as const, error: 'baseURL required for gemini-vertex' };
             provider = new GeminiVertexProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL);
+            break;
+          case 'anthropic-bedrock':
+            provider = new AnthropicBedrockProvider(
+              '__probe__',
+              '__probe__',
+              input.apiKey ?? '',
+              input.baseURL || 'us-east-1',
+            );
+            break;
+          case 'anthropic-vertex':
+            if (!input.baseURL) {
+              return { ok: false as const, error: 'baseURL required for anthropic-vertex (projectId@region)' };
+            }
+            provider = new AnthropicVertexProvider(
+              '__probe__',
+              '__probe__',
+              input.apiKey ?? '',
+              input.baseURL,
+            );
             break;
         }
         const ctrl = new AbortController();

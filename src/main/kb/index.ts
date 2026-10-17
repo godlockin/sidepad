@@ -379,13 +379,27 @@ export async function searchKnowledge(
   const [qVec] = await embed(db, [query]);
   if (!qVec) return [];
 
-  const sql = `SELECT c.id AS chunk_id, c.document_id, c.text, c.embedding,
+  const wantTags = opts.tags && opts.tags.length ? opts.tags : null;
+  // Apply tag filter in SQL when possible so the scan cap covers matching docs,
+  // not an arbitrary prefix of the full corpus.
+  let sql = `SELECT c.id AS chunk_id, c.document_id, c.text, c.embedding,
                     d.filename, d.tags
              FROM kb_chunks c
              JOIN kb_documents d ON d.id = c.document_id
-             WHERE d.status = 'ready' AND c.embedding IS NOT NULL
-             LIMIT ?`;
-  const rows = db.prepare(sql).all(MAX_KB_SCAN_CHUNKS) as Array<{
+             WHERE d.status = 'ready' AND c.embedding IS NOT NULL`;
+  const params: unknown[] = [];
+  if (wantTags) {
+    const tagClauses = wantTags.map(() => `d.tags LIKE ?`);
+    sql += ` AND (${tagClauses.join(' OR ')})`;
+    for (const tag of wantTags) {
+      // tags stored as JSON string array; substring match is best-effort.
+      params.push(`%"${tag.replace(/[%_\\"]/g, '')}"%`);
+    }
+  }
+  sql += ` LIMIT ?`;
+  params.push(MAX_KB_SCAN_CHUNKS);
+
+  const rows = db.prepare(sql).all(...params) as Array<{
     chunk_id: string;
     document_id: string;
     text: string;
@@ -393,8 +407,6 @@ export async function searchKnowledge(
     filename: string | null;
     tags: string | null;
   }>;
-
-  const wantTags = opts.tags && opts.tags.length ? opts.tags : null;
 
   const scored: SearchHit[] = [];
   for (const r of rows) {

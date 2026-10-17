@@ -87,7 +87,8 @@
       "collapse": "收起",
       "awaiting": "待批准",
       "approveHint": "允许此工具在本机执行？",
-      "approve": "允许",
+      "approve": "仅允许一次",
+      "alwaysAllow": "始终允许",
       "deny": "拒绝",
       "denied": "已拒绝"
     },
@@ -474,7 +475,11 @@
         "body": "开启后，每次 MCP 工具调用都会暂停，直到你允许或拒绝。",
         "off": "自动执行（不询问）",
         "ask": "每次调用前询问",
-        "offWarn": "当前工具无需确认即可运行——包括可执行本机代码的 stdio MCP 服务。"
+        "offWarn": "当前工具无需确认即可运行——包括可执行本机代码的 stdio MCP 服务。",
+        "allowlistTitle": "始终允许",
+        "allowlistBody": "询问模式下，这些工具名将跳过确认。清空后恢复逐次询问。",
+        "allowlistEmpty": "尚未记住任何工具。",
+        "allowlistClear": "清空列表"
       }
     },
     "budget": {
@@ -483,8 +488,11 @@
       "enable": "启用预算",
       "maxUsd": "上限（美元）",
       "periodDays": "周期（天）",
+      "sessionMaxUsd": "单会话上限（美元）",
+      "sessionMaxHint": "可选：单个聊天的终身花费上限。留空表示不限制。",
       "save": "保存预算",
       "exceeded": "本周期预算已用尽。请在设置 → 用量中提高上限，或等待周期滚动。",
+      "sessionExceeded": "当前聊天已达单会话消费上限。请在设置 → 用量中提高单会话上限，或新开聊天。",
       "status": "本周期：{{spent}} / {{cap}}",
       "statusUnlimited": "未启用消费上限",
       "warnNear": "接近预算上限"

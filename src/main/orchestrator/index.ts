@@ -29,10 +29,17 @@ import type {
 import type { Session } from '../store/types';
 import {
   ToolApprovalGate,
+  toolNeedsApproval,
   type ToolApprovalMode,
 } from './tool-approval';
 
-export { ToolApprovalGate, parseToolApprovalMode, TOOL_APPROVAL_SETTING_KEY } from './tool-approval';
+export {
+  ToolApprovalGate,
+  parseToolApprovalMode,
+  parseToolAllowlist,
+  TOOL_APPROVAL_SETTING_KEY,
+  TOOL_ALLOWLIST_SETTING_KEY,
+} from './tool-approval';
 export type { ToolApprovalDecision, ToolApprovalMode } from './tool-approval';
 
 function uuid(): string { return crypto.randomUUID(); }
@@ -169,6 +176,7 @@ export class ChatOrchestrator {
     private toolApprovalGate: ToolApprovalGate | null = null,
     private getToolApprovalMode: () => ToolApprovalMode = () => 'off',
     private getClassifierThreshold: () => number = () => 0.6,
+    private getAlwaysAllowedTools: () => readonly string[] = () => [],
   ) {
     this.getClassifier = typeof classifier === 'function' ? classifier : () => classifier;
   }
@@ -472,6 +480,7 @@ export class ChatOrchestrator {
       };
       const followUpToolMsgs: ChatMessage[] = [];
       const askMode = this.getToolApprovalMode() === 'ask' && !!this.toolApprovalGate;
+      const allowlist = this.getAlwaysAllowedTools();
 
       for (const tc of roundToolCalls) {
         if (signal.aborted) {
@@ -489,7 +498,7 @@ export class ChatOrchestrator {
           toolName: tc.name,
           args: tc.arguments ?? {},
         };
-        if (askMode) {
+        if (askMode && toolNeedsApproval('ask', tc.name, allowlist)) {
           yield {
             type: 'tool_call:awaiting_approval',
             turnId,
@@ -504,10 +513,13 @@ export class ChatOrchestrator {
       }
 
       const decisions = new Map<string, 'approve' | 'deny'>();
-      if (askMode && this.toolApprovalGate) {
+      const pendingApproval = roundToolCalls.filter((tc) =>
+        toolNeedsApproval(askMode ? 'ask' : 'off', tc.name, allowlist),
+      );
+      if (askMode && this.toolApprovalGate && pendingApproval.length > 0) {
         try {
           await Promise.all(
-            roundToolCalls.map(async (tc) => {
+            pendingApproval.map(async (tc) => {
               const decision = await this.toolApprovalGate!.request(tc.id, signal);
               decisions.set(tc.id, decision);
             }),

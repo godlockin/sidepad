@@ -205,7 +205,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
           if (ev.type === 'message:error') {
             const msgs = qc.getQueryData<Message[]>(key) ?? [];
             const errorText =
-              ev.code === 'BUDGET_EXCEEDED'
+              ev.code === 'SESSION_BUDGET_EXCEEDED'
+                ? i18n.t('settings.budget.sessionExceeded')
+                : ev.code === 'BUDGET_EXCEEDED'
                 ? i18n.t('settings.budget.exceeded')
                 : ev.message;
             const errMsg: Message = {

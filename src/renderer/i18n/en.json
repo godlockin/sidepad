@@ -87,7 +87,8 @@
       "collapse": "Collapse",
       "awaiting": "needs approval",
       "approveHint": "Allow this tool to run on your machine?",
-      "approve": "Allow",
+      "approve": "Allow once",
+      "alwaysAllow": "Always allow",
       "deny": "Deny",
       "denied": "denied"
     },
@@ -474,7 +475,11 @@
         "body": "When enabled, every MCP tool call pauses until you allow or deny it.",
         "off": "Auto-run (no prompt)",
         "ask": "Ask before each call",
-        "offWarn": "Tools currently run without confirmation — including stdio MCP servers that can execute local code."
+        "offWarn": "Tools currently run without confirmation — including stdio MCP servers that can execute local code.",
+        "allowlistTitle": "Always allowed",
+        "allowlistBody": "These tool names skip the prompt in ask mode. Clear to require approval again.",
+        "allowlistEmpty": "No tools remembered yet.",
+        "allowlistClear": "Clear list"
       }
     },
     "budget": {
@@ -483,8 +488,11 @@
       "enable": "Enforce budget",
       "maxUsd": "Max USD",
       "periodDays": "Period (days)",
+      "sessionMaxUsd": "Per-session USD",
+      "sessionMaxHint": "Optional lifetime cap for a single chat. Leave blank for none.",
       "save": "Save budget",
       "exceeded": "Budget exceeded for this period. Raise the cap in Settings → Usage, or wait for the window to roll.",
+      "sessionExceeded": "This chat hit its session spending cap. Raise the per-session limit in Settings → Usage, or start a new chat.",
       "status": "This period: {{spent}} of {{cap}}",
       "statusUnlimited": "No spending cap enforced",
       "warnNear": "Approaching budget limit"

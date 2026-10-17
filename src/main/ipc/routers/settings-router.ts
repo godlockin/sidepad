@@ -3,7 +3,9 @@ import { z } from 'zod';
 import type Database from 'better-sqlite3';
 import { createAppSettingsStore } from '../../store/app-settings-store.js';
 import {
+  parseToolAllowlist,
   parseToolApprovalMode,
+  TOOL_ALLOWLIST_SETTING_KEY,
   TOOL_APPROVAL_SETTING_KEY,
 } from '../../orchestrator/tool-approval.js';
 import { BUDGET_SETTING_KEY, readBudgetConfig } from '../../store/usage-store.js';
@@ -65,6 +67,19 @@ export const settingsRouter = t.router({
       return { ok: true as const };
     }),
 
+  getToolAllowlist: t.procedure.query(() => {
+    const raw = createAppSettingsStore(db()).getSetting(TOOL_ALLOWLIST_SETTING_KEY);
+    return { tools: parseToolAllowlist(raw) };
+  }),
+
+  setToolAllowlist: t.procedure
+    .input(z.object({ tools: z.array(z.string().min(1).max(200)).max(200) }))
+    .mutation(({ input }) => {
+      const tools = [...new Set(input.tools.map((s) => s.trim()).filter(Boolean))];
+      createAppSettingsStore(db()).setSetting(TOOL_ALLOWLIST_SETTING_KEY, JSON.stringify(tools));
+      return { ok: true as const, tools };
+    }),
+
   getUsageBudget: t.procedure.query(() => readBudgetConfig(db())),
 
   setUsageBudget: t.procedure
@@ -73,6 +88,7 @@ export const settingsRouter = t.router({
         enabled: z.boolean(),
         maxUsd: z.number().finite().min(0).nullable(),
         periodDays: z.number().int().positive().max(3650).default(30),
+        sessionMaxUsd: z.number().finite().min(0).nullable().optional(),
       }),
     )
     .mutation(({ input }) => {
@@ -82,6 +98,7 @@ export const settingsRouter = t.router({
           enabled: input.enabled,
           maxUsd: input.maxUsd,
           periodDays: input.periodDays,
+          sessionMaxUsd: input.sessionMaxUsd ?? null,
         }),
       );
       return { ok: true as const };

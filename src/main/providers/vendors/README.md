@@ -10,6 +10,8 @@ default like `GeminiProvider`).
 |------|-------|-------|
 | `anthropic-minimax` | `AnthropicMinimaxProvider` | Anthropic Messages → MiniMax (`api.minimax.io/anthropic`) |
 | `gemini-vertex` | `GeminiVertexProvider` | Gemini generateContent with required Vertex baseURL |
+| `anthropic-bedrock` | `AnthropicBedrockProvider` | Claude via `@anthropic-ai/bedrock-sdk` (SigV4 or bearer) |
+| `anthropic-vertex` | `AnthropicVertexProvider` | Claude via `@anthropic-ai/vertex-sdk` (ADC / SA / token) |
 
 ## Conventions
 
@@ -24,5 +26,4 @@ default like `GeminiProvider`).
 
 ## Still deferred
 
-- `anthropic-bedrock` — AWS SigV4
-- `anthropic-vertex` — GCP token refresh
+_(none — native sqlite-vec packaging remains a separate KB track)_

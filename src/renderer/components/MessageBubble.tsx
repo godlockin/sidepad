@@ -323,11 +323,13 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
     : 'bg-success';
   const dur = call.durationMs != null ? `${call.durationMs} ms` : '';
 
-  const decide = async (action: 'approve' | 'deny') => {
+  const decide = async (action: 'approve' | 'deny' | 'always') => {
     if (deciding) return;
     setDeciding(true);
     try {
-      if (action === 'approve') {
+      if (action === 'always') {
+        await trpc.chat.approveToolAlways.mutate({ toolCallId: call.id, toolName: call.name });
+      } else if (action === 'approve') {
         await trpc.chat.approveTool.mutate({ toolCallId: call.id });
       } else {
         await trpc.chat.denyTool.mutate({ toolCallId: call.id });
@@ -367,6 +369,14 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
             className="px-2.5 py-1 rounded-[6px] text-[12px] border border-rule text-ink-muted hover:text-danger hover:border-danger cursor-pointer disabled:opacity-50"
           >
             {t('chat.toolCall.deny')}
+          </button>
+          <button
+            type="button"
+            disabled={deciding}
+            onClick={() => void decide('always')}
+            className="px-2.5 py-1 rounded-[6px] text-[12px] border border-rule text-ink-muted hover:text-accent hover:border-accent cursor-pointer disabled:opacity-50"
+          >
+            {t('chat.toolCall.alwaysAllow')}
           </button>
           <button
             type="button"

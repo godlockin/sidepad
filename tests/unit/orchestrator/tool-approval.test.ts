@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   ToolApprovalGate,
   parseToolApprovalMode,
+  parseToolAllowlist,
+  toolNeedsApproval,
 } from '@main/orchestrator/tool-approval';
 import { ChatOrchestrator, type SessionToolResolver } from '@main/orchestrator';
 import type { OrchestratorEvent } from '@main/orchestrator/types';
@@ -18,6 +20,18 @@ describe('parseToolApprovalMode', () => {
   });
   it('accepts ask', () => {
     expect(parseToolApprovalMode('ask')).toBe('ask');
+  });
+});
+
+describe('parseToolAllowlist / toolNeedsApproval', () => {
+  it('parses unique tool names', () => {
+    expect(parseToolAllowlist('["echo","echo"," ls "]')).toEqual(['echo', 'ls']);
+    expect(parseToolAllowlist('not-json')).toEqual([]);
+  });
+  it('skips allowlisted tools in ask mode', () => {
+    expect(toolNeedsApproval('off', 'echo', [])).toBe(false);
+    expect(toolNeedsApproval('ask', 'echo', [])).toBe(true);
+    expect(toolNeedsApproval('ask', 'echo', ['echo'])).toBe(false);
   });
 });
 
@@ -127,5 +141,53 @@ describe('orchestrator ask-mode approval', () => {
       { type: 'tool_call:result' }
     >;
     expect(result?.isError).toBe(true);
+  });
+
+  it('skips approval for allowlisted tools', async () => {
+    let round = 0;
+    const callTool = vi.fn(async () => ({ result: 'ran', isError: false }));
+    const provider: LLMProvider = {
+      id: 'stub', configId: 'cfg', listModels: async () => [],
+      async *chat(_req: ChatRequest, _s: AbortSignal): AsyncIterable<ChatChunk> {
+        round++;
+        if (round === 1) {
+          yield {
+            finishReason: 'tool_calls',
+            toolCalls: [{ id: 'c1', name: 'echo', arguments: { x: 1 } }],
+          };
+        } else {
+          yield { delta: 'ok', finishReason: 'stop' };
+        }
+      },
+    };
+    const resolver: SessionToolResolver = {
+      async listToolsForSession() {
+        return [{ tool: { name: 'echo', inputSchema: {} }, serverId: 'srv' }];
+      },
+      callTool,
+      recordUsage: vi.fn(),
+    };
+    const gate = new ToolApprovalGate();
+    const orch = new ChatOrchestrator(
+      makeStore(makeSession()),
+      { list: () => [provider], get: () => provider, has: () => true } as unknown as ProviderRegistry,
+      null,
+      () => provider,
+      () => 'm',
+      undefined,
+      undefined,
+      resolver,
+      undefined,
+      undefined,
+      gate,
+      () => 'ask',
+      () => 0.6,
+      () => ['echo'],
+    );
+    const events = await collect(
+      orch.send({ sessionId: 's1', text: 'go', mentions: ['agent-a'] }, new AbortController().signal),
+    );
+    expect(events.some((e) => e.type === 'tool_call:awaiting_approval')).toBe(false);
+    expect(callTool).toHaveBeenCalled();
   });
 });

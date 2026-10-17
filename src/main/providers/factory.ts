@@ -10,6 +10,8 @@ import { AnthropicMessagesProvider } from './anthropic-messages';
 import { GeminiProvider } from './gemini';
 import { AnthropicMinimaxProvider } from './vendors/anthropic-minimax';
 import { GeminiVertexProvider } from './vendors/gemini-vertex';
+import { AnthropicBedrockProvider } from './vendors/anthropic-bedrock';
+import { AnthropicVertexProvider } from './vendors/anthropic-vertex';
 
 export function loadProviders(
   db: Database.Database,
@@ -25,8 +27,15 @@ export function loadProviders(
     if (row.id === '_classifier') continue;
 
     const apiKey = secrets.get(row.id);
-    // Ollama doesn't require an API key; all others do
-    if (!apiKey && row.type !== 'ollama') continue;
+    // Ollama / Bedrock (AWS chain) / Vertex (ADC) may omit a stored secret.
+    if (
+      !apiKey &&
+      row.type !== 'ollama' &&
+      row.type !== 'anthropic-bedrock' &&
+      row.type !== 'anthropic-vertex'
+    ) {
+      continue;
+    }
 
     const parsed = parseProviderParams(row.params_json);
 
@@ -65,6 +74,33 @@ export function loadProviders(
         if (!row.base_url) continue;
         try {
           provider = new GeminiVertexProvider(row.id, row.id, apiKey!, row.base_url, parsed);
+        } catch {
+          continue;
+        }
+        break;
+      case 'anthropic-bedrock':
+        try {
+          provider = new AnthropicBedrockProvider(
+            row.id,
+            row.id,
+            apiKey ?? '',
+            row.base_url || undefined,
+            parsed,
+          );
+        } catch {
+          continue;
+        }
+        break;
+      case 'anthropic-vertex':
+        if (!row.base_url) continue;
+        try {
+          provider = new AnthropicVertexProvider(
+            row.id,
+            row.id,
+            apiKey ?? '',
+            row.base_url,
+            parsed,
+          );
         } catch {
           continue;
         }

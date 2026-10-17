@@ -110,13 +110,15 @@ export interface BudgetConfig {
   enabled: boolean;
   maxUsd: number | null;
   periodDays: number;
+  /** Lifetime estimated spend cap for a single chat session. Null = no session cap. */
+  sessionMaxUsd: number | null;
 }
 
 export const BUDGET_SETTING_KEY = 'usage_budget';
 
 export function readBudgetConfig(db: Database.Database): BudgetConfig {
   const raw = createAppSettingsStore(db).getSetting(BUDGET_SETTING_KEY);
-  if (!raw) return { enabled: false, maxUsd: null, periodDays: 30 };
+  if (!raw) return { enabled: false, maxUsd: null, periodDays: 30, sessionMaxUsd: null };
   try {
     const parsed = JSON.parse(raw) as Partial<BudgetConfig>;
     return {
@@ -126,30 +128,72 @@ export function readBudgetConfig(db: Database.Database): BudgetConfig {
         typeof parsed.periodDays === 'number' && parsed.periodDays > 0
           ? Math.min(3650, Math.floor(parsed.periodDays))
           : 30,
+      sessionMaxUsd:
+        typeof parsed.sessionMaxUsd === 'number' && Number.isFinite(parsed.sessionMaxUsd)
+          ? parsed.sessionMaxUsd
+          : null,
     };
   } catch {
-    return { enabled: false, maxUsd: null, periodDays: 30 };
+    return { enabled: false, maxUsd: null, periodDays: 30, sessionMaxUsd: null };
   }
 }
 
+/** Estimated USD already recorded for one session (all time). */
+export function sessionSpendUsd(db: Database.Database, sessionId: string): number {
+  const pricing = createUsageStore(db).getPricing();
+  const rows = db
+    .prepare(
+      `SELECT model_id,
+              COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+              COALESCE(SUM(completion_tokens), 0) AS completion_tokens
+       FROM messages
+       WHERE session_id = ? AND role = 'assistant'
+         AND (prompt_tokens IS NOT NULL OR completion_tokens IS NOT NULL)
+       GROUP BY model_id`,
+    )
+    .all(sessionId) as Array<{
+    model_id: string | null;
+    prompt_tokens: number;
+    completion_tokens: number;
+  }>;
+  let spent = 0;
+  for (const row of rows) {
+    const rate = resolveModelPricing(row.model_id, pricing);
+    const part = estimateCostUsd(Number(row.prompt_tokens) || 0, Number(row.completion_tokens) || 0, rate);
+    if (part != null) spent += part;
+  }
+  return spent;
+}
+
 /** Returns overspend info when an enabled USD cap is exceeded. */
-export function checkBudget(db: Database.Database): {
+export function checkBudget(
+  db: Database.Database,
+  sessionId?: string,
+): {
   ok: boolean;
   spentUsd: number | null;
   maxUsd: number | null;
+  scope: 'period' | 'session' | null;
 } {
   const cfg = readBudgetConfig(db);
-  if (!cfg.enabled || cfg.maxUsd == null) {
-    return { ok: true, spentUsd: null, maxUsd: cfg.maxUsd };
+  if (!cfg.enabled) {
+    return { ok: true, spentUsd: null, maxUsd: cfg.maxUsd, scope: null };
   }
-  const since = Math.floor(Date.now() / 1000) - cfg.periodDays * 86_400;
-  const summary = createUsageStore(db).summarize({ since });
-  const spent = summary.estimatedCostUsd ?? 0;
-  return {
-    ok: spent < cfg.maxUsd,
-    spentUsd: spent,
-    maxUsd: cfg.maxUsd,
-  };
+  if (cfg.maxUsd != null) {
+    const since = Math.floor(Date.now() / 1000) - cfg.periodDays * 86_400;
+    const summary = createUsageStore(db).summarize({ since });
+    const spent = summary.estimatedCostUsd ?? 0;
+    if (spent >= cfg.maxUsd) {
+      return { ok: false, spentUsd: spent, maxUsd: cfg.maxUsd, scope: 'period' };
+    }
+  }
+  if (cfg.sessionMaxUsd != null && sessionId) {
+    const spent = sessionSpendUsd(db, sessionId);
+    if (spent >= cfg.sessionMaxUsd) {
+      return { ok: false, spentUsd: spent, maxUsd: cfg.sessionMaxUsd, scope: 'session' };
+    }
+  }
+  return { ok: true, spentUsd: null, maxUsd: cfg.maxUsd, scope: null };
 }
 
 export function createUsageStore(db: Database.Database): UsageStore {

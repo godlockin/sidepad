@@ -5,9 +5,35 @@ export type ToolApprovalDecision = 'approve' | 'deny';
 export type ToolApprovalMode = 'off' | 'ask';
 
 export const TOOL_APPROVAL_SETTING_KEY = 'tool_approval_mode';
+export const TOOL_ALLOWLIST_SETTING_KEY = 'tool_approval_allowlist';
 
 export function parseToolApprovalMode(raw: string | undefined | null): ToolApprovalMode {
   return raw === 'ask' ? 'ask' : 'off';
+}
+
+/** Tool names that skip the ask-mode pause. */
+export function parseToolAllowlist(raw: string | undefined | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const names = parsed
+      .filter((x): x is string => typeof x === 'string')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return [...new Set(names)].slice(0, 200);
+  } catch {
+    return [];
+  }
+}
+
+export function toolNeedsApproval(
+  mode: ToolApprovalMode,
+  toolName: string,
+  allowlist: readonly string[],
+): boolean {
+  if (mode !== 'ask') return false;
+  return !allowlist.includes(toolName);
 }
 
 export class ToolApprovalGate {

@@ -10,7 +10,9 @@ import {
   ChatOrchestrator,
   ToolApprovalGate,
   parseToolApprovalMode,
+  parseToolAllowlist,
   TOOL_APPROVAL_SETTING_KEY,
+  TOOL_ALLOWLIST_SETTING_KEY,
   type SessionToolResolver,
 } from '../../orchestrator/index.js';
 import { parseAgentId, composeAgentId } from '../../orchestrator/agent-id.js';
@@ -185,6 +187,14 @@ function getOrchestrator(): ChatOrchestrator {
       }
     },
     () => getClassifierThreshold(),
+    () => {
+      try {
+        const raw = createAppSettingsStore(db).getSetting(TOOL_ALLOWLIST_SETTING_KEY);
+        return parseToolAllowlist(raw);
+      } catch {
+        return [];
+      }
+    },
   );
 
   // Prewarm the context-window cache for every configured provider so the
@@ -348,15 +358,18 @@ export const chatRouter = t.router({
             try {
               const dbHandle = (globalThis as any).sidepad?.db;
               if (dbHandle) {
-                const budget = checkBudget(dbHandle);
+                const budget = checkBudget(dbHandle, input.sessionId);
                 if (!budget.ok) {
+                  const sessionCap = budget.scope === 'session';
                   observer.next({
                     type: 'message:error',
                     turnId: '',
                     msgId: '',
                     agentId: '',
-                    code: 'BUDGET_EXCEEDED',
-                    message: `Budget exceeded: spent $${(budget.spentUsd ?? 0).toFixed(3)} of $${(budget.maxUsd ?? 0).toFixed(2)}`,
+                    code: sessionCap ? 'SESSION_BUDGET_EXCEEDED' : 'BUDGET_EXCEEDED',
+                    message: sessionCap
+                      ? `Session budget exceeded: spent $${(budget.spentUsd ?? 0).toFixed(3)} of $${(budget.maxUsd ?? 0).toFixed(2)}`
+                      : `Budget exceeded: spent $${(budget.spentUsd ?? 0).toFixed(3)} of $${(budget.maxUsd ?? 0).toFixed(2)}`,
                     retriable: false,
                   });
                   observer.complete();
@@ -524,6 +537,23 @@ export const chatRouter = t.router({
     .input(z.object({ toolCallId: z.string().min(1) }))
     .mutation(({ input }) => {
       const ok = toolApprovalGate.decide(input.toolCallId, 'deny');
+      return { ok };
+    }),
+
+  /** Approve this call and remember the tool name so later calls skip the prompt. */
+  approveToolAlways: t.procedure
+    .input(z.object({ toolCallId: z.string().min(1), toolName: z.string().min(1).max(200) }))
+    .mutation(({ input }) => {
+      const database = (globalThis as any).sidepad?.db;
+      if (database) {
+        const settings = createAppSettingsStore(database);
+        const current = parseToolAllowlist(settings.getSetting(TOOL_ALLOWLIST_SETTING_KEY));
+        const name = input.toolName.trim();
+        if (name && !current.includes(name)) {
+          settings.setSetting(TOOL_ALLOWLIST_SETTING_KEY, JSON.stringify([...current, name].slice(0, 200)));
+        }
+      }
+      const ok = toolApprovalGate.decide(input.toolCallId, 'approve');
       return { ok };
     }),
 });

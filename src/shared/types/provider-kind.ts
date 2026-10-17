@@ -8,6 +8,8 @@ export const PROVIDER_KINDS = [
   'gemini',
   'anthropic-minimax',
   'gemini-vertex',
+  'anthropic-bedrock',
+  'anthropic-vertex',
 ] as const;
 
 export type ProviderKind = (typeof PROVIDER_KINDS)[number];
@@ -19,7 +21,9 @@ export function needsBaseURL(kind: ProviderKind): boolean {
     kind === 'anthropic-messages' ||
     kind === 'gemini' ||
     kind === 'anthropic-minimax' ||
-    kind === 'gemini-vertex'
+    kind === 'gemini-vertex' ||
+    kind === 'anthropic-bedrock' ||
+    kind === 'anthropic-vertex'
   );
 }
 
@@ -28,6 +32,8 @@ export function requiresBaseURL(kind: ProviderKind): boolean {
     kind === 'openai-compat' ||
     kind === 'anthropic-messages' ||
     kind === 'anthropic-minimax' ||
-    kind === 'gemini-vertex'
+    kind === 'gemini-vertex' ||
+    kind === 'anthropic-bedrock' ||
+    kind === 'anthropic-vertex'
   );
 }

@@ -12,6 +12,7 @@ import {
   MINIMAX_ANTHROPIC_BASE_URL,
   MINIMAX_ANTHROPIC_BASE_URL_CN,
   GEMINI_VERTEX_BASE_URL_HINT,
+  ANTHROPIC_VERTEX_ENDPOINT_HINT,
 } from '../../shared/providers/vendor-defaults';
 
 type ProviderType = ProviderKind;
@@ -54,9 +55,14 @@ function needsBaseURL(type: ProviderType): boolean {
 function needsAPIKey(type: ProviderType): boolean {
   return type !== 'ollama';
 }
+function apiKeyOptional(type: ProviderType): boolean {
+  return type === 'anthropic-bedrock' || type === 'anthropic-vertex';
+}
 /** Whether we have enough credentials to probe the API */
 function canProbe(type: ProviderType, apiKey: string, baseURL: string): boolean {
   if (type === 'ollama') return true; // no key needed
+  // Bedrock/Vertex can list static models with only an endpoint; auth may use ADC/AWS chain.
+  if (apiKeyOptional(type)) return !!baseURL.trim();
   if (requiresBaseURL(type)) return !!baseURL.trim() && !!apiKey.trim();
   return !!apiKey.trim();
 }
@@ -555,6 +561,8 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
             <option value="gemini">Google Gemini</option>
             <option value="anthropic-minimax">MiniMax (Anthropic)</option>
             <option value="gemini-vertex">Gemini Vertex AI</option>
+            <option value="anthropic-bedrock">Claude on Bedrock</option>
+            <option value="anthropic-vertex">Claude on Vertex</option>
           </Select>
         </Field>
 
@@ -579,7 +587,7 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={isEditing ? t('providerForm.apiKeyEditPlaceholder') : t('providerForm.apiKeyPlaceholder')}
-              required={!isEditing} // not required in edit mode (blank = keep existing)
+              required={!isEditing && !apiKeyOptional(type)}
               autoComplete="off"
               spellCheck={false}
             />
@@ -602,6 +610,10 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
                   ? MINIMAX_ANTHROPIC_BASE_URL
                   : type === 'gemini-vertex'
                   ? GEMINI_VERTEX_BASE_URL_HINT
+                  : type === 'anthropic-bedrock'
+                  ? 'us-east-1'
+                  : type === 'anthropic-vertex'
+                  ? ANTHROPIC_VERTEX_ENDPOINT_HINT
                   : type === 'anthropic-messages'
                   ? 'https://api.example.com'
                   : type === 'gemini'
@@ -628,6 +640,18 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
             {type === 'gemini-vertex' && (
               <p className="text-[12px] text-ink-muted mt-1">
                 Replace YOUR_PROJECT / location in the Vertex publisher base URL. API key or gateway required.
+              </p>
+            )}
+            {type === 'anthropic-bedrock' && (
+              <p className="text-[12px] text-ink-muted mt-1">
+                AWS region (us-east-1) or a full bedrock-runtime URL. API key: bearer token, or two lines
+                (access key id, secret). Leave the key blank to use the local AWS credential chain.
+              </p>
+            )}
+            {type === 'anthropic-vertex' && (
+              <p className="text-[12px] text-ink-muted mt-1">
+                Format {ANTHROPIC_VERTEX_ENDPOINT_HINT}. API key: access token, service-account JSON, or a
+                .json path. Leave blank to use Application Default Credentials.
               </p>
             )}
           </Field>

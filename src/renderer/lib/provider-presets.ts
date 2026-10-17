@@ -1,5 +1,8 @@
 import type { ProviderKind } from '../../shared/types/provider-kind';
-import { MINIMAX_ANTHROPIC_BASE_URL } from '../../shared/providers/vendor-defaults';
+import {
+  MINIMAX_ANTHROPIC_BASE_URL,
+  ANTHROPIC_VERTEX_ENDPOINT_HINT,
+} from '../../shared/providers/vendor-defaults';
 
 export interface ProviderPreset {
   id: string;
@@ -14,6 +17,13 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   { id: 'anthropic', label: 'Anthropic', type: 'anthropic' },
   { id: 'ollama', label: 'Ollama', type: 'ollama', baseURL: 'http://localhost:11434' },
   { id: 'minimax', label: 'MiniMax', type: 'anthropic-minimax', baseURL: MINIMAX_ANTHROPIC_BASE_URL },
+  { id: 'bedrock', label: 'Claude on Bedrock', type: 'anthropic-bedrock', baseURL: 'us-east-1' },
+  {
+    id: 'claude-vertex',
+    label: 'Claude on Vertex',
+    type: 'anthropic-vertex',
+    baseURL: ANTHROPIC_VERTEX_ENDPOINT_HINT,
+  },
   { id: 'deepseek', label: 'DeepSeek', type: 'openai-compat', baseURL: 'https://api.deepseek.com/v1' },
   { id: 'qwen', label: 'Qwen (DashScope)', type: 'openai-compat', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
   { id: 'glm', label: 'GLM (智谱)', type: 'openai-compat', baseURL: 'https://open.bigmodel.cn/api/paas/v4' },

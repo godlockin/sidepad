@@ -33,6 +33,7 @@ export function UsageTab() {
   const [budgetEnabled, setBudgetEnabled] = useState(false);
   const [budgetMax, setBudgetMax] = useState('');
   const [budgetDays, setBudgetDays] = useState('30');
+  const [sessionMaxUsd, setSessionMaxUsd] = useState('');
   const [budgetBusy, setBudgetBusy] = useState(false);
   const [budgetSpent, setBudgetSpent] = useState<number | null>(null);
 
@@ -58,6 +59,7 @@ export function UsageTab() {
       setBudgetEnabled(b.enabled);
       setBudgetMax(b.maxUsd != null ? String(b.maxUsd) : '');
       setBudgetDays(String(b.periodDays ?? 30));
+      setSessionMaxUsd(b.sessionMaxUsd != null ? String(b.sessionMaxUsd) : '');
       if (b.enabled && b.maxUsd != null) {
         const days = b.periodDays ?? 30;
         const periodSummary = await trpc.usage.summarize.query({ days, sessionLimit: 1 });
@@ -77,14 +79,17 @@ export function UsageTab() {
 
   const saveBudget = async () => {
     const maxUsd = budgetMax.trim() === '' ? null : Number(budgetMax);
+    const sessionCap = sessionMaxUsd.trim() === '' ? null : Number(sessionMaxUsd);
     const periodDays = Number(budgetDays) || 30;
     if (maxUsd != null && (!Number.isFinite(maxUsd) || maxUsd < 0)) return;
+    if (sessionCap != null && (!Number.isFinite(sessionCap) || sessionCap < 0)) return;
     setBudgetBusy(true);
     try {
       await trpc.settings.setUsageBudget.mutate({
         enabled: budgetEnabled,
         maxUsd,
         periodDays,
+        sessionMaxUsd: sessionCap,
       });
       await loadBudget();
     } finally {
@@ -224,10 +229,22 @@ export function UsageTab() {
               className="w-full px-2 py-1.5 rounded-[6px] border border-rule bg-paper text-[13px] tabular-nums disabled:opacity-50"
             />
           </label>
+          <label className="w-[120px]">
+            <span className="block text-[11px] text-ink-faint mb-1">{t('settings.budget.sessionMaxUsd')}</span>
+            <input
+              value={sessionMaxUsd}
+              onChange={(e) => setSessionMaxUsd(e.target.value)}
+              placeholder="—"
+              inputMode="decimal"
+              disabled={!budgetEnabled}
+              className="w-full px-2 py-1.5 rounded-[6px] border border-rule bg-paper text-[13px] tabular-nums disabled:opacity-50"
+            />
+          </label>
           <Button variant="ghost" size="sm" disabled={budgetBusy} onClick={() => void saveBudget()}>
             {t('settings.budget.save')}
           </Button>
         </div>
+        <p className="text-[11px] text-ink-faint mt-2 leading-[1.4]">{t('settings.budget.sessionMaxHint')}</p>
       </div>
 
       {summary && (

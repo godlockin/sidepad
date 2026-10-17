@@ -25,6 +25,8 @@ export function ToolsTab() {
   const logBoxRef = useRef<HTMLDivElement | null>(null);
   const [approvalMode, setApprovalMode] = useState<'off' | 'ask'>('off');
   const [approvalSaving, setApprovalSaving] = useState(false);
+  const [allowlist, setAllowlist] = useState<string[]>([]);
+  const [allowlistBusy, setAllowlistBusy] = useState(false);
   const [clfEnabled, setClfEnabled] = useState(false);
   const [clfProviderId, setClfProviderId] = useState('');
   const [clfModel, setClfModel] = useState('');
@@ -41,8 +43,32 @@ export function ToolsTab() {
     try {
       const res = await trpc.settings.getToolApprovalMode.query();
       setApprovalMode(res.mode);
+      const list = await trpc.settings.getToolAllowlist.query();
+      setAllowlist(list.tools);
     } catch {
       setApprovalMode('off');
+      setAllowlist([]);
+    }
+  };
+
+  const removeAllowed = async (name: string) => {
+    setAllowlistBusy(true);
+    try {
+      const next = allowlist.filter((t) => t !== name);
+      const res = await trpc.settings.setToolAllowlist.mutate({ tools: next });
+      setAllowlist(res.tools);
+    } finally {
+      setAllowlistBusy(false);
+    }
+  };
+
+  const clearAllowlist = async () => {
+    setAllowlistBusy(true);
+    try {
+      await trpc.settings.setToolAllowlist.mutate({ tools: [] });
+      setAllowlist([]);
+    } finally {
+      setAllowlistBusy(false);
     }
   };
 
@@ -254,6 +280,49 @@ export function ToolsTab() {
             );
           })}
         </div>
+        {approvalMode === 'ask' && (
+          <div className="mt-4 border border-rule rounded-[10px] bg-surface p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[12px] font-medium text-ink">{t('settings.tools.approval.allowlistTitle')}</span>
+              {allowlist.length > 0 && (
+                <button
+                  type="button"
+                  disabled={allowlistBusy}
+                  onClick={() => void clearAllowlist()}
+                  className="ml-auto text-[11px] text-ink-muted hover:text-danger cursor-pointer disabled:opacity-50"
+                >
+                  {t('settings.tools.approval.allowlistClear')}
+                </button>
+              )}
+            </div>
+            <p className="text-[12px] text-ink-muted mb-3 leading-[1.4]">
+              {t('settings.tools.approval.allowlistBody')}
+            </p>
+            {allowlist.length === 0 ? (
+              <p className="text-[12px] text-ink-faint">{t('settings.tools.approval.allowlistEmpty')}</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {allowlist.map((name) => (
+                  <li
+                    key={name}
+                    className="flex items-center gap-2 text-[12px] font-mono text-ink bg-paper border border-rule rounded-[6px] px-2 py-1.5"
+                  >
+                    <span className="flex-1 truncate">{name}</span>
+                    <button
+                      type="button"
+                      disabled={allowlistBusy}
+                      onClick={() => void removeAllowed(name)}
+                      className="text-ink-faint hover:text-danger cursor-pointer disabled:opacity-50 text-[14px] leading-none"
+                      aria-label={`Remove ${name}`}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-8">
