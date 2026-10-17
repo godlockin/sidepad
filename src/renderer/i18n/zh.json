@@ -345,7 +345,16 @@
       "about": "关于",
       "tools": "工具",
       "knowledge": "知识库",
-      "usage": "用量"
+      "usage": "用量",
+      "audit": "审计"
+    },
+    "audit": {
+      "title": "审计日志",
+      "body": "本机记录的近期工具调用与沙盒拒绝。完整对话仍可通过会话导出审计。",
+      "refresh": "刷新",
+      "export": "导出 Markdown",
+      "loading": "加载中…",
+      "empty": "尚无审计事件。"
     },
     "usage": {
       "title": "用量与成本",
@@ -480,6 +489,13 @@
         "allowlistBody": "询问模式下，这些工具名将跳过确认。清空后恢复逐次询问。",
         "allowlistEmpty": "尚未记住任何工具。",
         "allowlistClear": "清空列表"
+      },
+      "sandbox": {
+        "title": "项目沙盒",
+        "body": "开启后，路径参数与 pty_exec 只能访问该聊天绑定项目的工作目录与挂载点。需要已关联项目。",
+        "project": "限制在项目内",
+        "off": "不限制路径（旧行为）",
+        "ptyHint": "绑定了项目的聊天会自动获得内置 pty_exec 工具，可在该目录执行短命令。"
       }
     },
     "budget": {

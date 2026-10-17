@@ -29,9 +29,32 @@ import {
   rewriteArgsAgainstCwd,
 } from '../../store/project-cwd.js';
 import {
+  jailToolArgs,
+  parseSandboxMode,
+  SANDBOX_SETTING_KEY,
+  SandboxViolation,
+  sandboxRoots,
+} from '../../sandbox/jail.js';
+import { appendAuditEvent } from '../../store/audit-store.js';
+import { runPtyCommand } from '../../pty/exec.js';
+import {
   getClassifierAgent,
   getClassifierThreshold,
 } from './classifier-router.js';
+
+const PTY_SERVER_ID = '__pty__';
+const PTY_TOOL: ToolDefinition = {
+  name: 'pty_exec',
+  description:
+    'Run a shell command in the linked project working directory (sandboxed). Use for local CLI work such as git status, builds, or short scripts. Output is capped.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      command: { type: 'string', description: 'Shell command to run' },
+    },
+    required: ['command'],
+  },
+};
 
 const t = initTRPC.create({ isServer: true });
 
@@ -212,13 +235,11 @@ function getOrchestrator(): ChatOrchestrator {
 }
 
 /**
- * Build a SessionToolResolver bound to the live MCP registry on globalThis.
- * - Reads enabled tool names per session from `session_tools` (kind='mcp_tool').
- * - Resolves each name → serverId via `mcp.listAllTools()`.
- * - Persists every invocation to `mcp_tool_usage`.
- * Returns null if no MCP registry is wired (preserves chat-only behavior).
+ * Session tools: attached MCP tools + built-in `pty_exec` when a project is linked.
+ * Path args are rewritten against project cwd; sandbox mode can jail them.
+ * Every call is written to mcp_tool_usage and audit_events.
  */
-function buildSessionToolResolver(db: any): SessionToolResolver | null {
+function buildSessionToolResolver(db: any): SessionToolResolver {
   const mcp = (globalThis as any).sidepad?.mcp as
     | {
         listAllTools(): Promise<
@@ -231,22 +252,49 @@ function buildSessionToolResolver(db: any): SessionToolResolver | null {
         ): Promise<unknown>;
       }
     | undefined;
-  if (!mcp) return null;
 
   const sessionToolsStore = createSessionToolsStore(db);
 
+  function activeProject(): {
+    sessionId?: string;
+    cwd: string | null;
+    mountPaths: string[];
+  } {
+    const active = (globalThis as any).sidepad?.activeProjectContext as
+      | { sessionId?: string; cwd: string | null; mounts?: Array<{ path: string }> }
+      | undefined;
+    return {
+      sessionId: active?.sessionId,
+      cwd: active?.cwd ?? null,
+      mountPaths: (active?.mounts ?? []).map((m) => m.path).filter(Boolean),
+    };
+  }
+
+  function sandboxOn(): boolean {
+    try {
+      return parseSandboxMode(createAppSettingsStore(db).getSetting(SANDBOX_SETTING_KEY)) === 'project';
+    } catch {
+      return true;
+    }
+  }
+
   return {
     async listToolsForSession(sessionId: string) {
+      const out: Array<{ tool: ToolDefinition; serverId: string }> = [];
+      const session = new SessionStore(db).getSession(sessionId);
+      if (session?.projectId) {
+        out.push({ tool: PTY_TOOL, serverId: PTY_SERVER_ID });
+      }
+      if (!mcp) return out;
       const attached = sessionToolsStore.list(sessionId, 'mcp_tool');
-      if (attached.length === 0) return [];
+      if (attached.length === 0) return out;
       let allTools: Array<{ serverId: string; name: string; description?: string; inputSchema: unknown }>;
       try {
         allTools = await mcp.listAllTools();
       } catch {
-        return [];
+        return out;
       }
       const wanted = new Set(attached.map((a) => a.refId));
-      const out: Array<{ tool: ToolDefinition; serverId: string }> = [];
       for (const t of allTools) {
         if (wanted.has(t.name)) {
           out.push({
@@ -258,25 +306,45 @@ function buildSessionToolResolver(db: any): SessionToolResolver | null {
       return out;
     },
     async callTool(serverId, name, args, _signal) {
+      const project = activeProject();
       try {
-        // Resolve relative path args against the active session's project cwd
-        // when available (set by chat.send before the turn starts).
-        const active = (globalThis as any).sidepad?.activeProjectContext as
-          | { cwd: string | null }
-          | undefined;
-        const rewritten = rewriteArgsAgainstCwd(args, active?.cwd ?? null);
+        let rewritten = rewriteArgsAgainstCwd(args, project.cwd);
+        if (sandboxOn()) {
+          const roots = sandboxRoots(project.cwd, project.mountPaths);
+          // No linked project → cannot jail; keep cwd rewrite only.
+          if (roots.length > 0) {
+            rewritten = jailToolArgs(rewritten, roots, project.cwd);
+          }
+        }
+
+        if (serverId === PTY_SERVER_ID && name === 'pty_exec') {
+          const command = typeof rewritten.command === 'string' ? rewritten.command : '';
+          if (!project.cwd) {
+            return { result: 'pty_exec requires a linked project with a working directory', isError: true };
+          }
+          const roots = sandboxRoots(project.cwd, project.mountPaths);
+          const result = await runPtyCommand({ command, cwd: project.cwd, roots });
+          const text = [
+            result.timedOut ? 'timed out' : `exit ${result.exitCode ?? '?'}`,
+            result.output || '(no output)',
+          ].join('\n');
+          return { result: text, isError: !!result.timedOut || (result.exitCode != null && result.exitCode !== 0) };
+        }
+
+        if (!mcp) {
+          return { result: `unknown tool: ${name}`, isError: true };
+        }
         const r = (await mcp.callTool(serverId, name, rewritten)) as {
           content?: unknown;
           isError?: boolean;
         };
-        // Flatten the MCP envelope: the model sees plain text, not
-        // {"content":[{"type":"text",...}]} wrappers.
         return { result: flattenMcpResult(r), isError: !!r?.isError };
       } catch (err) {
-        return {
-          result: `Tool error: ${err instanceof Error ? err.message : String(err)}`,
-          isError: true,
-        };
+        const message =
+          err instanceof SandboxViolation
+            ? `Sandbox: ${err.message}`
+            : `Tool error: ${err instanceof Error ? err.message : String(err)}`;
+        return { result: message, isError: true };
       }
     },
     recordUsage({ messageId, serverId, toolName, args, result, error }) {
@@ -294,7 +362,24 @@ function buildSessionToolResolver(db: any): SessionToolResolver | null {
           Date.now(),
         );
       } catch {
-        // never fail the loop on persistence error
+        /* ignore */
+      }
+      try {
+        const project = activeProject();
+        appendAuditEvent(db, {
+          sessionId: project.sessionId ?? null,
+          kind: error ? 'tool.error' : 'tool.call',
+          summary: `${toolName} @ ${serverId}${error ? ` — ${error}` : ''}`,
+          detail: {
+            messageId,
+            toolName,
+            serverId,
+            args,
+            error: error ?? null,
+          },
+        });
+      } catch {
+        /* ignore */
       }
     },
   };
@@ -381,10 +466,20 @@ export const chatRouter = t.router({
                   if (sess?.projectId) {
                     const ctx = resolveProjectContext(dbHandle, sess.projectId);
                     (globalThis as any).sidepad.activeProjectContext = ctx
-                      ? { projectId: sess.projectId, cwd: ctx.cwd, mounts: ctx.mounts }
-                      : null;
+                      ? {
+                          sessionId: input.sessionId,
+                          projectId: sess.projectId,
+                          cwd: ctx.cwd,
+                          mounts: ctx.mounts,
+                        }
+                      : { sessionId: input.sessionId, projectId: null, cwd: null, mounts: [] };
                   } else {
-                    (globalThis as any).sidepad.activeProjectContext = null;
+                    (globalThis as any).sidepad.activeProjectContext = {
+                      sessionId: input.sessionId,
+                      projectId: null,
+                      cwd: null,
+                      mounts: [],
+                    };
                   }
                 } catch {
                   (globalThis as any).sidepad.activeProjectContext = null;

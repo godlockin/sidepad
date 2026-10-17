@@ -11,6 +11,7 @@ import { CapabilitiesTab } from './settings/CapabilitiesTab';
 import { ToolsTab } from './settings/ToolsTab';
 import { KnowledgeTab } from './settings/KnowledgeTab';
 import { UsageTab } from './settings/UsageTab';
+import { AuditTab } from './settings/AuditTab';
 import { trpc } from '../lib/trpc-client';
 import type { ProviderKind } from '../../shared/types/provider-kind';
 
@@ -21,6 +22,7 @@ type SettingsTab =
   | 'tools'
   | 'knowledge'
   | 'usage'
+  | 'audit'
   | 'appearance'
   | 'about';
 
@@ -40,6 +42,7 @@ export function SettingsPage() {
     { key: 'tools', label: t('settings.tabs.tools') },
     { key: 'knowledge', label: t('settings.tabs.knowledge') },
     { key: 'usage', label: t('settings.tabs.usage') },
+    { key: 'audit', label: t('settings.tabs.audit') },
     { key: 'appearance', label: t('settings.tabs.appearance') },
     { key: 'about', label: t('settings.tabs.about') },
   ];
@@ -282,6 +285,8 @@ export function SettingsPage() {
           {tab === 'knowledge' && <KnowledgeTab />}
 
           {tab === 'usage' && <UsageTab />}
+
+          {tab === 'audit' && <AuditTab />}
 
           {tab === 'appearance' && (
             <section>

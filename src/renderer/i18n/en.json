@@ -345,7 +345,16 @@
       "about": "About",
       "tools": "Tools",
       "knowledge": "Knowledge",
-      "usage": "Usage"
+      "usage": "Usage",
+      "audit": "Audit"
+    },
+    "audit": {
+      "title": "Audit log",
+      "body": "Recent tool calls and sandbox denials recorded on this machine. Session export still covers full transcripts.",
+      "refresh": "Refresh",
+      "export": "Export markdown",
+      "loading": "Loading…",
+      "empty": "No audit events yet."
     },
     "usage": {
       "title": "Usage & cost",
@@ -480,6 +489,13 @@
         "allowlistBody": "These tool names skip the prompt in ask mode. Clear to require approval again.",
         "allowlistEmpty": "No tools remembered yet.",
         "allowlistClear": "Clear list"
+      },
+      "sandbox": {
+        "title": "Project sandbox",
+        "body": "When on, path arguments and pty_exec stay inside the chat's project working directory and mounts. Requires a linked project.",
+        "project": "Confine to project",
+        "off": "No path jail (legacy)",
+        "ptyHint": "Chats linked to a project get a built-in pty_exec tool for short shell commands in that directory."
       }
     },
     "budget": {

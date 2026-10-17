@@ -27,6 +27,8 @@ export function ToolsTab() {
   const [approvalSaving, setApprovalSaving] = useState(false);
   const [allowlist, setAllowlist] = useState<string[]>([]);
   const [allowlistBusy, setAllowlistBusy] = useState(false);
+  const [sandboxMode, setSandboxMode] = useState<'off' | 'project'>('project');
+  const [sandboxSaving, setSandboxSaving] = useState(false);
   const [clfEnabled, setClfEnabled] = useState(false);
   const [clfProviderId, setClfProviderId] = useState('');
   const [clfModel, setClfModel] = useState('');
@@ -72,6 +74,25 @@ export function ToolsTab() {
     }
   };
 
+  const refreshSandbox = async () => {
+    try {
+      const res = await trpc.settings.getSandboxMode.query();
+      setSandboxMode(res.mode);
+    } catch {
+      setSandboxMode('project');
+    }
+  };
+
+  const saveSandbox = async (mode: 'off' | 'project') => {
+    setSandboxSaving(true);
+    try {
+      await trpc.settings.setSandboxMode.mutate({ mode });
+      setSandboxMode(mode);
+    } finally {
+      setSandboxSaving(false);
+    }
+  };
+
   const refreshClassifier = async () => {
     try {
       const cfg = await trpc.classifier.getConfig.query();
@@ -99,6 +120,7 @@ export function ToolsTab() {
     void refresh();
     void refreshBrowser();
     void refreshApproval();
+    void refreshSandbox();
     void refreshClassifier();
   }, []);
 
@@ -279,6 +301,32 @@ export function ToolsTab() {
               </button>
             );
           })}
+        </div>
+        <div className="mt-6">
+          <span className="text-[12px] font-medium text-ink">{t('settings.tools.sandbox.title')}</span>
+          <p className="mt-1 text-[12px] text-ink-muted leading-[1.4]">{t('settings.tools.sandbox.body')}</p>
+          <p className="mt-1 text-[12px] text-ink-faint leading-[1.4]">{t('settings.tools.sandbox.ptyHint')}</p>
+          <div className="mt-3 border border-rule rounded-[10px] bg-surface overflow-hidden divide-y divide-rule">
+            {([
+              { key: 'project' as const, label: t('settings.tools.sandbox.project') },
+              { key: 'off' as const, label: t('settings.tools.sandbox.off') },
+            ]).map((opt) => {
+              const active = sandboxMode === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  disabled={sandboxSaving}
+                  onClick={() => void saveSandbox(opt.key)}
+                  className={`w-full text-left px-4 py-3 text-[13px] cursor-pointer transition-colors ${
+                    active ? 'bg-accent-muted text-accent font-medium' : 'text-ink hover:bg-surface-2'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         {approvalMode === 'ask' && (
           <div className="mt-4 border border-rule rounded-[10px] bg-surface p-4">

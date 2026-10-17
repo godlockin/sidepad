@@ -9,6 +9,7 @@ import {
   TOOL_APPROVAL_SETTING_KEY,
 } from '../../orchestrator/tool-approval.js';
 import { BUDGET_SETTING_KEY, readBudgetConfig } from '../../store/usage-store.js';
+import { parseSandboxMode, SANDBOX_SETTING_KEY } from '../../sandbox/jail.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -78,6 +79,18 @@ export const settingsRouter = t.router({
       const tools = [...new Set(input.tools.map((s) => s.trim()).filter(Boolean))];
       createAppSettingsStore(db()).setSetting(TOOL_ALLOWLIST_SETTING_KEY, JSON.stringify(tools));
       return { ok: true as const, tools };
+    }),
+
+  getSandboxMode: t.procedure.query(() => {
+    const raw = createAppSettingsStore(db()).getSetting(SANDBOX_SETTING_KEY);
+    return { mode: parseSandboxMode(raw) };
+  }),
+
+  setSandboxMode: t.procedure
+    .input(z.object({ mode: z.enum(['off', 'project']) }))
+    .mutation(({ input }) => {
+      createAppSettingsStore(db()).setSetting(SANDBOX_SETTING_KEY, input.mode);
+      return { ok: true as const };
     }),
 
   getUsageBudget: t.procedure.query(() => readBudgetConfig(db())),

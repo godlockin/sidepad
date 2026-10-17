@@ -14,6 +14,7 @@ import { settingsRouter } from './routers/settings-router.js';
 import { knowledgeRouter } from './routers/knowledge-router.js';
 import { projectRouter } from './routers/project-router.js';
 import { usageRouter } from './routers/usage-router.js';
+import { auditRouter } from './routers/audit-router.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -36,6 +37,7 @@ export const appRouter = t.router({
   knowledge: knowledgeRouter,
   project: projectRouter,
   usage: usageRouter,
+  audit: auditRouter,
 });
 
 export type AppRouter = typeof appRouter;
