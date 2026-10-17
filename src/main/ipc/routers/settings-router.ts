@@ -2,6 +2,11 @@ import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import type Database from 'better-sqlite3';
 import { createAppSettingsStore } from '../../store/app-settings-store.js';
+import {
+  parseToolApprovalMode,
+  TOOL_APPROVAL_SETTING_KEY,
+} from '../../orchestrator/tool-approval.js';
+import { BUDGET_SETTING_KEY, readBudgetConfig } from '../../store/usage-store.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -46,5 +51,39 @@ export const settingsRouter = t.router({
         store.setSetting(input.key, trimmed);
       }
       return { ok: true };
+    }),
+
+  getToolApprovalMode: t.procedure.query(() => {
+    const raw = createAppSettingsStore(db()).getSetting(TOOL_APPROVAL_SETTING_KEY);
+    return { mode: parseToolApprovalMode(raw) };
+  }),
+
+  setToolApprovalMode: t.procedure
+    .input(z.object({ mode: z.enum(['off', 'ask']) }))
+    .mutation(({ input }) => {
+      createAppSettingsStore(db()).setSetting(TOOL_APPROVAL_SETTING_KEY, input.mode);
+      return { ok: true as const };
+    }),
+
+  getUsageBudget: t.procedure.query(() => readBudgetConfig(db())),
+
+  setUsageBudget: t.procedure
+    .input(
+      z.object({
+        enabled: z.boolean(),
+        maxUsd: z.number().finite().min(0).nullable(),
+        periodDays: z.number().int().positive().max(3650).default(30),
+      }),
+    )
+    .mutation(({ input }) => {
+      createAppSettingsStore(db()).setSetting(
+        BUDGET_SETTING_KEY,
+        JSON.stringify({
+          enabled: input.enabled,
+          maxUsd: input.maxUsd,
+          periodDays: input.periodDays,
+        }),
+      );
+      return { ok: true as const };
     }),
 });

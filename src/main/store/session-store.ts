@@ -114,6 +114,12 @@ export class SessionStore {
     return row ? rowToSession(row) : null;
   }
 
+  setProject(sessionId: string, projectId: string | null): void {
+    this.db
+      .prepare('UPDATE sessions SET project_id = ?, updated_at = ? WHERE id = ?')
+      .run(projectId, now(), sessionId);
+  }
+
   listSessions(): Session[] {
     const rows = this.db.prepare('SELECT * FROM sessions ORDER BY updated_at DESC').all() as Record<string, unknown>[];
     return rows.map(rowToSession);

@@ -18,6 +18,16 @@ export type OrchestratorEvent =
       args: Record<string, unknown>;
     }
   | {
+      type: 'tool_call:awaiting_approval';
+      turnId: string;
+      msgId: string;
+      agentId: string;
+      toolCallId: string;
+      serverId: string;
+      toolName: string;
+      args: Record<string, unknown>;
+    }
+  | {
       type: 'tool_call:result';
       turnId: string;
       msgId: string;

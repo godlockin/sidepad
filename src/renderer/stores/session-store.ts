@@ -13,13 +13,14 @@ interface SessionState {
 
   loadSessions: () => Promise<void>;
   selectSession: (id: string) => Promise<void>;
-  createSession: (title?: string) => Promise<Session>;
+  createSession: (title?: string, opts?: { projectId?: string }) => Promise<Session>;
   deleteSession: (id: string) => Promise<void>;
   renameSession: (id: string, title: string) => Promise<void>;
   setSessionIcon: (id: string, kind: 'emoji' | 'image' | null, value: string | null) => Promise<void>;
   forkSession: (parentMessageId: string, title?: string) => Promise<Session>;
   setParticipantPersona: (agentId: string, personaId: string) => Promise<void>;
   setGroupMode: (id: string, mode: GroupMode) => Promise<void>;
+  setProject: (id: string, projectId: string | null) => Promise<void>;
   refreshActiveSession: () => Promise<void>;
   set: (partial: Partial<SessionState>) => void;
 }
@@ -47,11 +48,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     void getQueryClient().invalidateQueries({ queryKey: messagesKey(id) });
   },
 
-  createSession: async (title?: string) => {
+  createSession: async (title?: string, opts?: { projectId?: string }) => {
     const firstProvider = useSettingsStore.getState().providers[0];
     const session = await trpc.session.create.mutate({
       title,
       defaultAgentId: firstProvider?.id,
+      projectId: opts?.projectId,
     });
     const { sessions } = get();
     set({
@@ -118,6 +120,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   setGroupMode: async (id: string, mode: GroupMode) => {
     const updated = await trpc.session.setGroupMode.mutate({ sessionId: id, mode });
+    const { sessions, activeSession } = get();
+    set({
+      sessions: sessions.map((s) => (s.id === id ? updated : s)),
+      activeSession: activeSession?.id === id ? updated : activeSession,
+    });
+  },
+
+  setProject: async (id: string, projectId: string | null) => {
+    const updated = await trpc.session.setProject.mutate({ sessionId: id, projectId });
     const { sessions, activeSession } = get();
     set({
       sessions: sessions.map((s) => (s.id === id ? updated : s)),

@@ -43,6 +43,7 @@ export const sessionRouter = t.router({
         visibilityMode: z.enum(['independent', 'full']).optional(),
         groupMode: groupModeEnum.optional(),
         participants: z.array(z.string()).optional(),
+        projectId: z.string().optional(),
       }),
     )
     .mutation(({ input }) => {
@@ -51,6 +52,7 @@ export const sessionRouter = t.router({
         title: input.title,
         participants: input.participants,
         groupMode: input.groupMode,
+        projectId: input.projectId,
       });
       if (input.defaultAgentId) {
         store.setDefaultAgent(session.id, input.defaultAgentId);
@@ -59,6 +61,16 @@ export const sessionRouter = t.router({
         store.setVisibilityMode(session.id, input.visibilityMode);
       }
       return store.getSession(session.id)!;
+    }),
+
+  setProject: t.procedure
+    .input(z.object({ sessionId: z.string(), projectId: z.string().nullable() }))
+    .mutation(({ input }) => {
+      const store = getStore();
+      const session = store.getSession(input.sessionId);
+      if (!session) throw new Error(`Session "${input.sessionId}" not found`);
+      store.setProject(input.sessionId, input.projectId);
+      return store.getSession(input.sessionId)!;
     }),
 
   rename: t.procedure
@@ -341,6 +353,121 @@ export const sessionRouter = t.router({
         lines.push('---');
         lines.push('');
       }
+
+      return lines.join('\n');
+    }),
+
+  /**
+   * Local audit export: transcript + per-message tokens/effort + MCP tool rows.
+   * Intended for governance review, not a polished share artifact.
+   */
+  exportAudit: t.procedure
+    .input(
+      z.object({
+        sessionId: z.string(),
+        includeToolBodies: z.boolean().default(true),
+      }),
+    )
+    .query(({ input }) => {
+      const store = getStore();
+      const session = store.getSession(input.sessionId);
+      if (!session) throw new Error(`Session "${input.sessionId}" not found`);
+      const messages = store.listMessages(input.sessionId);
+      const db = getDb();
+
+      const toolStmt = db.prepare(
+        `SELECT server_id, tool_name, args_json, result_json, error, created_at
+         FROM mcp_tool_usage WHERE message_id = ? ORDER BY created_at ASC`,
+      );
+
+      const lines: string[] = [];
+      lines.push(`# Audit — ${session.title ?? 'Untitled'}`);
+      lines.push('');
+      lines.push(`- Session: \`${session.id}\``);
+      lines.push(`- Project: \`${session.projectId ?? '—'}\``);
+      lines.push(`- Exported: ${new Date().toISOString()}`);
+      lines.push('');
+
+      let totalIn = 0;
+      let totalOut = 0;
+      let toolCount = 0;
+
+      for (const msg of messages) {
+        let agentId = '';
+        let effort: string | null = null;
+        if (msg.metaJson) {
+          try {
+            const meta = JSON.parse(msg.metaJson) as Record<string, unknown>;
+            if (typeof meta.agentId === 'string') agentId = meta.agentId;
+            if (typeof meta.effort === 'string') effort = meta.effort;
+          } catch {
+            /* ignore */
+          }
+        }
+        const inTok = msg.promptTokens ?? 0;
+        const outTok = msg.completionTokens ?? 0;
+        totalIn += inTok;
+        totalOut += outTok;
+
+        lines.push(`## ${msg.role} · ${agentId || msg.modelId || '—'} · ${msg.id}`);
+        lines.push('');
+        lines.push(
+          `- status: ${msg.status}` +
+            (msg.modelId ? ` · model: \`${msg.modelId}\`` : '') +
+            (effort ? ` · effort: ${effort}` : '') +
+            ` · tokens: ${inTok} in / ${outTok} out`,
+        );
+        lines.push('');
+        if (msg.content?.trim()) {
+          lines.push(msg.content);
+          lines.push('');
+        }
+
+        const tools = toolStmt.all(msg.id) as Array<{
+          server_id: string;
+          tool_name: string;
+          args_json: string | null;
+          result_json: string | null;
+          error: string | null;
+          created_at: number;
+        }>;
+        if (tools.length > 0) {
+          lines.push('### Tool calls');
+          lines.push('');
+          for (const trow of tools) {
+            toolCount += 1;
+            lines.push(`- \`${trow.tool_name}\` @ \`${trow.server_id}\`${trow.error ? ` · ERROR: ${trow.error}` : ''}`);
+            if (input.includeToolBodies) {
+              if (trow.args_json) {
+                lines.push('  - args:');
+                lines.push('```json');
+                lines.push(trow.args_json);
+                lines.push('```');
+              }
+              if (trow.result_json) {
+                const clipped =
+                  trow.result_json.length > 4000
+                    ? `${trow.result_json.slice(0, 4000)}\n… truncated`
+                    : trow.result_json;
+                lines.push('  - result:');
+                lines.push('```json');
+                lines.push(clipped);
+                lines.push('```');
+              }
+            }
+          }
+          lines.push('');
+        }
+        lines.push('---');
+        lines.push('');
+      }
+
+      lines.push('## Totals');
+      lines.push('');
+      lines.push(`- Messages: ${messages.length}`);
+      lines.push(`- Tokens: ${totalIn} in / ${totalOut} out`);
+      lines.push(`- Tool invocations: ${toolCount}`);
+      lines.push('');
 
       return lines.join('\n');
     }),

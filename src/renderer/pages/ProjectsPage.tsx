@@ -1,23 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../stores/project-store';
+import { useSessionStore } from '../stores/session-store';
 import { ProjectWizard } from '../components/ProjectWizard';
 import { MountList } from '../components/MountList';
 
-export function ProjectsPage() {
+export function ProjectsPage({ onOpenChat }: { onOpenChat?: () => void }) {
   const { t } = useTranslation();
   const projects = useProjectStore((s) => s.projects);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const init = useProjectStore((s) => s.init);
   const selectProject = useProjectStore((s) => s.selectProject);
   const deleteProject = useProjectStore((s) => s.deleteProject);
+  const createSession = useSessionStore((s) => s.createSession);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [opening, setOpening] = useState(false);
 
   useEffect(() => {
     void init();
   }, [init]);
 
   const active = projects.find((p) => p.id === activeProjectId) ?? null;
+
+  const handleOpenChat = async () => {
+    if (!active || opening) return;
+    setOpening(true);
+    try {
+      await createSession(active.name, { projectId: active.id });
+      onOpenChat?.();
+    } finally {
+      setOpening(false);
+    }
+  };
 
   return (
     <div className="flex h-full">
@@ -55,16 +69,26 @@ export function ProjectsPage() {
       <main className="flex-1 p-6 overflow-y-auto">
         {active ? (
           <div className="space-y-4 max-w-2xl">
-            <header className="flex items-center justify-between">
-              <h1 className="text-xl font-semibold">{active.name}</h1>
-              <button
-                onClick={() => {
-                  if (confirm(t('projects.confirmDelete'))) void deleteProject(active.id);
-                }}
-                className="text-[12px] text-ink-muted hover:text-danger"
-              >
-                {t('projects.delete')}
-              </button>
+            <header className="flex items-center justify-between gap-3">
+              <h1 className="text-xl font-semibold truncate">{active.name}</h1>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={opening}
+                  onClick={() => void handleOpenChat()}
+                  className="text-[12px] px-3 py-1.5 rounded-[6px] bg-accent text-white hover:bg-accent-hover disabled:opacity-50"
+                >
+                  {t('projects.openChat')}
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(t('projects.confirmDelete'))) void deleteProject(active.id);
+                  }}
+                  className="text-[12px] text-ink-muted hover:text-danger"
+                >
+                  {t('projects.delete')}
+                </button>
+              </div>
             </header>
             <section>
               <h3 className="text-[13px] font-medium mb-2">{t('projects.mountsHeading')}</h3>

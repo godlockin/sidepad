@@ -27,6 +27,13 @@ import type {
   ReasoningEffort,
 } from '../providers/types';
 import type { Session } from '../store/types';
+import {
+  ToolApprovalGate,
+  type ToolApprovalMode,
+} from './tool-approval';
+
+export { ToolApprovalGate, parseToolApprovalMode, TOOL_APPROVAL_SETTING_KEY } from './tool-approval';
+export type { ToolApprovalDecision, ToolApprovalMode } from './tool-approval';
 
 function uuid(): string { return crypto.randomUUID(); }
 
@@ -157,6 +164,8 @@ export class ChatOrchestrator {
     private toolResolver: SessionToolResolver | null = null,
     private getContextWindowForModel: (agentId: string, model: string) => number = () => 8000,
     private getAgentLabel: (agentId: string) => string = (id) => id,
+    private toolApprovalGate: ToolApprovalGate | null = null,
+    private getToolApprovalMode: () => ToolApprovalMode = () => 'off',
   ) {}
 
   /**
@@ -438,14 +447,15 @@ export class ChatOrchestrator {
         return;
       }
 
-      // We have tool calls to run. All start events go out up front, then the
-      // tools execute concurrently; results are emitted in tool-call order.
+      // We have tool calls to run. Start events go out up front; when approval
+      // mode is 'ask', we pause each call until the UI approves or denies.
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content: roundContent,
         toolCalls: roundToolCalls,
       };
       const followUpToolMsgs: ChatMessage[] = [];
+      const askMode = this.getToolApprovalMode() === 'ask' && !!this.toolApprovalGate;
 
       for (const tc of roundToolCalls) {
         if (signal.aborted) {
@@ -463,6 +473,36 @@ export class ChatOrchestrator {
           toolName: tc.name,
           args: tc.arguments ?? {},
         };
+        if (askMode) {
+          yield {
+            type: 'tool_call:awaiting_approval',
+            turnId,
+            msgId,
+            agentId,
+            toolCallId: tc.id,
+            serverId,
+            toolName: tc.name,
+            args: tc.arguments ?? {},
+          };
+        }
+      }
+
+      const decisions = new Map<string, 'approve' | 'deny'>();
+      if (askMode && this.toolApprovalGate) {
+        try {
+          await Promise.all(
+            roundToolCalls.map(async (tc) => {
+              const decision = await this.toolApprovalGate!.request(tc.id, signal);
+              decisions.set(tc.id, decision);
+            }),
+          );
+        } catch {
+          if (signal.aborted) {
+            this.store.markAborted(msgId);
+            return;
+          }
+          throw new Error('tool approval interrupted');
+        }
       }
 
       const executed = await Promise.all(
@@ -472,6 +512,18 @@ export class ChatOrchestrator {
           let resultPayload: unknown = null;
           let isError = false;
           let errorMsg: string | undefined;
+
+          if (decisions.get(tc.id) === 'deny') {
+            return {
+              tc,
+              serverId,
+              startedAt,
+              resultPayload: { error: 'Tool call denied by user' },
+              isError: true,
+              errorMsg: 'denied_by_user',
+            };
+          }
+
           try {
             if (!this.toolResolver) throw new Error('no tool resolver configured');
             if (!serverId) throw new Error(`unknown tool: ${tc.name}`);

@@ -23,10 +23,21 @@ export function ToolsTab() {
   const [installing, setInstalling] = useState(false);
   const [installLog, setInstallLog] = useState<string[]>([]);
   const logBoxRef = useRef<HTMLDivElement | null>(null);
+  const [approvalMode, setApprovalMode] = useState<'off' | 'ask'>('off');
+  const [approvalSaving, setApprovalSaving] = useState(false);
 
   const refresh = async () => {
     const res = (await trpc.settings.getToolKeys.query()) as KeyStatus;
     setStatus(res);
+  };
+
+  const refreshApproval = async () => {
+    try {
+      const res = await trpc.settings.getToolApprovalMode.query();
+      setApprovalMode(res.mode);
+    } catch {
+      setApprovalMode('off');
+    }
   };
 
   const refreshBrowser = async () => {
@@ -41,7 +52,18 @@ export function ToolsTab() {
   useEffect(() => {
     void refresh();
     void refreshBrowser();
+    void refreshApproval();
   }, []);
+
+  const saveApproval = async (mode: 'off' | 'ask') => {
+    setApprovalSaving(true);
+    try {
+      await trpc.settings.setToolApprovalMode.mutate({ mode });
+      setApprovalMode(mode);
+    } finally {
+      setApprovalSaving(false);
+    }
+  };
 
   // Auto-scroll the install log to the bottom whenever it grows.
   useEffect(() => {
@@ -156,6 +178,41 @@ export function ToolsTab() {
                   {saving === row.key ? '…' : 'Save'}
                 </Button>
               </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
+          {t('settings.tools.approval.title')}
+        </span>
+        <p className="mt-2 text-[13px] text-ink-muted leading-[1.5]">
+          {t('settings.tools.approval.body')}
+        </p>
+        {approvalMode === 'off' && (
+          <p className="mt-2 text-[12px] text-warn leading-[1.5]">
+            {t('settings.tools.approval.offWarn')}
+          </p>
+        )}
+        <div className="mt-3 border border-rule rounded-[10px] bg-surface overflow-hidden divide-y divide-rule">
+          {([
+            { key: 'off' as const, label: t('settings.tools.approval.off') },
+            { key: 'ask' as const, label: t('settings.tools.approval.ask') },
+          ]).map((opt) => {
+            const active = approvalMode === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                disabled={approvalSaving}
+                onClick={() => void saveApproval(opt.key)}
+                className={`w-full text-left px-4 py-3 text-[13px] cursor-pointer transition-colors ${
+                  active ? 'bg-accent-muted text-accent font-medium' : 'text-ink hover:bg-surface-2'
+                }`}
+              >
+                {opt.label}
+              </button>
             );
           })}
         </div>

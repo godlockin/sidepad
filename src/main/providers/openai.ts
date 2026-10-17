@@ -55,9 +55,9 @@ export class OpenAIProvider implements LLMProvider {
     try {
       const stream = await this.client.chat.completions.create(
         {
+          ...bodyOverrides,
           model: req.model,
           messages: messages as any,
-          ...bodyOverrides,
           stream: true,
           ...(tools ? { tools } : {}),
           ...reasoning,

@@ -6,18 +6,32 @@ import { randomUUID } from 'node:crypto';
 import { SessionStore } from '../../store/session-store.js';
 import { PersonaStore } from '../../store/persona-store.js';
 import { createSessionToolsStore } from '../../store/session-tools-store.js';
-import { ChatOrchestrator, type SessionToolResolver } from '../../orchestrator/index.js';
+import {
+  ChatOrchestrator,
+  ToolApprovalGate,
+  parseToolApprovalMode,
+  TOOL_APPROVAL_SETTING_KEY,
+  type SessionToolResolver,
+} from '../../orchestrator/index.js';
 import { parseAgentId, composeAgentId } from '../../orchestrator/agent-id.js';
 import { getSessionSkillAddenda } from '../../skills/composer.js';
 import type { OrchestratorEvent } from '../../orchestrator/types.js';
 import { registry } from '../../providers/index.js';
 import { flattenMcpResult } from '../../mcp/flatten.js';
 import type { ToolDefinition } from '../../providers/types.js';
+import { createAppSettingsStore } from '../../store/app-settings-store.js';
+import { checkBudget } from '../../store/usage-store.js';
+import {
+  formatProjectAddendum,
+  resolveProjectContext,
+  rewriteArgsAgainstCwd,
+} from '../../store/project-cwd.js';
 
 const t = initTRPC.create({ isServer: true });
 
 let orchestrator: ChatOrchestrator | null = null;
 const activeTurns = new Map<string, AbortController>();
+const toolApprovalGate = new ToolApprovalGate();
 
 function getOrchestrator(): ChatOrchestrator {
   if (orchestrator) return orchestrator;
@@ -118,11 +132,23 @@ function getOrchestrator(): ChatOrchestrator {
       return persona?.prompt ?? null;
     },
     (sessionId: string) => {
+      const parts: string[] = [];
       try {
-        return getSessionSkillAddenda(db, sessionId);
+        const skills = getSessionSkillAddenda(db, sessionId);
+        if (skills.trim()) parts.push(skills);
       } catch {
-        return '';
+        /* ignore */
       }
+      try {
+        const session = store.getSession(sessionId);
+        if (session?.projectId) {
+          const ctx = resolveProjectContext(db, session.projectId);
+          if (ctx) parts.push(formatProjectAddendum(ctx));
+        }
+      } catch {
+        /* ignore */
+      }
+      return parts.join('\n\n');
     },
     buildSessionToolResolver(db),
     (agentId: string, model: string) => {
@@ -145,6 +171,15 @@ function getOrchestrator(): ChatOrchestrator {
         } catch { /* ignore */ }
       }
       return providerId || agentId;
+    },
+    toolApprovalGate,
+    () => {
+      try {
+        const mode = createAppSettingsStore(db).getSetting(TOOL_APPROVAL_SETTING_KEY);
+        return parseToolApprovalMode(mode);
+      } catch {
+        return 'off';
+      }
     },
   );
 
@@ -210,7 +245,13 @@ function buildSessionToolResolver(db: any): SessionToolResolver | null {
     },
     async callTool(serverId, name, args, _signal) {
       try {
-        const r = (await mcp.callTool(serverId, name, args)) as {
+        // Resolve relative path args against the active session's project cwd
+        // when available (set by chat.send before the turn starts).
+        const active = (globalThis as any).sidepad?.activeProjectContext as
+          | { cwd: string | null }
+          | undefined;
+        const rewritten = rewriteArgsAgainstCwd(args, active?.cwd ?? null);
+        const r = (await mcp.callTool(serverId, name, rewritten)) as {
           content?: unknown;
           isError?: boolean;
         };
@@ -301,6 +342,38 @@ export const chatRouter = t.router({
 
           async function run() {
             try {
+              const dbHandle = (globalThis as any).sidepad?.db;
+              if (dbHandle) {
+                const budget = checkBudget(dbHandle);
+                if (!budget.ok) {
+                  observer.next({
+                    type: 'message:error',
+                    turnId: '',
+                    msgId: '',
+                    agentId: '',
+                    code: 'BUDGET_EXCEEDED',
+                    message: `Budget exceeded: spent $${(budget.spentUsd ?? 0).toFixed(3)} of $${(budget.maxUsd ?? 0).toFixed(2)}`,
+                    retriable: false,
+                  });
+                  observer.complete();
+                  return;
+                }
+                // Publish project context for this turn (path rewriting in callTool).
+                try {
+                  const sess = new SessionStore(dbHandle).getSession(input.sessionId);
+                  if (sess?.projectId) {
+                    const ctx = resolveProjectContext(dbHandle, sess.projectId);
+                    (globalThis as any).sidepad.activeProjectContext = ctx
+                      ? { projectId: sess.projectId, cwd: ctx.cwd, mounts: ctx.mounts }
+                      : null;
+                  } else {
+                    (globalThis as any).sidepad.activeProjectContext = null;
+                  }
+                } catch {
+                  (globalThis as any).sidepad.activeProjectContext = null;
+                }
+              }
+
               // Resolve attachment rows for the vision router. Best-effort —
               // if anything fails we just send without images and the model
               // sees the OCR'd text inlined by the renderer.
@@ -432,6 +505,21 @@ export const chatRouter = t.router({
         ac.abort();
         activeTurns.delete(input.turnId);
       }
+      toolApprovalGate.clear('turn cancelled');
       return { ok: true };
+    }),
+
+  approveTool: t.procedure
+    .input(z.object({ toolCallId: z.string().min(1) }))
+    .mutation(({ input }) => {
+      const ok = toolApprovalGate.decide(input.toolCallId, 'approve');
+      return { ok };
+    }),
+
+  denyTool: t.procedure
+    .input(z.object({ toolCallId: z.string().min(1) }))
+    .mutation(({ input }) => {
+      const ok = toolApprovalGate.decide(input.toolCallId, 'deny');
+      return { ok };
     }),
 });

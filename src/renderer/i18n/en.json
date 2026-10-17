@@ -40,7 +40,8 @@
     "emptyHint": "No projects yet",
     "emptyTitle": "Organize work into projects",
     "emptyBody": "A project groups folders (references, inputs, workspace, outputs) that AI tasks can read from and write to.",
-    "emptyCta": "New project"
+    "emptyCta": "New project",
+    "openChat": "Open chat"
   },
   "onboarding": {
     "welcomeTitle": "Welcome to sidepad",
@@ -65,6 +66,7 @@
     "emptyStart": "Start a conversation. Use",
     "emptyEnd": "to address a voice.",
     "export": "Export",
+    "exportAudit": "Audit",
     "skills": {
       "title": "Skills",
       "attach": "Attach",
@@ -82,7 +84,12 @@
       "resultLabel": "result",
       "errorLabel": "error",
       "expand": "Expand",
-      "collapse": "Collapse"
+      "collapse": "Collapse",
+      "awaiting": "needs approval",
+      "approveHint": "Allow this tool to run on your machine?",
+      "approve": "Allow",
+      "deny": "Deny",
+      "denied": "denied"
     },
     "attach": "Attach file",
     "attachUrl": "Attach URL",
@@ -330,7 +337,40 @@
       "appearance": "Appearance",
       "about": "About",
       "tools": "Tools",
-      "knowledge": "Knowledge"
+      "knowledge": "Knowledge",
+      "usage": "Usage"
+    },
+    "usage": {
+      "title": "Usage & cost",
+      "body": "Token spend across voices, estimated from recorded prompt/completion counts. Built-in rates cover common models; override any model below.",
+      "period7": "7 days",
+      "period30": "30 days",
+      "period90": "90 days",
+      "periodAll": "All time",
+      "refresh": "Refresh",
+      "loading": "Loading usage…",
+      "totalTokens": "Tokens",
+      "totalCalls": "Calls",
+      "estCost": "Est. cost",
+      "estCostHint": "USD · known rates only",
+      "byModel": "By model",
+      "bySession": "Top sessions",
+      "empty": "No metered calls in this period.",
+      "colModel": "Model",
+      "colIn": "In",
+      "colOut": "Out",
+      "colCalls": "Calls",
+      "colCost": "Cost",
+      "untitled": "Untitled session",
+      "callsUnit": "calls",
+      "showPricing": "Edit custom rates →",
+      "hidePricing": "Hide custom rates",
+      "pricingBody": "USD per 1M tokens (input / output). Custom rates override built-in estimates. Match is by model id substring.",
+      "priceModel": "Model id",
+      "priceIn": "$ / 1M in",
+      "priceOut": "$ / 1M out",
+      "savePrice": "Save",
+      "remove": "Remove"
     },
     "capabilities": {
       "title": "Capabilities",
@@ -422,7 +462,31 @@
         "install": "Install browser",
         "installing": "Installing…",
         "required": "Required by web_browse and web_crawl tools."
+      },
+      "approval": {
+        "title": "Tool approval",
+        "body": "When enabled, every MCP tool call pauses until you allow or deny it.",
+        "off": "Auto-run (no prompt)",
+        "ask": "Ask before each call",
+        "offWarn": "Tools currently run without confirmation — including stdio MCP servers that can execute local code."
       }
+    },
+    "budget": {
+      "title": "Spending cap",
+      "body": "Block new turns when estimated cost in the period reaches this USD limit. Based on recorded tokens and known rates.",
+      "enable": "Enforce budget",
+      "maxUsd": "Max USD",
+      "periodDays": "Period (days)",
+      "save": "Save budget",
+      "exceeded": "Budget exceeded for this period. Raise the cap in Settings → Usage, or wait for the window to roll.",
+      "status": "This period: {{spent}} of {{cap}}",
+      "statusUnlimited": "No spending cap enforced",
+      "warnNear": "Approaching budget limit"
+    },
+    "projectLink": {
+      "label": "Project",
+      "none": "None",
+      "hint": "Binds mounts & working directory for tool calls"
     }
   }
 }

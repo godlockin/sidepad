@@ -13,6 +13,7 @@ import { useSkillStore } from '../stores/skill-store';
 import { useSessionSkillsStore } from '../stores/session-skills-store';
 import { useSessionToolsStore } from '../stores/session-tools-store';
 import { useMCPStore } from '../stores/mcp-store';
+import { useProjectStore } from '../stores/project-store';
 import { Sidebar } from '../components/Sidebar';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatInput } from '../components/ChatInput';
@@ -46,6 +47,9 @@ export function ChatPage() {
   const listMcpTools = useMCPStore((s) => s.listTools);
   const [availableTools, setAvailableTools] = useState<Array<{ name: string; description?: string }>>([]);
   const setParticipantPersona = useSessionStore((s) => s.setParticipantPersona);
+  const setProject = useSessionStore((s) => s.setProject);
+  const projects = useProjectStore((s) => s.projects);
+  const initProjects = useProjectStore((s) => s.init);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [headerPicker, setHeaderPicker] = useState<{
     agentId: string;
@@ -69,7 +73,8 @@ export function ChatPage() {
     loadPersonas();
     loadSkills();
     loadMcpServers();
-  }, [loadSessions, loadPersonas, loadSkills, loadMcpServers]);
+    void initProjects();
+  }, [loadSessions, loadPersonas, loadSkills, loadMcpServers, initProjects]);
 
   useEffect(() => {
     if (activeSessionId) {
@@ -178,18 +183,8 @@ export function ChatPage() {
     await useSessionStore.getState().selectSession(activeSessionId);
   };
 
-  const handleExport = async () => {
-    if (!activeSessionId || !activeSession) return;
-    const md = await trpc.session.exportMarkdown.query({ sessionId: activeSessionId });
-    const slug = (activeSession.title || 'conversation')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || 'conversation';
-    const d = new Date();
-    const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-    const filename = `sidepad-${slug}-${ymd}.md`;
-    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const downloadText = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: `${mime};charset=utf-8` });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -198,6 +193,34 @@ export function ChatPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const sessionSlug = () => {
+    const slug = (activeSession?.title || 'conversation')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'conversation';
+    const d = new Date();
+    const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    return { slug, ymd };
+  };
+
+  const handleExport = async () => {
+    if (!activeSessionId || !activeSession) return;
+    const md = await trpc.session.exportMarkdown.query({ sessionId: activeSessionId });
+    const { slug, ymd } = sessionSlug();
+    downloadText(md, `sidepad-${slug}-${ymd}.md`, 'text/markdown');
+  };
+
+  const handleExportAudit = async () => {
+    if (!activeSessionId || !activeSession) return;
+    const md = await trpc.session.exportAudit.query({
+      sessionId: activeSessionId,
+      includeToolBodies: true,
+    });
+    const { slug, ymd } = sessionSlug();
+    downloadText(md, `sidepad-audit-${slug}-${ymd}.md`, 'text/markdown');
   };
 
   const handleEditInPlace = async (msgId: string, newContent: string) => {
@@ -357,13 +380,43 @@ export function ChatPage() {
                 <option value="independent">{t('chat.visibilityIndependent')}</option>
                 <option value="full">{t('chat.visibilityFull')}</option>
               </select>
+              <span
+                className="text-[11px] uppercase tracking-[0.06em] text-ink-faint"
+                title={t('settings.projectLink.hint')}
+              >
+                {t('settings.projectLink.label')}
+              </span>
+              <select
+                value={activeSession.projectId ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  void setProject(activeSession.id, v ? v : null);
+                }}
+                title={t('settings.projectLink.hint')}
+                className="bg-surface border border-rule rounded-[6px] text-[12px] text-ink px-2 py-1 cursor-pointer focus:outline-none focus:border-accent max-w-[140px]"
+              >
+                <option value="">{t('settings.projectLink.none')}</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
-                onClick={handleExport}
+                onClick={() => void handleExport()}
                 className="text-[12px] text-ink hover:text-accent border border-rule rounded-[6px] px-2 py-1 cursor-pointer transition-colors hover:border-accent"
                 title={t('chat.export')}
               >
                 {t('chat.export')} ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleExportAudit()}
+                className="text-[12px] text-ink hover:text-accent border border-rule rounded-[6px] px-2 py-1 cursor-pointer transition-colors hover:border-accent"
+                title={t('chat.exportAudit')}
+              >
+                {t('chat.exportAudit')} ↓
               </button>
             </div>
           )}

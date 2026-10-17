@@ -113,7 +113,7 @@ export function App() {
           />
         )}
         {page === 'chat' && <ChatPage />}
-        {page === 'projects' && <ProjectsPage />}
+        {page === 'projects' && <ProjectsPage onOpenChat={() => setPage('chat')} />}
         {page === 'settings' && <SettingsPage />}
       </main>
     </div>

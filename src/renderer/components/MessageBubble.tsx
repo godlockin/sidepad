@@ -11,6 +11,7 @@ import { useChatStore, type ToolCallView } from '../stores/chat-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { splitAgentId } from '../lib/agent-id';
 import { Avatar } from './Avatar';
+import { trpc } from '../lib/trpc-client';
 
 interface MessageBubbleProps {
   message: Message;
@@ -312,13 +313,30 @@ function BylineAgent({ agentId }: { agentId: string | null }) {
 
 function ToolCallCard({ call }: { call: ToolCallView }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(call.status === 'awaiting');
+  const [deciding, setDeciding] = useState(false);
   const status = call.status;
   const dot =
-    status === 'pending' ? 'bg-accent animate-pulse'
+    status === 'awaiting' ? 'bg-warn animate-pulse'
+    : status === 'pending' ? 'bg-accent animate-pulse'
     : status === 'error' ? 'bg-danger'
     : 'bg-success';
   const dur = call.durationMs != null ? `${call.durationMs} ms` : '';
+
+  const decide = async (action: 'approve' | 'deny') => {
+    if (deciding) return;
+    setDeciding(true);
+    try {
+      if (action === 'approve') {
+        await trpc.chat.approveTool.mutate({ toolCallId: call.id });
+      } else {
+        await trpc.chat.denyTool.mutate({ toolCallId: call.id });
+      }
+    } finally {
+      setDeciding(false);
+    }
+  };
+
   return (
     <div className="border border-rule rounded-[8px] bg-surface-2 overflow-hidden">
       <button
@@ -328,11 +346,38 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
       >
         <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot}`} />
         <span className="font-mono text-[12px] text-ink">🔧 {call.name}</span>
+        {status === 'awaiting' && (
+          <span className="text-[11px] text-warn font-medium">{t('chat.toolCall.awaiting')}</span>
+        )}
+        {status === 'error' && call.isError && String(call.result ?? '').includes('denied') && (
+          <span className="text-[11px] text-danger font-medium">{t('chat.toolCall.denied')}</span>
+        )}
         {dur && <span className="text-[11px] text-ink-faint">· {dur}</span>}
         <span className="ml-auto text-[10px] text-ink-faint uppercase tracking-wider">
           {open ? t('chat.toolCall.collapse') : t('chat.toolCall.expand')}
         </span>
       </button>
+      {status === 'awaiting' && (
+        <div className="border-t border-rule px-3 py-2 flex items-center gap-2">
+          <span className="text-[12px] text-ink-muted flex-1">{t('chat.toolCall.approveHint')}</span>
+          <button
+            type="button"
+            disabled={deciding}
+            onClick={() => void decide('deny')}
+            className="px-2.5 py-1 rounded-[6px] text-[12px] border border-rule text-ink-muted hover:text-danger hover:border-danger cursor-pointer disabled:opacity-50"
+          >
+            {t('chat.toolCall.deny')}
+          </button>
+          <button
+            type="button"
+            disabled={deciding}
+            onClick={() => void decide('approve')}
+            className="px-2.5 py-1 rounded-[6px] text-[12px] bg-accent text-white hover:opacity-90 cursor-pointer disabled:opacity-50"
+          >
+            {t('chat.toolCall.approve')}
+          </button>
+        </div>
+      )}
       {open && (
         <div className="border-t border-rule px-3 py-2 space-y-2">
           <div>

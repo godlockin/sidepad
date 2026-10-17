@@ -121,9 +121,9 @@ describe('sessionRouter', () => {
     const procs = Object.keys((sessionRouter as any)._def.procedures);
     expect(procs.sort()).toEqual([
       'attachSkill', 'attachTool', 'create', 'delete', 'detachSkill', 'detachTool',
-      'editMessage', 'exportMarkdown', 'fork', 'get', 'list', 'listAttachedSkills',
+      'editMessage', 'exportAudit', 'exportMarkdown', 'fork', 'get', 'list', 'listAttachedSkills',
       'listAttachedTools', 'messages', 'rename', 'search', 'setDefaultAgent',
-      'setGroupMode', 'setIcon', 'setParticipantPersona', 'setVisibilityMode',
+      'setGroupMode', 'setIcon', 'setParticipantPersona', 'setProject', 'setVisibilityMode',
     ]);
   });
 

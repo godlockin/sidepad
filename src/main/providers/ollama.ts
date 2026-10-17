@@ -80,12 +80,23 @@ export class OllamaProvider implements LLMProvider {
           }))
         : undefined;
 
+    const overrideOptions =
+      bodyOverrides.options && typeof bodyOverrides.options === 'object'
+        ? (bodyOverrides.options as Record<string, unknown>)
+        : {};
+    const { options: _ignoredOptions, ...bodyRest } = bodyOverrides as Record<string, unknown> & {
+      options?: unknown;
+    };
     const baseArgs: any = {
+      ...bodyRest,
       model: req.model,
       messages,
       stream: true,
-      options: { temperature: req.temperature, num_predict: req.maxTokens },
-      ...bodyOverrides,
+      options: {
+        ...overrideOptions,
+        ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+        ...(req.maxTokens !== undefined ? { num_predict: req.maxTokens } : {}),
+      },
     };
     // 'minimal' effort skips the thinking phase on thinking-capable models
     // (qwen3, deepseek-r1, qwq…). Non-thinking models reject the `think`

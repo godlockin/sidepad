@@ -13,6 +13,7 @@ import { attachmentRouter } from './routers/attachment-router.js';
 import { settingsRouter } from './routers/settings-router.js';
 import { knowledgeRouter } from './routers/knowledge-router.js';
 import { projectRouter } from './routers/project-router.js';
+import { usageRouter } from './routers/usage-router.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -34,6 +35,7 @@ export const appRouter = t.router({
   settings: settingsRouter,
   knowledge: knowledgeRouter,
   project: projectRouter,
+  usage: usageRouter,
 });
 
 export type AppRouter = typeof appRouter;

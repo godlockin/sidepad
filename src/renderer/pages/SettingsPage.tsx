@@ -10,9 +10,18 @@ import { PersonasTab } from './settings/PersonasTab';
 import { CapabilitiesTab } from './settings/CapabilitiesTab';
 import { ToolsTab } from './settings/ToolsTab';
 import { KnowledgeTab } from './settings/KnowledgeTab';
+import { UsageTab } from './settings/UsageTab';
 import { trpc } from '../lib/trpc-client';
 
-type SettingsTab = 'providers' | 'personas' | 'capabilities' | 'tools' | 'knowledge' | 'appearance' | 'about';
+type SettingsTab =
+  | 'providers'
+  | 'personas'
+  | 'capabilities'
+  | 'tools'
+  | 'knowledge'
+  | 'usage'
+  | 'appearance'
+  | 'about';
 
 type EditingProvider = {
   id: string;
@@ -29,6 +38,7 @@ export function SettingsPage() {
     { key: 'capabilities', label: t('settings.tabs.capabilities') },
     { key: 'tools', label: t('settings.tabs.tools') },
     { key: 'knowledge', label: t('settings.tabs.knowledge') },
+    { key: 'usage', label: t('settings.tabs.usage') },
     { key: 'appearance', label: t('settings.tabs.appearance') },
     { key: 'about', label: t('settings.tabs.about') },
   ];
@@ -269,6 +279,8 @@ export function SettingsPage() {
           {tab === 'tools' && <ToolsTab />}
 
           {tab === 'knowledge' && <KnowledgeTab />}
+
+          {tab === 'usage' && <UsageTab />}
 
           {tab === 'appearance' && (
             <section>

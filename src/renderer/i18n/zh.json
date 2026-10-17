@@ -40,7 +40,8 @@
     "emptyHint": "尚无项目",
     "emptyTitle": "把工作组织成项目",
     "emptyBody": "项目将文件夹（参考资料、输入、工作区、产出）组织在一起，供 AI 任务读写。",
-    "emptyCta": "新建项目"
+    "emptyCta": "新建项目",
+    "openChat": "打开对话"
   },
   "onboarding": {
     "welcomeTitle": "欢迎使用 sidepad",
@@ -65,6 +66,7 @@
     "emptyStart": "开始对话。输入",
     "emptyEnd": "来指定一个声音回复。",
     "export": "导出",
+    "exportAudit": "审计",
     "skills": {
       "title": "技能",
       "attach": "添加",
@@ -82,7 +84,12 @@
       "resultLabel": "结果",
       "errorLabel": "错误",
       "expand": "展开",
-      "collapse": "收起"
+      "collapse": "收起",
+      "awaiting": "待批准",
+      "approveHint": "允许此工具在本机执行？",
+      "approve": "允许",
+      "deny": "拒绝",
+      "denied": "已拒绝"
     },
     "attach": "添加附件",
     "attachUrl": "附加网页",
@@ -330,7 +337,40 @@
       "appearance": "外观",
       "about": "关于",
       "tools": "工具",
-      "knowledge": "知识库"
+      "knowledge": "知识库",
+      "usage": "用量"
+    },
+    "usage": {
+      "title": "用量与成本",
+      "body": "按已记录的 prompt / completion token 汇总各声音的消耗。内置常见模型单价；可在下方覆盖任意模型费率。",
+      "period7": "近 7 天",
+      "period30": "近 30 天",
+      "period90": "近 90 天",
+      "periodAll": "全部",
+      "refresh": "刷新",
+      "loading": "正在加载用量…",
+      "totalTokens": "Token",
+      "totalCalls": "调用次数",
+      "estCost": "估算费用",
+      "estCostHint": "美元 · 仅含已知单价",
+      "byModel": "按模型",
+      "bySession": "消耗最高的会话",
+      "empty": "该时段没有可计量的调用。",
+      "colModel": "模型",
+      "colIn": "输入",
+      "colOut": "输出",
+      "colCalls": "次数",
+      "colCost": "费用",
+      "untitled": "未命名会话",
+      "callsUnit": "次",
+      "showPricing": "编辑自定义费率 →",
+      "hidePricing": "收起自定义费率",
+      "pricingBody": "单位：美元 / 百万 token（输入 / 输出）。自定义费率优先于内置估算；按模型 id 子串匹配。",
+      "priceModel": "模型 id",
+      "priceIn": "$ / 百万输入",
+      "priceOut": "$ / 百万输出",
+      "savePrice": "保存",
+      "remove": "删除"
     },
     "capabilities": {
       "title": "能力",
@@ -422,7 +462,31 @@
         "install": "安装浏览器",
         "installing": "安装中…",
         "required": "web_browse 和 web_crawl 工具需要此组件。"
+      },
+      "approval": {
+        "title": "工具批准",
+        "body": "开启后，每次 MCP 工具调用都会暂停，直到你允许或拒绝。",
+        "off": "自动执行（不询问）",
+        "ask": "每次调用前询问",
+        "offWarn": "当前工具无需确认即可运行——包括可执行本机代码的 stdio MCP 服务。"
       }
+    },
+    "budget": {
+      "title": "消费上限",
+      "body": "当本周期估算费用达到该美元上限时，阻止新对话轮次。基于已记录 token 与已知单价。",
+      "enable": "启用预算",
+      "maxUsd": "上限（美元）",
+      "periodDays": "周期（天）",
+      "save": "保存预算",
+      "exceeded": "本周期预算已用尽。请在设置 → 用量中提高上限，或等待周期滚动。",
+      "status": "本周期：{{spent}} / {{cap}}",
+      "statusUnlimited": "未启用消费上限",
+      "warnNear": "接近预算上限"
+    },
+    "projectLink": {
+      "label": "项目",
+      "none": "无",
+      "hint": "绑定挂载目录与工具调用工作目录"
     }
   }
 }

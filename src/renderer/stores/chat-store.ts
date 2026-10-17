@@ -3,6 +3,7 @@ import type { Unsubscribable } from '@trpc/server/observable';
 import { getQueryClient } from '../lib/query-client';
 import { messagesKey } from '../hooks/useMessages';
 import { trpc } from '../lib/trpc-client';
+import i18n from '../i18n/config';
 import type { Message, OrchestratorEvent } from '../../shared/types';
 
 export interface ToolCallView {
@@ -13,7 +14,7 @@ export interface ToolCallView {
   result?: unknown;
   isError?: boolean;
   durationMs?: number;
-  status: 'pending' | 'done' | 'error';
+  status: 'pending' | 'awaiting' | 'done' | 'error';
 }
 
 interface ChatState {
@@ -203,6 +204,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
           if (ev.type === 'message:error') {
             const msgs = qc.getQueryData<Message[]>(key) ?? [];
+            const errorText =
+              ev.code === 'BUDGET_EXCEEDED'
+                ? i18n.t('settings.budget.exceeded')
+                : ev.message;
             const errMsg: Message = {
               id: ev.msgId || `error-${Date.now()}`,
               sessionId,
@@ -213,9 +218,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
               promptTokens: null,
               completionTokens: null,
               status: 'error',
-              error: ev.message,
+              error: errorText,
               parentMessageId: null,
-              metaJson: JSON.stringify({ agentId: ev.agentId }),
+              metaJson: JSON.stringify({ agentId: ev.agentId, code: ev.code }),
               reasoning: null,
               createdAt: Date.now(),
               finishedAt: null,
@@ -234,6 +239,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
               status: 'pending',
             });
             toolCalls.set(ev.msgId, list);
+            set({ toolCalls: new Map(toolCalls) });
+          }
+
+          if (ev.type === 'tool_call:awaiting_approval') {
+            const { toolCalls } = get();
+            const list = toolCalls.get(ev.msgId) ?? [];
+            const idx = list.findIndex((c) => c.id === ev.toolCallId);
+            if (idx >= 0) {
+              list[idx] = { ...list[idx], status: 'awaiting' };
+            } else {
+              list.push({
+                id: ev.toolCallId,
+                name: ev.toolName,
+                serverId: ev.serverId,
+                args: ev.args,
+                status: 'awaiting',
+              });
+            }
+            toolCalls.set(ev.msgId, [...list]);
             set({ toolCalls: new Map(toolCalls) });
           }
 

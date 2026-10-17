@@ -49,9 +49,9 @@ export class OpenAICompatProvider extends OpenAIProvider {
       const { headers, body: bodyOverrides } = mergeOverrides(req, this.parsedParams as ProviderParams);
       const stream = await this.azureClient.chat.completions.create(
         {
+          ...bodyOverrides,
           model: req.model, // = deployment name on Azure
           messages: messages as any,
-          ...bodyOverrides,
           stream: true,
           ...(tools ? { tools } : {}),
         },
