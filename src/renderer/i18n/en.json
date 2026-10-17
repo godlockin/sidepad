@@ -304,7 +304,13 @@
     "enable": "Connect",
     "disable": "Disconnect",
     "delete": "Remove",
-    "toolsCount": "{{value}} tools"
+    "toolsCount": "{{value}} tools",
+    "resourcesCount": "{{count}} resources",
+    "promptsCount": "{{count}} prompts",
+    "resources": "Resources",
+    "prompts": "Prompts",
+    "showCatalog": "Show resources & prompts",
+    "hideCatalog": "Hide resources & prompts"
   },
   "mcpForm": {
     "nameLabel": "Name",
@@ -487,6 +493,16 @@
       "label": "Project",
       "none": "None",
       "hint": "Binds mounts & working directory for tool calls"
+    },
+    "classifier": {
+      "title": "Collaboration classifier",
+      "body": "Optional LLM that picks parallel / relay / roundtable / lead-and-comment when two or more voices are @-mentioned. Falls back to heuristics on failure or low confidence.",
+      "enable": "Enable classifier",
+      "provider": "Provider",
+      "pickProvider": "Select a voice…",
+      "model": "Model",
+      "threshold": "Confidence threshold",
+      "save": "Save classifier"
     }
   }
 }

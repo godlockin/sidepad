@@ -28,9 +28,10 @@ export function resolveMode(
   text: string,
   mentions: string[],
   classifierResult?: ClassifierResult,
+  confidenceThreshold = 0.6,
 ): ModeResult {
   // Classifier: only use if confident
-  if (classifierResult && classifierResult.confidence >= 0.6) {
+  if (classifierResult && classifierResult.confidence >= confidenceThreshold) {
     const cr = classifierResult;
     if (cr.mode === 'lead-and-comment' && cr.leadAgentId)
       return { mode: 'lead-and-comment', agentIds: mentions, leadAgentId: cr.leadAgentId,

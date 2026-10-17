@@ -8,6 +8,8 @@ import { OllamaProvider } from './ollama';
 import { OpenAICompatProvider } from './openai-compat';
 import { AnthropicMessagesProvider } from './anthropic-messages';
 import { GeminiProvider } from './gemini';
+import { AnthropicMinimaxProvider } from './vendors/anthropic-minimax';
+import { GeminiVertexProvider } from './vendors/gemini-vertex';
 
 export function loadProviders(
   db: Database.Database,
@@ -49,6 +51,23 @@ export function loadProviders(
         break;
       case 'gemini':
         provider = new GeminiProvider(row.id, row.id, apiKey!, row.base_url || undefined, parsed);
+        break;
+      case 'anthropic-minimax':
+        provider = new AnthropicMinimaxProvider(
+          row.id,
+          row.id,
+          apiKey!,
+          row.base_url || undefined,
+          parsed,
+        );
+        break;
+      case 'gemini-vertex':
+        if (!row.base_url) continue;
+        try {
+          provider = new GeminiVertexProvider(row.id, row.id, apiKey!, row.base_url, parsed);
+        } catch {
+          continue;
+        }
         break;
     }
     if (provider) reg.register(provider);

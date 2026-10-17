@@ -76,6 +76,16 @@ export const mcpRouter = t.router({
     .input(z.object({ id: z.string() }))
     .query(({ input }) => getRegistry().listTools(input.id)),
 
+  /** Best-effort; empty when the server does not support resources. */
+  listResources: t.procedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => getRegistry().listResources(input.id)),
+
+  /** Best-effort; empty when the server does not support prompts. */
+  listPrompts: t.procedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => getRegistry().listPrompts(input.id)),
+
   testConnection: t.procedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {

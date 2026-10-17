@@ -12,6 +12,7 @@ import { ToolsTab } from './settings/ToolsTab';
 import { KnowledgeTab } from './settings/KnowledgeTab';
 import { UsageTab } from './settings/UsageTab';
 import { trpc } from '../lib/trpc-client';
+import type { ProviderKind } from '../../shared/types/provider-kind';
 
 type SettingsTab =
   | 'providers'
@@ -25,7 +26,7 @@ type SettingsTab =
 
 type EditingProvider = {
   id: string;
-  type: 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages' | 'gemini';
+  type: ProviderKind;
   baseURL?: string;
   defaultModel?: string;
 };

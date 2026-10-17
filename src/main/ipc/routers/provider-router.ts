@@ -8,9 +8,13 @@ import { OllamaProvider } from '../../providers/ollama.js';
 import { OpenAICompatProvider } from '../../providers/openai-compat.js';
 import { AnthropicMessagesProvider } from '../../providers/anthropic-messages.js';
 import { GeminiProvider } from '../../providers/gemini.js';
+import { AnthropicMinimaxProvider, MINIMAX_ANTHROPIC_BASE_URL } from '../../providers/vendors/anthropic-minimax.js';
+import { GeminiVertexProvider } from '../../providers/vendors/gemini-vertex.js';
 import type { LLMProvider } from '../../providers/types.js';
+import { PROVIDER_KINDS } from '../../../shared/types/provider-kind.js';
 
 const t = initTRPC.create({ isServer: true });
+const providerKindEnum = z.enum(PROVIDER_KINDS);
 
 export const providerRouter = t.router({
   list: t.procedure.query(() => {
@@ -69,7 +73,7 @@ export const providerRouter = t.router({
   listModels: t.procedure
     .input(
       z.object({
-        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages', 'gemini']),
+        type: providerKindEnum,
         baseURL: z.string().optional(),
         apiKey: z.string().optional(),
       }),
@@ -117,6 +121,20 @@ export const providerRouter = t.router({
           case 'gemini':
             provider = new GeminiProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL || undefined);
             break;
+          case 'anthropic-minimax':
+            provider = new AnthropicMinimaxProvider(
+              '__probe__',
+              '__probe__',
+              input.apiKey ?? '',
+              input.baseURL || MINIMAX_ANTHROPIC_BASE_URL,
+            );
+            break;
+          case 'gemini-vertex':
+            if (!input.baseURL) {
+              return { ok: false as const, error: 'baseURL required for gemini-vertex' };
+            }
+            provider = new GeminiVertexProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL);
+            break;
         }
         const models = await provider!.listModels();
         return {
@@ -134,7 +152,7 @@ export const providerRouter = t.router({
   testModel: t.procedure
     .input(
       z.object({
-        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages', 'gemini']),
+        type: providerKindEnum,
         baseURL: z.string().optional(),
         apiKey: z.string().optional(),
         model: z.string(),
@@ -163,6 +181,18 @@ export const providerRouter = t.router({
             break;
           case 'gemini':
             provider = new GeminiProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL || undefined);
+            break;
+          case 'anthropic-minimax':
+            provider = new AnthropicMinimaxProvider(
+              '__probe__',
+              '__probe__',
+              input.apiKey ?? '',
+              input.baseURL || MINIMAX_ANTHROPIC_BASE_URL,
+            );
+            break;
+          case 'gemini-vertex':
+            if (!input.baseURL) return { ok: false as const, error: 'baseURL required for gemini-vertex' };
+            provider = new GeminiVertexProvider('__probe__', '__probe__', input.apiKey ?? '', input.baseURL);
             break;
         }
         const ctrl = new AbortController();
@@ -206,7 +236,7 @@ export const providerRouter = t.router({
       const params = row.params_json ? (JSON.parse(row.params_json) as { defaultModel?: string }) : {};
       return {
         id: row.id,
-        type: row.type as 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages' | 'gemini',
+        type: row.type as (typeof PROVIDER_KINDS)[number],
         baseURL: row.base_url ?? undefined,
         defaultModel: params.defaultModel,
       };
@@ -228,7 +258,7 @@ export const providerRouter = t.router({
     .input(
       z.object({
         id: z.string(),
-        type: z.enum(['openai', 'anthropic', 'ollama', 'openai-compat', 'anthropic-messages', 'gemini']),
+        type: providerKindEnum,
         apiKey: z.string().optional(),
         baseURL: z.string().optional(),
         defaultModel: z.string().optional(),

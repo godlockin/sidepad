@@ -25,6 +25,12 @@ export function ToolsTab() {
   const logBoxRef = useRef<HTMLDivElement | null>(null);
   const [approvalMode, setApprovalMode] = useState<'off' | 'ask'>('off');
   const [approvalSaving, setApprovalSaving] = useState(false);
+  const [clfEnabled, setClfEnabled] = useState(false);
+  const [clfProviderId, setClfProviderId] = useState('');
+  const [clfModel, setClfModel] = useState('');
+  const [clfThreshold, setClfThreshold] = useState('0.6');
+  const [clfSaving, setClfSaving] = useState(false);
+  const [providers, setProviders] = useState<Array<{ id: string }>>([]);
 
   const refresh = async () => {
     const res = (await trpc.settings.getToolKeys.query()) as KeyStatus;
@@ -37,6 +43,20 @@ export function ToolsTab() {
       setApprovalMode(res.mode);
     } catch {
       setApprovalMode('off');
+    }
+  };
+
+  const refreshClassifier = async () => {
+    try {
+      const cfg = await trpc.classifier.getConfig.query();
+      setClfEnabled(cfg.enabled);
+      setClfProviderId(cfg.providerId);
+      setClfModel(cfg.model);
+      setClfThreshold(String(cfg.threshold));
+      const list = await trpc.provider.list.query();
+      setProviders(list.map((p) => ({ id: p.id })));
+    } catch {
+      /* ignore */
     }
   };
 
@@ -53,6 +73,7 @@ export function ToolsTab() {
     void refresh();
     void refreshBrowser();
     void refreshApproval();
+    void refreshClassifier();
   }, []);
 
   const saveApproval = async (mode: 'off' | 'ask') => {
@@ -62,6 +83,23 @@ export function ToolsTab() {
       setApprovalMode(mode);
     } finally {
       setApprovalSaving(false);
+    }
+  };
+
+  const saveClassifier = async () => {
+    const threshold = Number(clfThreshold);
+    if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) return;
+    setClfSaving(true);
+    try {
+      await trpc.classifier.configure.mutate({
+        enabled: clfEnabled,
+        providerId: clfProviderId,
+        model: clfModel.trim(),
+        timeoutMs: 8_000,
+        threshold,
+      });
+    } finally {
+      setClfSaving(false);
     }
   };
 
@@ -215,6 +253,69 @@ export function ToolsTab() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
+          {t('settings.classifier.title')}
+        </span>
+        <p className="mt-2 text-[13px] text-ink-muted leading-[1.5]">
+          {t('settings.classifier.body')}
+        </p>
+        <div className="mt-3 border border-rule rounded-[10px] bg-surface p-4 space-y-3">
+          <label className="flex items-center gap-2 text-[13px] text-ink cursor-pointer">
+            <input
+              type="checkbox"
+              checked={clfEnabled}
+              onChange={(e) => setClfEnabled(e.target.checked)}
+            />
+            {t('settings.classifier.enable')}
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-ink-faint">{t('settings.classifier.provider')}</span>
+            <select
+              value={clfProviderId}
+              onChange={(e) => setClfProviderId(e.target.value)}
+              disabled={!clfEnabled}
+              className="mt-1 w-full px-2 py-1.5 rounded-[6px] border border-rule bg-paper text-[13px] disabled:opacity-50"
+            >
+              <option value="">{t('settings.classifier.pickProvider')}</option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-ink-faint">{t('settings.classifier.model')}</span>
+            <input
+              value={clfModel}
+              onChange={(e) => setClfModel(e.target.value)}
+              disabled={!clfEnabled}
+              placeholder="gpt-4o-mini"
+              className="mt-1 w-full px-2 py-1.5 rounded-[6px] border border-rule bg-paper text-[13px] font-mono disabled:opacity-50"
+            />
+          </label>
+          <label className="block w-[120px]">
+            <span className="text-[11px] text-ink-faint">{t('settings.classifier.threshold')}</span>
+            <input
+              value={clfThreshold}
+              onChange={(e) => setClfThreshold(e.target.value)}
+              disabled={!clfEnabled}
+              inputMode="decimal"
+              className="mt-1 w-full px-2 py-1.5 rounded-[6px] border border-rule bg-paper text-[13px] tabular-nums disabled:opacity-50"
+            />
+          </label>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={clfSaving || (clfEnabled && (!clfProviderId || !clfModel.trim()))}
+            onClick={() => void saveClassifier()}
+          >
+            {t('settings.classifier.save')}
+          </Button>
         </div>
       </div>
 

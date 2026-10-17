@@ -362,8 +362,14 @@ export interface SearchHit {
   filename: string | null;
 }
 
-// TODO: replace with sqlite-vec or HNSW once libraries cleared for bundling.
-// For now, naive in-memory cosine over all chunks. OK up to ~10k chunks.
+/**
+ * Brute-force cosine over chunk embeddings.
+ * Caps the scan at MAX_KB_SCAN_CHUNKS to keep latency bounded; prefer
+ * tag filters for large corpora. sqlite-vec remains deferred until the
+ * Electron loadExtension packaging spike lands.
+ */
+const MAX_KB_SCAN_CHUNKS = 12_000;
+
 export async function searchKnowledge(
   db: Database.Database,
   query: string,
@@ -373,13 +379,13 @@ export async function searchKnowledge(
   const [qVec] = await embed(db, [query]);
   if (!qVec) return [];
 
-  let sql = `SELECT c.id AS chunk_id, c.document_id, c.text, c.embedding,
+  const sql = `SELECT c.id AS chunk_id, c.document_id, c.text, c.embedding,
                     d.filename, d.tags
              FROM kb_chunks c
              JOIN kb_documents d ON d.id = c.document_id
-             WHERE d.status = 'ready' AND c.embedding IS NOT NULL`;
-  const args: any[] = [];
-  const rows = db.prepare(sql).all(...args) as Array<{
+             WHERE d.status = 'ready' AND c.embedding IS NOT NULL
+             LIMIT ?`;
+  const rows = db.prepare(sql).all(MAX_KB_SCAN_CHUNKS) as Array<{
     chunk_id: string;
     document_id: string;
     text: string;

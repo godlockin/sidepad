@@ -18,6 +18,18 @@ export interface MCPTool {
   inputSchema?: unknown;
 }
 
+export interface MCPResource {
+  uri: string;
+  name?: string;
+  description?: string;
+  mimeType?: string;
+}
+
+export interface MCPPrompt {
+  name: string;
+  description?: string;
+}
+
 export interface AddMCPInput {
   name: string;
   transport: MCPTransport;
@@ -36,6 +48,8 @@ interface MCPState {
   remove: (id: string) => Promise<void>;
   testConnection: (id: string) => Promise<MCPTool[]>;
   listTools: (id: string) => Promise<MCPTool[]>;
+  listResources: (id: string) => Promise<MCPResource[]>;
+  listPrompts: (id: string) => Promise<MCPPrompt[]>;
 }
 
 export const useMCPStore = create<MCPState>((set, get) => ({
@@ -77,5 +91,13 @@ export const useMCPStore = create<MCPState>((set, get) => ({
 
   listTools: async (id) => {
     return (await trpc.mcp.listTools.query({ id })) as MCPTool[];
+  },
+
+  listResources: async (id) => {
+    return (await trpc.mcp.listResources.query({ id })) as MCPResource[];
+  },
+
+  listPrompts: async (id) => {
+    return (await trpc.mcp.listPrompts.query({ id })) as MCPPrompt[];
   },
 }));

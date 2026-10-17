@@ -7,10 +7,26 @@ import type { MCPServerRecord } from '../store/mcp-store.js';
 import type { MCPToolDescriptor, MCPCallResult } from './types.js';
 import { createAppSettingsStore } from '../store/app-settings-store.js';
 
+export interface MCPResourceDescriptor {
+  serverId: string;
+  uri: string;
+  name?: string;
+  description?: string;
+  mimeType?: string;
+}
+
+export interface MCPPromptDescriptor {
+  serverId: string;
+  name: string;
+  description?: string;
+}
+
 export interface MCPRegistry {
   connect(rec: MCPServerRecord): Promise<void>;
   disconnect(id: string): Promise<void>;
   listTools(id: string): Promise<MCPToolDescriptor[]>;
+  listResources(id: string): Promise<MCPResourceDescriptor[]>;
+  listPrompts(id: string): Promise<MCPPromptDescriptor[]>;
   callTool(
     id: string,
     name: string,
@@ -112,6 +128,37 @@ export function createMCPRegistry(): MCPRegistry {
       if (!c) throw new Error(`mcp server ${id} not connected`);
       const res = await c.client.callTool({ name, arguments: args });
       return res as MCPCallResult;
+    },
+    async listResources(id) {
+      const c = conns.get(id);
+      if (!c) throw new Error(`mcp server ${id} not connected`);
+      try {
+        const res = await c.client.listResources();
+        return (res.resources ?? []).map((r) => ({
+          serverId: id,
+          uri: r.uri,
+          name: r.name,
+          description: r.description,
+          mimeType: r.mimeType,
+        }));
+      } catch {
+        // Server may not advertise resources capability.
+        return [];
+      }
+    },
+    async listPrompts(id) {
+      const c = conns.get(id);
+      if (!c) throw new Error(`mcp server ${id} not connected`);
+      try {
+        const res = await c.client.listPrompts();
+        return (res.prompts ?? []).map((p) => ({
+          serverId: id,
+          name: p.name,
+          description: p.description,
+        }));
+      } catch {
+        return [];
+      }
     },
     async listAllTools() {
       const out: MCPToolDescriptor[] = [];

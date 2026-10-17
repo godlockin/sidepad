@@ -7,6 +7,8 @@ import {
   type MCPTransport,
   type AddMCPInput,
   type MCPTool,
+  type MCPResource,
+  type MCPPrompt,
 } from '../../stores/mcp-store';
 
 export function MCPTab() {
@@ -83,15 +85,21 @@ interface MCPRowProps {
 
 function MCPRow({ server, onToggle, onDelete }: MCPRowProps) {
   const { t } = useTranslation();
-  const { listTools } = useMCPStore();
+  const { listTools, listResources, listPrompts } = useMCPStore();
   const [tools, setTools] = useState<MCPTool[] | null>(null);
+  const [resources, setResources] = useState<MCPResource[] | null>(null);
+  const [prompts, setPrompts] = useState<MCPPrompt[] | null>(null);
   const [toolsError, setToolsError] = useState<string | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     if (!server.enabled) {
       setTools(null);
+      setResources(null);
+      setPrompts(null);
       setToolsError(null);
+      setCatalogOpen(false);
       return;
     }
     listTools(server.id)
@@ -104,10 +112,24 @@ function MCPRow({ server, onToggle, onDelete }: MCPRowProps) {
           setToolsError(err instanceof Error ? err.message : String(err));
         }
       });
+    listResources(server.id)
+      .then((list) => {
+        if (!cancelled) setResources(list);
+      })
+      .catch(() => {
+        if (!cancelled) setResources([]);
+      });
+    listPrompts(server.id)
+      .then((list) => {
+        if (!cancelled) setPrompts(list);
+      })
+      .catch(() => {
+        if (!cancelled) setPrompts([]);
+      });
     return () => {
       cancelled = true;
     };
-  }, [server.id, server.enabled, listTools]);
+  }, [server.id, server.enabled, listTools, listResources, listPrompts]);
 
   const toolCountLabel = !server.enabled
     ? '—'
@@ -129,6 +151,16 @@ function MCPRow({ server, onToggle, onDelete }: MCPRowProps) {
           >
             {t('mcpTab.toolsCount', { count: 0, value: toolCountLabel })}
           </span>
+          {server.enabled && resources && resources.length > 0 && (
+            <span className="text-[10px] uppercase tracking-[0.06em] text-ink-muted bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px]">
+              {t('mcpTab.resourcesCount', { count: resources.length })}
+            </span>
+          )}
+          {server.enabled && prompts && prompts.length > 0 && (
+            <span className="text-[10px] uppercase tracking-[0.06em] text-ink-muted bg-surface-2 border border-rule rounded-[4px] px-1.5 py-[1px]">
+              {t('mcpTab.promptsCount', { count: prompts.length })}
+            </span>
+          )}
           {server.enabled && (
             <span className="text-[10px] uppercase tracking-[0.06em] text-success">
               {t('mcpTab.enabled')}
@@ -139,6 +171,47 @@ function MCPRow({ server, onToggle, onDelete }: MCPRowProps) {
           <p className="mt-1 text-[12px] text-danger leading-[1.55] line-clamp-2">
             {toolsError}
           </p>
+        )}
+        {server.enabled && ((resources?.length ?? 0) > 0 || (prompts?.length ?? 0) > 0) && (
+          <button
+            type="button"
+            onClick={() => setCatalogOpen((v) => !v)}
+            className="mt-1 text-[11px] text-accent cursor-pointer"
+          >
+            {catalogOpen ? t('mcpTab.hideCatalog') : t('mcpTab.showCatalog')}
+          </button>
+        )}
+        {catalogOpen && (
+          <div className="mt-2 space-y-2 text-[12px] text-ink-muted">
+            {(resources?.length ?? 0) > 0 && (
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.06em] text-ink-faint mb-1">
+                  {t('mcpTab.resources')}
+                </div>
+                <ul className="font-mono space-y-0.5">
+                  {resources!.map((r) => (
+                    <li key={r.uri} className="truncate" title={r.description}>
+                      {r.name || r.uri}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(prompts?.length ?? 0) > 0 && (
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.06em] text-ink-faint mb-1">
+                  {t('mcpTab.prompts')}
+                </div>
+                <ul className="font-mono space-y-0.5">
+                  {prompts!.map((p) => (
+                    <li key={p.name} className="truncate" title={p.description}>
+                      {p.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0">

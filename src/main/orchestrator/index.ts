@@ -153,10 +153,12 @@ async function* mergeAsyncGenerators<T>(
 }
 
 export class ChatOrchestrator {
+  private getClassifier: () => ClassifierAgent | null;
+
   constructor(
     private store: SessionStore,
     private registry: ProviderRegistry,
-    private classifier: ClassifierAgent | null,
+    classifier: ClassifierAgent | null | (() => ClassifierAgent | null),
     private getProviderForAgent: (agentId: string) => LLMProvider | null = () => null,
     private getModelForAgent: (agentId: string) => string = () => 'gpt-4o-mini',
     private getPersonaPromptForAgent: (sessionId: string, agentId: string) => string | null = () => null,
@@ -166,7 +168,10 @@ export class ChatOrchestrator {
     private getAgentLabel: (agentId: string) => string = (id) => id,
     private toolApprovalGate: ToolApprovalGate | null = null,
     private getToolApprovalMode: () => ToolApprovalMode = () => 'off',
-  ) {}
+    private getClassifierThreshold: () => number = () => 0.6,
+  ) {
+    this.getClassifier = typeof classifier === 'function' ? classifier : () => classifier;
+  }
 
   /**
    * Combine persona prompt + session system prompt + attached skill addenda.
@@ -235,19 +240,30 @@ export class ChatOrchestrator {
     const history = this.buildHistory(input.sessionId);
 
     let classifierResult: ClassifierResult | undefined;
-    if (this.classifier?.isEnabled() && input.mentions.length >= 2) {
+    const classifier = this.getClassifier();
+    if (classifier?.isEnabled() && input.mentions.length >= 2) {
       try {
-        classifierResult = await this.classifier.classify({
+        const raw = await classifier.classify({
           text: input.text,
           mentions: input.mentions.map((id) => ({ agentId: id, displayName: id, role: 'agent' })),
           triggerHints: { leadMatched: false, commentMatched: false },
         });
+        const threshold = this.getClassifierThreshold();
+        if (raw && typeof raw.confidence === 'number' && raw.confidence >= threshold) {
+          classifierResult = raw;
+        }
       } catch {
         // fall through to rules
       }
     }
 
-    const modeResult = resolveMode(session, input.text, input.mentions, classifierResult);
+    const modeResult = resolveMode(
+      session,
+      input.text,
+      input.mentions,
+      classifierResult,
+      this.getClassifierThreshold(),
+    );
 
     if (modeResult.mode === 'error') {
       yield {

@@ -45,9 +45,24 @@ export class ClassifierAgent {
       )) {
         if (chunk.delta) accumulated += chunk.delta;
       }
-      return JSON.parse(accumulated) as ClassifierResult;
+      return parseClassifierJson(accumulated);
     } finally {
       clearTimeout(timeout);
     }
   }
+}
+
+/** Strip markdown fences / leading prose and parse classifier JSON. */
+export function parseClassifierJson(raw: string): ClassifierResult {
+  let text = raw.trim();
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) text = fence[1].trim();
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start >= 0 && end > start) text = text.slice(start, end + 1);
+  const parsed = JSON.parse(text) as ClassifierResult;
+  if (!parsed || typeof parsed.mode !== 'string' || typeof parsed.confidence !== 'number') {
+    throw new Error('invalid classifier JSON');
+  }
+  return parsed;
 }

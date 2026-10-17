@@ -1,7 +1,15 @@
 # Vendor Extensions
 
 Each file in this directory implements a vendor-specific provider that
-extends one of the protocol base classes in `../base/`.
+extends one of the protocol base classes in `../base/` (or a protocol
+default like `GeminiProvider`).
+
+## Shipped
+
+| Type | Class | Notes |
+|------|-------|-------|
+| `anthropic-minimax` | `AnthropicMinimaxProvider` | Anthropic Messages → MiniMax (`api.minimax.io/anthropic`) |
+| `gemini-vertex` | `GeminiVertexProvider` | Gemini generateContent with required Vertex baseURL |
 
 ## Conventions
 
@@ -10,5 +18,11 @@ extends one of the protocol base classes in `../base/`.
 - Always `extends` a protocol base class; never modify the base
 - Override `chat()` only when you need to intercept the request stream
 - Reuse `mergeOverrides()` and `anthropicThinkingParams()` from the base
-- Register the new class in `factory.ts` (switch case) and
-  `provider-router.ts` (zod enum + switch case)
+- Register in **three** places: `factory.ts`, `provider-router.ts` (zod enum +
+  switches), `ProviderForm.tsx` (+ optional preset in `provider-presets.ts`)
+- Add the type to `shared/types/provider-kind.ts`
+
+## Still deferred
+
+- `anthropic-bedrock` — AWS SigV4
+- `anthropic-vertex` — GCP token refresh

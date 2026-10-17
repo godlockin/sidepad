@@ -3,8 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { Field, Input, Select, Button } from './ui';
 import { trpc } from '../lib/trpc-client';
 import { PROVIDER_PRESETS } from '../lib/provider-presets';
+import {
+  type ProviderKind,
+  needsBaseURL as kindNeedsBaseURL,
+  requiresBaseURL,
+} from '../../shared/types/provider-kind';
+import {
+  MINIMAX_ANTHROPIC_BASE_URL,
+  MINIMAX_ANTHROPIC_BASE_URL_CN,
+  GEMINI_VERTEX_BASE_URL_HINT,
+} from '../../shared/providers/vendor-defaults';
 
-type ProviderType = 'openai' | 'anthropic' | 'ollama' | 'openai-compat' | 'anthropic-messages' | 'gemini';
+type ProviderType = ProviderKind;
 
 interface ModelCaps {
   free?: boolean;
@@ -39,15 +49,15 @@ interface ProviderFormProps {
 }
 
 function needsBaseURL(type: ProviderType): boolean {
-  return type === 'openai-compat' || type === 'ollama' || type === 'anthropic-messages' || type === 'gemini';
+  return kindNeedsBaseURL(type);
 }
 function needsAPIKey(type: ProviderType): boolean {
-  return type !== 'ollama' && type !== 'anthropic-messages';
+  return type !== 'ollama';
 }
 /** Whether we have enough credentials to probe the API */
 function canProbe(type: ProviderType, apiKey: string, baseURL: string): boolean {
   if (type === 'ollama') return true; // no key needed
-  if (type === 'openai-compat' || type === 'anthropic-messages') return !!baseURL.trim(); // baseURL required
+  if (requiresBaseURL(type)) return !!baseURL.trim() && !!apiKey.trim();
   return !!apiKey.trim();
 }
 
@@ -543,6 +553,8 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
             <option value="openai-compat">{t('providerForm.types.openaiCompat')}</option>
             <option value="anthropic-messages">Anthropic Messages (custom URL)</option>
             <option value="gemini">Google Gemini</option>
+            <option value="anthropic-minimax">MiniMax (Anthropic)</option>
+            <option value="gemini-vertex">Gemini Vertex AI</option>
           </Select>
         </Field>
 
@@ -576,7 +588,7 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
 
         {showBaseURL && (
           <Field
-            label={`${t('providerForm.baseURL')}${type === 'openai-compat' || type === 'anthropic-messages' ? ' *' : ''}`}
+            label={`${t('providerForm.baseURL')}${requiresBaseURL(type) ? ' *' : ''}`}
             className="md:col-span-2"
           >
             <Input
@@ -586,6 +598,10 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
               placeholder={
                 type === 'ollama'
                   ? t('providerForm.baseURLPlaceholderOllama')
+                  : type === 'anthropic-minimax'
+                  ? MINIMAX_ANTHROPIC_BASE_URL
+                  : type === 'gemini-vertex'
+                  ? GEMINI_VERTEX_BASE_URL_HINT
                   : type === 'anthropic-messages'
                   ? 'https://api.example.com'
                   : type === 'gemini'
@@ -596,13 +612,22 @@ export function ProviderForm({ onSubmit, onCancel, initialType = 'openai', initi
             />
             {type === 'anthropic-messages' && (
               <p className="text-[12px] text-ink-muted mt-1">
-                Any Anthropic Messages compatible endpoint (Minimax, self-hosted proxies).
-                Vendors needing custom auth (AWS SigV4, GCP) require a custom subclass.
+                Any Anthropic Messages compatible endpoint (self-hosted proxies). Prefer MiniMax type for MiniMax.
+              </p>
+            )}
+            {type === 'anthropic-minimax' && (
+              <p className="text-[12px] text-ink-muted mt-1">
+                Default {MINIMAX_ANTHROPIC_BASE_URL}. China: {MINIMAX_ANTHROPIC_BASE_URL_CN}.
               </p>
             )}
             {type === 'gemini' && (
               <p className="text-[12px] text-ink-muted mt-1">
-                Google AI Studio by default. Set baseURL for Vertex AI endpoints.
+                Google AI Studio by default. Use Gemini Vertex AI type for Vertex endpoints.
+              </p>
+            )}
+            {type === 'gemini-vertex' && (
+              <p className="text-[12px] text-ink-muted mt-1">
+                Replace YOUR_PROJECT / location in the Vertex publisher base URL. API key or gateway required.
               </p>
             )}
           </Field>

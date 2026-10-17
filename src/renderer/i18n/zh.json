@@ -304,7 +304,13 @@
     "enable": "连接",
     "disable": "断开",
     "delete": "移除",
-    "toolsCount": "{{value}} 个工具"
+    "toolsCount": "{{value}} 个工具",
+    "resourcesCount": "{{count}} 个资源",
+    "promptsCount": "{{count}} 个提示",
+    "resources": "资源",
+    "prompts": "提示",
+    "showCatalog": "查看资源与提示",
+    "hideCatalog": "收起资源与提示"
   },
   "mcpForm": {
     "nameLabel": "名称",
@@ -487,6 +493,16 @@
       "label": "项目",
       "none": "无",
       "hint": "绑定挂载目录与工具调用工作目录"
+    },
+    "classifier": {
+      "title": "协作分类器",
+      "body": "可选的 LLM：在 @ 提到两个及以上声音时，选择 parallel / relay / roundtable / lead-and-comment。失败或置信度不足时回退启发式。",
+      "enable": "启用分类器",
+      "provider": "Provider",
+      "pickProvider": "选择声音…",
+      "model": "模型",
+      "threshold": "置信度阈值",
+      "save": "保存分类器"
     }
   }
 }

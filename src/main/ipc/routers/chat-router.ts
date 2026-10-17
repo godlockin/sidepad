@@ -26,6 +26,10 @@ import {
   resolveProjectContext,
   rewriteArgsAgainstCwd,
 } from '../../store/project-cwd.js';
+import {
+  getClassifierAgent,
+  getClassifierThreshold,
+} from './classifier-router.js';
 
 const t = initTRPC.create({ isServer: true });
 
@@ -41,7 +45,6 @@ function getOrchestrator(): ChatOrchestrator {
 
   const store = new SessionStore(db);
   const personaStore = new PersonaStore(db);
-  const classifier = null;
 
   // Look up the configured model for an agent instance. agentId may be a
   // composite instance id ("provider::persona") — the model always comes
@@ -108,7 +111,7 @@ function getOrchestrator(): ChatOrchestrator {
   orchestrator = new ChatOrchestrator(
     store,
     registry,
-    classifier,
+    () => getClassifierAgent(),
     // Resolve an agent instance id to its provider. Unknown agents yield a
     // per-agent PROVIDER_NOT_CONFIGURED error instead of silently answering
     // through the first configured provider.
@@ -181,6 +184,7 @@ function getOrchestrator(): ChatOrchestrator {
         return 'off';
       }
     },
+    () => getClassifierThreshold(),
   );
 
   // Prewarm the context-window cache for every configured provider so the
