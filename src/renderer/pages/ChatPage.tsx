@@ -17,6 +17,7 @@ import { useProjectStore } from '../stores/project-store';
 import { Sidebar } from '../components/Sidebar';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatInput } from '../components/ChatInput';
+import { ProjectShell } from '../components/ProjectShell';
 import { PersonaPicker } from '../components/PersonaPicker';
 import { Avatar } from '../components/Avatar';
 import { IconEditor } from '../components/IconEditor';
@@ -64,6 +65,7 @@ export function ChatPage() {
   const [headerIconEdit, setHeaderIconEdit] = useState<{ top: number; left: number } | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  const [shellOpen, setShellOpen] = useState(false);
   const setSessionIcon = useSessionStore((s) => s.setSessionIcon);
   const renameSession = useSessionStore((s) => s.renameSession);
   const setGroupMode = useSessionStore((s) => s.setGroupMode);
@@ -120,6 +122,10 @@ export function ChatPage() {
   }, [messages, streaming]);
 
   const activeSession = storeActive ?? sessions.find((s) => s.id === activeSessionId) ?? null;
+
+  useEffect(() => {
+    if (!activeSession?.projectId) setShellOpen(false);
+  }, [activeSession?.projectId]);
 
   // Auto-assign first provider if session has no default agent
   useEffect(() => {
@@ -402,6 +408,20 @@ export function ChatPage() {
                   </option>
                 ))}
               </select>
+              {activeSession.projectId && (
+                <button
+                  type="button"
+                  onClick={() => setShellOpen((v) => !v)}
+                  className={`text-[12px] border rounded-[6px] px-2 py-1 cursor-pointer transition-colors ${
+                    shellOpen
+                      ? 'bg-accent-muted text-accent border-accent'
+                      : 'text-ink hover:text-accent border-rule hover:border-accent'
+                  }`}
+                  title={t('chat.shell.toggle')}
+                >
+                  {t('chat.shell.toggle')}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => void handleExport()}
@@ -602,6 +622,12 @@ export function ChatPage() {
             ))}
           </div>
         </div>
+
+        {activeSession?.projectId && shellOpen && (
+          <div className="h-[220px] shrink-0">
+            <ProjectShell sessionId={activeSession.id} />
+          </div>
+        )}
 
         <ChatInput
           onSend={handleSend}

@@ -67,6 +67,17 @@
     "emptyEnd": "来指定一个声音回复。",
     "export": "导出",
     "exportAudit": "审计",
+    "shell": {
+      "toggle": "终端",
+      "title": "项目终端",
+      "hint": "在关联项目目录中执行受沙盒约束的命令",
+      "placeholder": "git status",
+      "run": "运行",
+      "clear": "清空",
+      "empty": "在项目工作目录中运行命令。",
+      "exit": "退出码 {{code}}",
+      "timedOut": "超时"
+    },
     "skills": {
       "title": "技能",
       "attach": "添加",
@@ -91,6 +102,13 @@
       "alwaysAllow": "始终允许",
       "deny": "拒绝",
       "denied": "已拒绝"
+    },
+    "shell": {
+      "title": "项目 Shell",
+      "hint": "沙盒 · 与 pty_exec 同一限制",
+      "empty": "在已绑定项目的工作目录中执行短命令。",
+      "placeholder": "git status",
+      "run": "运行"
     },
     "attach": "添加附件",
     "attachUrl": "附加网页",

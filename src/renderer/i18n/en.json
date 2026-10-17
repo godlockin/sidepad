@@ -67,6 +67,17 @@
     "emptyEnd": "to address a voice.",
     "export": "Export",
     "exportAudit": "Audit",
+    "shell": {
+      "toggle": "Shell",
+      "title": "Project shell",
+      "hint": "Sandboxed commands in the linked project directory",
+      "placeholder": "git status",
+      "run": "Run",
+      "clear": "Clear",
+      "empty": "Run a command in the project working directory.",
+      "exit": "exit {{code}}",
+      "timedOut": "timed out"
+    },
     "skills": {
       "title": "Skills",
       "attach": "Attach",
@@ -91,6 +102,13 @@
       "alwaysAllow": "Always allow",
       "deny": "Deny",
       "denied": "denied"
+    },
+    "shell": {
+      "title": "Project shell",
+      "hint": "sandboxed · same jail as pty_exec",
+      "empty": "Run a short command in the linked project directory.",
+      "placeholder": "git status",
+      "run": "Run"
     },
     "attach": "Attach file",
     "attachUrl": "Attach URL",
