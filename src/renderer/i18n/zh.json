@@ -82,7 +82,10 @@
       "ready": "已连接",
       "exited": "已退出",
       "error": "错误",
-      "startFailed": "无法启动项目终端"
+      "startFailed": "无法启动项目终端",
+      "permissionTitle": "检测到 CLI 权限提示",
+      "allow": "允许",
+      "deny": "拒绝"
     },
     "skills": {
       "title": "技能",

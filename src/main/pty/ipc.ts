@@ -44,6 +44,7 @@ export function registerPtyIpc(getDb: () => Database.Database, getWin: () => Bro
         roots: resolved.roots,
         cols: payload.cols,
         rows: payload.rows,
+        chatSessionId: payload.chatSessionId,
       });
       if (result.ok) {
         try {
@@ -70,6 +71,24 @@ export function registerPtyIpc(getDb: () => Database.Database, getWin: () => Bro
   });
 
   ipcMain.handle('pty:kill', async (_e, id: string) => ptyManager.kill(id));
+
+  ipcMain.on(
+    'pty:permission:respond',
+    (_e, payload: { ptyId: string; allow: boolean; chatSessionId?: string | null }) => {
+      const ok = ptyManager.respondPermission(payload.ptyId, payload.allow);
+      if (!ok) return;
+      try {
+        appendAuditEvent(getDb(), {
+          sessionId: payload.chatSessionId ?? null,
+          kind: payload.allow ? 'pty.permission.allow' : 'pty.permission.deny',
+          summary: `CLI prompt ${payload.allow ? 'allowed' : 'denied'}`,
+          detail: { ptyId: payload.ptyId },
+        });
+      } catch {
+        /* ignore */
+      }
+    },
+  );
 }
 
 export async function shutdownPtySessions(): Promise<void> {

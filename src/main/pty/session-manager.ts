@@ -1,6 +1,9 @@
 import * as pty from 'node-pty';
 import type { BrowserWindow } from 'electron';
+import { randomBytes } from 'node:crypto';
+import stripAnsi from 'strip-ansi';
 import { isInsideRoot } from '../sandbox/jail.js';
+import { PermissionSniffer } from './sniffer.js';
 
 export interface PtySpawnOpts {
   id: string;
@@ -8,12 +11,16 @@ export interface PtySpawnOpts {
   roots: string[];
   cols?: number;
   rows?: number;
+  /** Chat session id for permission/audit correlation. */
+  chatSessionId?: string;
 }
 
 interface LiveSession {
   proc: pty.IPty;
   alive: boolean;
   cwd: string;
+  chatSessionId?: string;
+  sniffer: PermissionSniffer;
 }
 
 function pickShell(): { shell: string; args: string[] } {
@@ -29,6 +36,7 @@ function pickShell(): { shell: string; args: string[] } {
 /**
  * Multi-session PTY manager for the main process.
  * Interactive xterm bridge lives in the renderer; this owns spawn/write/resize/kill.
+ * Optional CLI permission sniffer is a fallback (hooks remain the preferred path).
  */
 export class PtySessionManager {
   private sessions = new Map<string, LiveSession>();
@@ -53,15 +61,34 @@ export class PtySessionManager {
         env: {
           ...process.env,
           TERM: 'xterm-256color',
-          // Soften PATH-only env enough for local CLI work without leaking secrets intentionally.
         } as { [key: string]: string },
         useConptyDll: false,
       } as pty.IWindowsPtyForkOptions & pty.IPtyForkOptions);
 
-      const session: LiveSession = { proc, alive: true, cwd: opts.cwd };
+      const session: LiveSession = {
+        proc,
+        alive: true,
+        cwd: opts.cwd,
+        chatSessionId: opts.chatSessionId,
+        sniffer: new PermissionSniffer(),
+      };
       proc.onData((data: string) => {
         const w = this.win;
         if (w && !w.isDestroyed()) w.webContents.send(`pty:data:${opts.id}`, data);
+        try {
+          const hit = session.sniffer.feed(stripAnsi(data));
+          if (hit && w && !w.isDestroyed()) {
+            w.webContents.send('pty:permission', {
+              id: `${opts.id}:${Date.now()}:${randomBytes(3).toString('hex')}`,
+              ptyId: opts.id,
+              chatSessionId: opts.chatSessionId ?? null,
+              text: hit.text,
+              kind: hit.kind,
+            });
+          }
+        } catch {
+          /* sniffer must never break the stream */
+        }
       });
       proc.onExit(({ exitCode, signal }) => {
         session.alive = false;
@@ -81,6 +108,17 @@ export class PtySessionManager {
   write(id: string, data: string): void {
     const s = this.sessions.get(id);
     if (s?.alive) s.proc.write(data);
+  }
+
+  respondPermission(ptyId: string, allow: boolean): boolean {
+    const s = this.sessions.get(ptyId);
+    if (!s?.alive) return false;
+    try {
+      s.proc.write(allow ? 'y\n' : 'n\n');
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   resize(id: string, cols: number, rows: number): void {

@@ -82,7 +82,10 @@
       "ready": "live",
       "exited": "exited",
       "error": "error",
-      "startFailed": "Could not start the project shell"
+      "startFailed": "Could not start the project shell",
+      "permissionTitle": "CLI permission prompt detected",
+      "allow": "Allow",
+      "deny": "Deny"
     },
     "skills": {
       "title": "Skills",

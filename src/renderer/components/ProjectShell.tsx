@@ -5,6 +5,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { getPtyApi } from '../lib/pty-api';
 import { trpc } from '../lib/trpc-client';
+import type { PtyPermissionPayload } from '../../shared/types/pty';
 
 interface ShellLine {
   id: string;
@@ -30,6 +31,9 @@ function InteractiveShell({ sessionId }: { sessionId: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'starting' | 'ready' | 'dead' | 'error'>('starting');
   const [error, setError] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState<PtyPermissionPayload | null>(null);
+  const ptyIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     const api = getPtyApi();
     const host = hostRef.current;
@@ -56,8 +60,10 @@ function InteractiveShell({ sessionId }: { sessionId: string }) {
     }
 
     const id = `shell-${sessionId}-${Date.now()}`;
+    ptyIdRef.current = id;
     let unsubData: (() => void) | undefined;
     let unsubExit: (() => void) | undefined;
+    let unsubPerm: (() => void) | undefined;
     let alive = true;
 
     const start = async () => {
@@ -82,7 +88,12 @@ function InteractiveShell({ sessionId }: { sessionId: string }) {
       unsubData = api.onData(id, (data) => term.write(data));
       unsubExit = api.onExit(id, () => {
         setStatus('dead');
+        setPrompt(null);
         term.writeln(`\r\n[${t('chat.shell.exited')}]`);
+      });
+      unsubPerm = api.onPermission((p) => {
+        if (p.ptyId !== id) return;
+        setPrompt(p);
       });
       term.onData((data) => api.write(id, data));
       term.focus();
@@ -108,10 +119,19 @@ function InteractiveShell({ sessionId }: { sessionId: string }) {
       window.removeEventListener('resize', onResize);
       unsubData?.();
       unsubExit?.();
+      unsubPerm?.();
       void api.kill(id);
       term.dispose();
     };
   }, [sessionId, t]);
+
+  const answerPrompt = (allow: boolean) => {
+    const api = getPtyApi();
+    const ptyId = prompt?.ptyId ?? ptyIdRef.current;
+    if (!api || !ptyId) return;
+    api.respondPermission(ptyId, allow, sessionId);
+    setPrompt(null);
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0 border-t border-rule bg-[#1a1b1e]">
@@ -139,6 +159,30 @@ function InteractiveShell({ sessionId }: { sessionId: string }) {
         </span>
       </div>
       {error && <p className="px-3 py-2 text-[12px] text-danger bg-surface">{error}</p>}
+      {prompt && (
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-warn/40 bg-warn/10">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] text-warn font-medium">{t('chat.shell.permissionTitle')}</p>
+            <p className="text-[12px] text-ink truncate font-mono" title={prompt.text}>
+              {prompt.text}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => answerPrompt(false)}
+            className="px-2.5 py-1 rounded-[6px] text-[12px] border border-rule text-ink-muted hover:text-danger hover:border-danger cursor-pointer"
+          >
+            {t('chat.shell.deny')}
+          </button>
+          <button
+            type="button"
+            onClick={() => answerPrompt(true)}
+            className="px-2.5 py-1 rounded-[6px] text-[12px] bg-accent text-white hover:opacity-90 cursor-pointer"
+          >
+            {t('chat.shell.allow')}
+          </button>
+        </div>
+      )}
       <div ref={hostRef} className="flex-1 min-h-0 px-1 py-1" />
     </div>
   );

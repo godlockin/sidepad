@@ -1,3 +1,11 @@
+export interface PtyPermissionPayload {
+  id: string;
+  ptyId: string;
+  chatSessionId: string | null;
+  text: string;
+  kind: string;
+}
+
 export interface PtyApi {
   spawn(opts: {
     id: string;
@@ -10,4 +18,6 @@ export interface PtyApi {
   kill(id: string): Promise<{ ok: boolean; alreadyDead?: boolean; error?: string }>;
   onData(id: string, cb: (data: string) => void): () => void;
   onExit(id: string, cb: (info: { exitCode: number; signal?: number }) => void): () => void;
+  onPermission(cb: (p: PtyPermissionPayload) => void): () => void;
+  respondPermission(ptyId: string, allow: boolean, chatSessionId?: string | null): void;
 }

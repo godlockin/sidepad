@@ -40,6 +40,14 @@ const ptyApi: PtyApi = {
     ipcRenderer.on(ch, fn);
     return () => ipcRenderer.removeListener(ch, fn);
   },
+  onPermission: (cb) => {
+    const fn = (_e: Electron.IpcRendererEvent, p: import('../shared/types/pty').PtyPermissionPayload) =>
+      cb(p);
+    ipcRenderer.on('pty:permission', fn);
+    return () => ipcRenderer.removeListener('pty:permission', fn);
+  },
+  respondPermission: (ptyId, allow, chatSessionId) =>
+    ipcRenderer.send('pty:permission:respond', { ptyId, allow, chatSessionId }),
 };
 
 contextBridge.exposeInMainWorld('pty', ptyApi);
